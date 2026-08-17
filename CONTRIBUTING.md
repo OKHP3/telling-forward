@@ -21,7 +21,7 @@ This is the *kind* of contribution, decided at submission time. It is separate f
 
 ## Tracking a submission
 
-Once a story submission exists, it should carry a simple, independently visible status: **Draft**, **Under review**, **Accepted into canon**, or **Published as an alternate path**. A contributor should be able to see this without understanding what a pull request, check run, or merge is. See [docs/adr/0001-product-naming-and-vocabulary.md](docs/adr/0001-product-naming-and-vocabulary.md) for the full backstage-to-frontstage vocabulary table, including the contributor flow (choose a story path, share character or plot intent, review the agent-shaped scene, submit).
+Once a story submission exists, it should carry a simple, independently visible status. The authoritative state machine is defined in `docs/platform-requirements.md` Section 7.3: **Draft**, **Submitted**, **Under review**, **Returned with notes** (loops back to Under review), then exactly one of two mutually exclusive terminal outcomes, **Accepted into canon** or **Published as an alternate path**. A contributor should be able to see this without understanding what a pull request, check run, or merge is. See [docs/adr/0001-product-naming-and-vocabulary.md](docs/adr/0001-product-naming-and-vocabulary.md) for the full backstage-to-frontstage vocabulary table, including the contributor flow (choose a story path, share character or plot intent, review the agent-shaped scene, submit).
 
 ## Good first contributions
 
