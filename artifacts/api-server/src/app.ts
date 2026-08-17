@@ -5,6 +5,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "@workspace/db";
 import router from "./routes";
+import { githubWebhookHandler } from "./routes/webhooks";
 import { logger } from "./lib/logger";
 
 // Session store backed by PostgreSQL — survives server restarts
@@ -52,6 +53,16 @@ const corsOrigin: cors.CorsOptions["origin"] =
   (process.env.NODE_ENV !== "production" ? true : false);
 
 app.use(cors({ origin: corsOrigin, credentials: true }));
+
+// Webhook endpoint MUST be mounted before express.json() so it receives the
+// raw body Buffer needed for HMAC-SHA256 signature verification.
+// express.raw() gives req.body as Buffer; the handler parses JSON itself.
+app.post(
+  "/api/webhooks/github",
+  express.raw({ type: "application/json" }),
+  githubWebhookHandler,
+);
+
 // 20 MB covers the largest base64-encoded audio blobs the transcription
 // route accepts (~15 MB audio → ~20 MB base64). All other API payloads are
 // far smaller; the per-route guard in transcribe.ts enforces the audio cap.

@@ -5,6 +5,7 @@ import storyworldsRouter from "./storyworlds";
 import proposalsRouter from "./proposals";
 import transcribeRouter from "./transcribe";
 import seedRouter from "./seed";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -13,6 +14,7 @@ router.use("/auth", authRouter);
 router.use("/storyworlds", storyworldsRouter);
 router.use("/proposals", proposalsRouter);
 router.use("/", transcribeRouter);
+router.use("/admin", adminRouter);
 
 // Dev-only seed route — not available in production
 if (process.env["NODE_ENV"] !== "production") {

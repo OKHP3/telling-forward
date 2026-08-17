@@ -4,6 +4,7 @@ import {
   text,
   timestamp,
   integer,
+  bigint,
   boolean,
   unique,
   index,
@@ -133,7 +134,8 @@ export const editorQuestionsTable = pgTable("editor_questions", {
   proposalId: integer("proposal_id")
     .notNull()
     .references(() => proposalsTable.id),
-  reviewCommentId: integer("review_comment_id").notNull().unique(),
+  // bigint stores GitHub-native IDs losslessly; GitHub IDs exceed INT32 range.
+  reviewCommentId: bigint("review_comment_id", { mode: "number" }).notNull().unique(),
   body: text("body").notNull(),
   resolved: boolean("resolved").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
