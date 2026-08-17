@@ -41,6 +41,7 @@ Out of scope for the current repository:
 - `CONTRIBUTING.md`: contribution model, story-submission requirements, and public-facing review language.
 - `CONTENT-LICENSE.md`: default story and content rights, separate from platform code.
 - `docs/MISSION.md`: mission statement and working principles.
+- `docs/adr/`: Architecture Decision Records capturing naming, contributor vocabulary, the notification model, and open architecture questions. Read before making naming, vocabulary, notification, or backend-architecture changes.
 - `lib/`: shared workspace packages — `api-client-react`, `api-spec`, `api-zod`, `db`.
 - `artifacts/`: deployable/buildable packages — `api-server`, `mockup-sandbox`.
 - `attached_assets/`: uploaded creative source material (e.g. Magnus Saga documents). Confirm the intended public/private content boundary before publication work touches this directory.
@@ -88,7 +89,7 @@ Do not claim a command was executed unless it was actually run in a suitable env
 
 ## Content, security, and operational conventions
 
-- Use plain-language terms on public-facing surfaces (`story seed`, `path`, `branch`, `proposed canon`, `alternate continuity`) per `README.md`; Git terminology (branch, commit, pull request, review) may remain backstage implementation.
+- Use plain-language terms on public-facing surfaces (`story seed`, `path`, `branch`, `proposed canon`, `alternate continuity`) per `README.md`; Git terminology (branch, commit, pull request, review) may remain backstage implementation. Full vocabulary table and contributor-facing notification states: `docs/adr/0001-product-naming-and-vocabulary.md` and `docs/adr/0002-contributor-notification-model.md`.
 - Distinguish personal work, open path, proposed canon, and published alternate path per `CONTRIBUTING.md` when handling story submissions or contribution tooling.
 - Do not present repository visibility as reuse permission. Point to `CONTENT-LICENSE.md` for the current default.
 - Preserve standalone punchy lines. Do not consolidate them into paragraphs.
@@ -112,6 +113,7 @@ Do not claim a command was executed unless it was actually run in a suitable env
 
 ## Known gaps and open questions
 
+- **Open (see `docs/adr/0003-github-native-fast-path-vs-custom-backend.md`):** the original concept scoped a GitHub-native fast path (GitHub Pages SPA, PRs and Actions as the backend). The repository instead contains a custom Express/Postgres API on Replit. This is not a security problem, but the reason for the divergence is not yet recorded. Do not assume either architecture is "correct" until the project owner confirms.
 - The product model, contribution rules, agent skills, and content governance described in `README.md` and `CONTRIBUTING.md` are explicitly still evolving, not finalized features.
 - No code license file is confirmed at the repository root; only content/story licensing is documented (`CONTENT-LICENSE.md`). Confirm the intended code license with the project owner if this matters for a task.
 - `attached_assets/` contains creative source material whose relationship to the platform's public/private content boundary is not yet documented; confirm before treating it as either product fixture or protected fiction.

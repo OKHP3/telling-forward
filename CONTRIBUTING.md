@@ -17,6 +17,12 @@ The project distinguishes four common outcomes:
 
 The public product should make these states understandable without requiring contributors to know Git terminology.
 
+This is the *kind* of contribution, decided at submission time. It is separate from the submission's *review status*: see "Tracking a submission" below.
+
+## Tracking a submission
+
+Once a story submission exists, it should carry a simple, independently visible status: **Draft**, **Under review**, **Accepted into canon**, or **Published as an alternate path**. A contributor should be able to see this without understanding what a pull request, check run, or merge is. See [docs/adr/0001-product-naming-and-vocabulary.md](docs/adr/0001-product-naming-and-vocabulary.md) for the full backstage-to-frontstage vocabulary table, including the contributor flow (choose a story path, share character or plot intent, review the agent-shaped scene, submit).
+
 ## Good first contributions
 
 - Explain a barrier that makes storytelling difficult.
@@ -43,4 +49,6 @@ Do not promise that a contribution will receive royalties, become canon, or be s
 
 ## Review language
 
-The public interface may use terms such as **story submission**, **story path**, **editor question**, **accepted into canon**, and **published alternate path**. GitHub's technical terms remain useful backstage, but contributors should not need to understand them to participate.
+The public interface may use terms such as **story submission**, **story path**, **saved moment**, **editor question**, **accepted into canon**, and **published alternate path**. GitHub's technical terms remain useful backstage, but contributors should not need to understand them to participate.
+
+What a contributor never has to see, and how a maintainer or agent should route it instead, is defined in [docs/adr/0002-contributor-notification-model.md](docs/adr/0002-contributor-notification-model.md).
