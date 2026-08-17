@@ -33,7 +33,7 @@ The thread also sketched a contributor flow: choose a world or story path, speak
 
 1. Product name: **Telling Forward**. Concept descriptor: **open-canon collaborative fiction**. Both are already reflected in `README.md`, `docs/MISSION.md`, and `AGENTS.md`.
 2. The frontstage/backstage vocabulary table above is the reference standard for any contributor-facing copy, UI labels, or notification text. GitHub terminology may remain in code, commit history, and maintainer tooling, but should not surface in the contributor experience.
-3. The submission status progression (**Draft → Under review → Accepted into canon → Published as an alternate path**) is a distinct axis from the four ownership/permission outcomes already documented in `CONTRIBUTING.md` (Personal work, Open path, Proposed canon, Published alternate path). The ownership outcome describes *what kind of thing* a contribution is; the status describes *where a specific submission is* in review. Both should be tracked and surfaced independently once a submission UI exists.
+3. The submission status is a distinct axis from the four ownership/permission outcomes already documented in `CONTRIBUTING.md` (Personal work, Open path, Proposed canon, Published alternate path). The sketch in this ADR's Context (Draft, Under review, Accepted into canon, Published as an alternate path) was later refined into the authoritative state machine in `docs/platform-requirements.md` Section 7.3, which adds **Submitted** and **Returned with notes** and makes the two terminal outcomes mutually exclusive results of the same review, not a sequence. Section 7.3 is the single normative model; this ADR defers to it. The ownership outcome describes *what kind of thing* a contribution is; the status describes *where a specific submission is* in review. Both should be tracked and surfaced independently once a submission UI exists.
 
 ## Gaps this ADR closes
 
@@ -41,6 +41,6 @@ The thread also sketched a contributor flow: choose a world or story path, speak
 
 ## Consequences
 
-- Any future submission UI should render status as one of the four states above, not raw GitHub PR/check state.
+- Any future submission UI should render status using the state machine in `docs/platform-requirements.md` Section 7.3, not raw GitHub PR/check state.
 - "Submit your scene" is the recommended call-to-action verb-phrase for a UI button; "story submission" remains the correct noun when describing the object of that action. Keep both, don't collapse them.
 - Naming and vocabulary decisions made in ad hoc conversations before this ADR existed are easy to lose. Future naming or vocabulary changes should be recorded as a new ADR (or an amendment here) rather than left in a chat transcript only.
