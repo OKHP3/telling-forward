@@ -17,6 +17,7 @@ import { WorldDetail } from '@/pages/world-detail';
 import { PathReader } from '@/pages/path-reader';
 import { ProposalView } from '@/pages/proposal-view';
 import { Submissions } from '@/pages/submissions';
+import { StewardDashboard } from '@/pages/steward-dashboard';
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ function Router() {
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/submissions" component={Submissions} />
+          <Route path="/worlds/:worldId/steward" component={StewardDashboard} />
           <Route path="/worlds/:worldId" component={WorldDetail} />
           <Route path="/worlds/:worldId/paths/:pathId" component={PathReader} />
           <Route path="/worlds/:worldId/proposals/:proposalId" component={ProposalView} />

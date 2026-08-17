@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AcceptProposalResponse,
   AuthResponse,
   BadRequestResponse,
   Contribution,
@@ -29,6 +30,7 @@ import type {
   NotFoundResponse,
   Proposal,
   RegisterRequest,
+  ReturnProposalBody,
   StoryPath,
   Storyworld,
   TranscribeRequest,
@@ -956,6 +958,99 @@ export function useListContributions<
 }
 
 /**
+ * Returns proposals for a storyworld ordered by submission date descending. Requires authentication and steward role for the storyworld.
+
+ * @summary List all proposals for a storyworld (steward dashboard)
+ */
+export const getListStoryworldProposalsUrl = (id: number) => {
+  return `/api/storyworlds/${id}/proposals`;
+};
+
+export const listStoryworldProposals = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Proposal[]> => {
+  return customFetch<Proposal[]>(getListStoryworldProposalsUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListStoryworldProposalsQueryKey = (id: number) => {
+  return [`/api/storyworlds/${id}/proposals`] as const;
+};
+
+export const getListStoryworldProposalsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStoryworldProposals>>,
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listStoryworldProposals>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListStoryworldProposalsQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listStoryworldProposals>>
+  > = ({ signal }) =>
+    listStoryworldProposals(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStoryworldProposals>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListStoryworldProposalsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStoryworldProposals>>
+>;
+export type ListStoryworldProposalsQueryError = ErrorType<
+  UnauthorizedResponse | ErrorResponse | NotFoundResponse
+>;
+
+/**
+ * @summary List all proposals for a storyworld (steward dashboard)
+ */
+
+export function useListStoryworldProposals<
+  TData = Awaited<ReturnType<typeof listStoryworldProposals>>,
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listStoryworldProposals>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListStoryworldProposalsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary List proposals
  */
 export const getListProposalsUrl = () => {
@@ -1204,3 +1299,274 @@ export function useGetProposal<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Transitions a submitted proposal to the "under-review" state, signalling to the contributor that a steward has begun reading it. Requires authentication and steward role for the proposal's storyworld.
+
+ * @summary Mark a submission as under steward review
+ */
+export const getMarkProposalUnderReviewUrl = (id: number) => {
+  return `/api/proposals/${id}/review`;
+};
+
+export const markProposalUnderReview = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Proposal> => {
+  return customFetch<Proposal>(getMarkProposalUnderReviewUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getMarkProposalUnderReviewMutationOptions = <
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markProposalUnderReview>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markProposalUnderReview>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["markProposalUnderReview"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markProposalUnderReview>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return markProposalUnderReview(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkProposalUnderReviewMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markProposalUnderReview>>
+>;
+
+export type MarkProposalUnderReviewMutationError = ErrorType<
+  UnauthorizedResponse | ErrorResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Mark a submission as under steward review
+ */
+export const useMarkProposalUnderReview = <
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markProposalUnderReview>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof markProposalUnderReview>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getMarkProposalUnderReviewMutationOptions(options));
+};
+
+/**
+ * Merges the backing pull request into the canon branch via Octokit, transitions state to "accepted-into-canon", and writes a provenance record. Requires authentication and steward role for the storyworld.
+
+ * @summary Accept a submission into canon
+ */
+export const getAcceptProposalUrl = (id: number) => {
+  return `/api/proposals/${id}/accept`;
+};
+
+export const acceptProposal = async (
+  id: number,
+  options?: RequestInit,
+): Promise<AcceptProposalResponse> => {
+  return customFetch<AcceptProposalResponse>(getAcceptProposalUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAcceptProposalMutationOptions = <
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acceptProposal>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof acceptProposal>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["acceptProposal"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof acceptProposal>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return acceptProposal(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AcceptProposalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof acceptProposal>>
+>;
+
+export type AcceptProposalMutationError = ErrorType<
+  UnauthorizedResponse | ErrorResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Accept a submission into canon
+ */
+export const useAcceptProposal = <
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acceptProposal>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof acceptProposal>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAcceptProposalMutationOptions(options));
+};
+
+/**
+ * Posts a review comment on the backing pull request explaining what needs to change, transitions state to "returned-with-notes", and creates an editor_question row. Requires authentication and steward role.
+
+ * @summary Return a submission with an editor question
+ */
+export const getReturnProposalUrl = (id: number) => {
+  return `/api/proposals/${id}/return`;
+};
+
+export const returnProposal = async (
+  id: number,
+  returnProposalBody: ReturnProposalBody,
+  options?: RequestInit,
+): Promise<Proposal> => {
+  return customFetch<Proposal>(getReturnProposalUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(returnProposalBody),
+  });
+};
+
+export const getReturnProposalMutationOptions = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof returnProposal>>,
+    TError,
+    { id: number; data: BodyType<ReturnProposalBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof returnProposal>>,
+  TError,
+  { id: number; data: BodyType<ReturnProposalBody> },
+  TContext
+> => {
+  const mutationKey = ["returnProposal"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof returnProposal>>,
+    { id: number; data: BodyType<ReturnProposalBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return returnProposal(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReturnProposalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof returnProposal>>
+>;
+export type ReturnProposalMutationBody = BodyType<ReturnProposalBody>;
+export type ReturnProposalMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Return a submission with an editor question
+ */
+export const useReturnProposal = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof returnProposal>>,
+    TError,
+    { id: number; data: BodyType<ReturnProposalBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof returnProposal>>,
+  TError,
+  { id: number; data: BodyType<ReturnProposalBody> },
+  TContext
+> => {
+  return useMutation(getReturnProposalMutationOptions(options));
+};

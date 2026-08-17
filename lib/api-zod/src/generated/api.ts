@@ -158,6 +158,35 @@ export const ListContributionsResponse = zod.array(
 );
 
 /**
+ * Returns proposals for a storyworld ordered by submission date descending. Requires authentication and steward role for the storyworld.
+
+ * @summary List all proposals for a storyworld (steward dashboard)
+ */
+export const ListStoryworldProposalsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListStoryworldProposalsResponseItem = zod.object({
+  id: zod.number(),
+  storyworldId: zod.number(),
+  pathId: zod.number(),
+  prNumber: zod.number(),
+  state: zod.enum([
+    "draft",
+    "submitted",
+    "under-review",
+    "returned-with-notes",
+    "accepted-into-canon",
+    "published-alternate",
+  ]),
+  submittedAt: zod.coerce.date(),
+  decidedAt: zod.coerce.date().nullish(),
+});
+export const ListStoryworldProposalsResponse = zod.array(
+  ListStoryworldProposalsResponseItem,
+);
+
+/**
  * @summary List proposals
  */
 export const ListProposalsResponseItem = zod.object({
@@ -202,6 +231,98 @@ export const GetProposalParams = zod.object({
 });
 
 export const GetProposalResponse = zod.object({
+  id: zod.number(),
+  storyworldId: zod.number(),
+  pathId: zod.number(),
+  prNumber: zod.number(),
+  state: zod.enum([
+    "draft",
+    "submitted",
+    "under-review",
+    "returned-with-notes",
+    "accepted-into-canon",
+    "published-alternate",
+  ]),
+  submittedAt: zod.coerce.date(),
+  decidedAt: zod.coerce.date().nullish(),
+});
+
+/**
+ * Transitions a submitted proposal to the "under-review" state, signalling to the contributor that a steward has begun reading it. Requires authentication and steward role for the proposal's storyworld.
+
+ * @summary Mark a submission as under steward review
+ */
+export const MarkProposalUnderReviewParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const MarkProposalUnderReviewResponse = zod.object({
+  id: zod.number(),
+  storyworldId: zod.number(),
+  pathId: zod.number(),
+  prNumber: zod.number(),
+  state: zod.enum([
+    "draft",
+    "submitted",
+    "under-review",
+    "returned-with-notes",
+    "accepted-into-canon",
+    "published-alternate",
+  ]),
+  submittedAt: zod.coerce.date(),
+  decidedAt: zod.coerce.date().nullish(),
+});
+
+/**
+ * Merges the backing pull request into the canon branch via Octokit, transitions state to "accepted-into-canon", and writes a provenance record. Requires authentication and steward role for the storyworld.
+
+ * @summary Accept a submission into canon
+ */
+export const AcceptProposalParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AcceptProposalResponse = zod.object({
+  proposal: zod.object({
+    id: zod.number(),
+    storyworldId: zod.number(),
+    pathId: zod.number(),
+    prNumber: zod.number(),
+    state: zod.enum([
+      "draft",
+      "submitted",
+      "under-review",
+      "returned-with-notes",
+      "accepted-into-canon",
+      "published-alternate",
+    ]),
+    submittedAt: zod.coerce.date(),
+    decidedAt: zod.coerce.date().nullish(),
+  }),
+  provenanceRecordId: zod
+    .number()
+    .describe("ID of the provenance_records row created on acceptance."),
+});
+
+/**
+ * Posts a review comment on the backing pull request explaining what needs to change, transitions state to "returned-with-notes", and creates an editor_question row. Requires authentication and steward role.
+
+ * @summary Return a submission with an editor question
+ */
+export const ReturnProposalParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ReturnProposalBody = zod.object({
+  editorQuestion: zod
+    .string()
+    .min(1)
+    .describe(
+      "The question or guidance returned to the contributor. Surfaces as an editor question on the proposal view; posted as a PR review comment on GitHub.\n",
+    ),
+});
+
+export const ReturnProposalResponse = zod.object({
   id: zod.number(),
   storyworldId: zod.number(),
   pathId: zod.number(),

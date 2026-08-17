@@ -5,12 +5,16 @@ import {
   storyworldsTable,
   storyPathsTable,
   contributionsTable,
+  proposalsTable,
 } from "@workspace/db";
 import {
   GetStoryworldParams,
   ListStoryPathsParams,
   ListContributionsParams,
+  ListStoryworldProposalsParams,
 } from "@workspace/api-zod";
+import { requireAuth } from "../middlewares/auth";
+import { requireStewardForStoryworld } from "../middlewares/steward";
 
 const router: IRouter = Router();
 
@@ -96,5 +100,30 @@ router.get("/:id/paths/:pathId/contributions", async (req, res) => {
     res.status(500).json({ error: "Failed to load contributions" });
   }
 });
+
+// GET /api/storyworlds/:id/proposals — steward dashboard data
+router.get(
+  "/:id/proposals",
+  requireAuth,
+  requireStewardForStoryworld,
+  async (req, res) => {
+    const params = ListStoryworldProposalsParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid storyworld id" });
+      return;
+    }
+    try {
+      const rows = await db
+        .select()
+        .from(proposalsTable)
+        .where(eq(proposalsTable.storyworldId, params.data.id))
+        .orderBy(desc(proposalsTable.submittedAt));
+      res.json(rows);
+    } catch (err) {
+      req.log.error({ err }, "listStoryworldProposals DB error");
+      res.status(500).json({ error: "Failed to load proposals" });
+    }
+  },
+);
 
 export default router;

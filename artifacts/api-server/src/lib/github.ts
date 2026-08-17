@@ -60,6 +60,23 @@ export interface CreateCommitParams {
   authorEmail: string;
 }
 
+export interface MergePullRequestParams {
+  owner: string;
+  repo: string;
+  prNumber: number;
+  /** Commit title written to GitHub — must use platform vocabulary, not Git jargon */
+  commitTitle: string;
+}
+
+export interface CreatePullRequestReviewParams {
+  owner: string;
+  repo: string;
+  prNumber: number;
+  body: string;
+  /** 'COMMENT' leaves a note; 'REQUEST_CHANGES' also blocks further merges until answered */
+  event: "COMMENT" | "REQUEST_CHANGES";
+}
+
 export interface GitHubClientInterface {
   listBranches(owner: string, repo: string): Promise<GitHubBranch[]>;
   listCommitsForBranch(
@@ -79,6 +96,20 @@ export interface GitHubClientInterface {
   ): Promise<GitHubPullRequest | null>;
   createBranch(params: CreateBranchParams): Promise<void>;
   createCommit(params: CreateCommitParams): Promise<string>;
+  /**
+   * Merge a pull request into its base branch.
+   * Section 6.3: "Accept into canon"
+   * Returns the SHA of the resulting merge commit.
+   */
+  mergePullRequest(params: MergePullRequestParams): Promise<string>;
+  /**
+   * Post a PR review (editor question) or change-request.
+   * Section 6.3: "Leave an editor question" / "Return with notes"
+   * Returns the review ID.
+   */
+  createPullRequestReview(
+    params: CreatePullRequestReviewParams,
+  ): Promise<number>;
 }
 
 // ---------------------------------------------------------------------------
@@ -216,6 +247,35 @@ class OctokitGitHubClient implements GitHubClientInterface {
       ref: `refs/heads/${branchName}`,
       sha,
     });
+  }
+
+  async mergePullRequest(params: MergePullRequestParams): Promise<string> {
+    const { owner, repo, prNumber, commitTitle } = params;
+    const { data } = await this.octokit.rest.pulls.merge({
+      owner,
+      repo,
+      pull_number: prNumber,
+      commit_title: commitTitle,
+      merge_method: "merge",
+    });
+    if (!data.merged) {
+      throw new Error(`GitHub merge was not completed: ${data.message}`);
+    }
+    return data.sha;
+  }
+
+  async createPullRequestReview(
+    params: CreatePullRequestReviewParams,
+  ): Promise<number> {
+    const { owner, repo, prNumber, body, event } = params;
+    const { data } = await this.octokit.rest.pulls.createReview({
+      owner,
+      repo,
+      pull_number: prNumber,
+      body,
+      event,
+    });
+    return data.id;
   }
 
   /**

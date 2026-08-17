@@ -103,6 +103,15 @@ export interface TranscribeResponse {
   text: string;
 }
 
+export interface ReturnProposalBody {
+  /**
+   * The question or guidance returned to the contributor. Surfaces as an editor question on the proposal view; posted as a PR review comment on GitHub.
+
+   * @minLength 1
+   */
+  editorQuestion: string;
+}
+
 export type ProposalState = (typeof ProposalState)[keyof typeof ProposalState];
 
 export const ProposalState = {
@@ -122,6 +131,12 @@ export interface Proposal {
   state: ProposalState;
   submittedAt: string;
   decidedAt?: string | null;
+}
+
+export interface AcceptProposalResponse {
+  proposal: Proposal;
+  /** ID of the provenance_records row created on acceptance. */
+  provenanceRecordId: number;
 }
 
 /**

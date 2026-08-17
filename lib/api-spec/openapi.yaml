@@ -255,6 +255,40 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /storyworlds/{id}/proposals:
+    get:
+      operationId: listStoryworldProposals
+      tags: [proposals]
+      summary: List all proposals for a storyworld (steward dashboard)
+      description: >
+        Returns proposals for a storyworld ordered by submission date descending.
+        Requires authentication and steward role for the storyworld.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Proposal list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Proposal"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not a steward for this storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /proposals:
     get:
       operationId: listProposals
@@ -320,6 +354,143 @@ paths:
                 $ref: "#/components/schemas/Proposal"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /proposals/{id}/review:
+    post:
+      operationId: markProposalUnderReview
+      tags: [proposals]
+      summary: Mark a submission as under steward review
+      description: >
+        Transitions a submitted proposal to the "under-review" state, signalling
+        to the contributor that a steward has begun reading it.
+        Requires authentication and steward role for the proposal's storyworld.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated proposal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proposal"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not a steward for this storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Proposal is not in a state that allows this transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /proposals/{id}/accept:
+    post:
+      operationId: acceptProposal
+      tags: [proposals]
+      summary: Accept a submission into canon
+      description: >
+        Merges the backing pull request into the canon branch via Octokit,
+        transitions state to "accepted-into-canon", and writes a provenance
+        record. Requires authentication and steward role for the storyworld.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Accepted proposal with provenance record id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcceptProposalResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not a steward for this storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Proposal cannot be accepted in its current state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: GitHub merge failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /proposals/{id}/return:
+    post:
+      operationId: returnProposal
+      tags: [proposals]
+      summary: Return a submission with an editor question
+      description: >
+        Posts a review comment on the backing pull request explaining what needs
+        to change, transitions state to "returned-with-notes", and creates an
+        editor_question row. Requires authentication and steward role.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReturnProposalBody"
+      responses:
+        "200":
+          description: Updated proposal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proposal"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not a steward for this storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Proposal cannot be returned in its current state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: GitHub review comment failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   schemas:
@@ -534,6 +705,31 @@ components:
           type: string
           description: Transcribed text from the audio
       required: [text]
+
+    ReturnProposalBody:
+      type: object
+      properties:
+        editorQuestion:
+          type: string
+          minLength: 1
+          description: >
+            The question or guidance returned to the contributor. Surfaces as an
+            editor question on the proposal view; posted as a PR review comment
+            on GitHub.
+      required:
+        - editorQuestion
+
+    AcceptProposalResponse:
+      type: object
+      properties:
+        proposal:
+          $ref: "#/components/schemas/Proposal"
+        provenanceRecordId:
+          type: integer
+          description: ID of the provenance_records row created on acceptance.
+      required:
+        - proposal
+        - provenanceRecordId
 
     Proposal:
       type: object

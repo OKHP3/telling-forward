@@ -55,6 +55,11 @@ export default defineConfig({
       mode: "split",
       clean: true,
       prettier: true,
+      // Prevent Orval from generating/overwriting lib/api-zod/src/index.ts.
+      // We maintain a hand-written barrel that only re-exports generated/api
+      // (Zod validators), deliberately omitting generated/types TypeScript
+      // interfaces to avoid name collisions with same-name Zod validator constants.
+      indexFiles: false,
       override: {
         zod: {
           coerce: {
