@@ -41,6 +41,8 @@ Out of scope for the current repository:
 - `CONTRIBUTING.md`: contribution model, story-submission requirements, and public-facing review language.
 - `CONTENT-LICENSE.md`: default story and content rights, separate from platform code.
 - `docs/MISSION.md`: mission statement and working principles.
+- `docs/platform-requirements.md`: platform requirements baseline (GitHub-backed community storytelling interface); the authoritative design intent for the platform build.
+- `docs/decisions/open-questions.md`: open decisions log tracking the unresolved questions from the requirements doc, Section 15, with status and owner decisions.
 - `docs/adr/`: Architecture Decision Records capturing naming, contributor vocabulary, the notification model, and open architecture questions. Read before making naming, vocabulary, notification, or backend-architecture changes.
 - `lib/`: shared workspace packages — `api-client-react`, `api-spec`, `api-zod`, `db`.
 - `artifacts/`: deployable/buildable packages — `api-server`, `mockup-sandbox`.
