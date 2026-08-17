@@ -8,6 +8,15 @@ This project is currently an experiment. Contributions may include product ideas
 
 Please describe what you are proposing and what kind of permission you are requesting. A maintainer may accept, revise, defer, or decline a contribution. Acceptance into this repository does not automatically make a story part of canon or grant permission to reuse someone else's work.
 
+The project distinguishes four common outcomes:
+
+- **Personal work:** a contributor-controlled story that is not open for continuation.
+- **Open path:** a work whose author has granted defined permission for others to continue or fork it.
+- **Proposed canon:** a contribution submitted for review by the world steward or an agreed editorial group.
+- **Published alternate path:** a permitted branch that remains visible as its own continuity rather than replacing canon.
+
+The public product should make these states understandable without requiring contributors to know Git terminology.
+
 ## Good first contributions
 
 - Explain a barrier that makes storytelling difficult.
@@ -27,6 +36,10 @@ Every story submission should identify:
 - the intended visibility;
 - whether it is a draft, alternate path, or proposed canon;
 - any restrictions or attribution requirements.
+
+For an open path or shared world, also identify the governing steward, the applicable content license or contribution agreement, whether commercial adaptation is permitted, and whether contributors may reuse their own additions elsewhere. These choices must be visible before someone contributes.
+
+Do not promise that a contribution will receive royalties, become canon, or be selected for adaptation unless a separate written agreement says so. If a future commercial model is tested, it should use a documented eligibility rule, a traceable contribution record, and a defined process for resolving disputes.
 
 ## Review language
 
