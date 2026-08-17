@@ -29,6 +29,109 @@ export async function ensureSchema(): Promise<void> {
       linked_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    -- Telling Forward enums (must mirror lib/db/src/schema/telling-forward.ts)
+    DO $$ BEGIN
+      CREATE TYPE story_path_state AS ENUM
+        ('personal', 'open', 'proposed', 'published-alternate');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    DO $$ BEGIN
+      CREATE TYPE proposal_state AS ENUM
+        ('draft', 'submitted', 'under-review', 'returned-with-notes',
+         'accepted-into-canon', 'published-alternate');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    -- Telling Forward core tables (Section 8 of platform requirements)
+    CREATE TABLE IF NOT EXISTS storyworlds (
+      id               SERIAL      PRIMARY KEY,
+      repo_owner       TEXT        NOT NULL,
+      repo_name        TEXT        NOT NULL,
+      title            TEXT        NOT NULL,
+      steward_id       INTEGER,
+      canon_branch_ref TEXT        NOT NULL,
+      created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT storyworlds_repo_unique UNIQUE (repo_owner, repo_name)
+    );
+
+    CREATE TABLE IF NOT EXISTS story_paths (
+      id             SERIAL      PRIMARY KEY,
+      storyworld_id  INTEGER     NOT NULL REFERENCES storyworlds(id),
+      branch_ref     TEXT        NOT NULL,
+      title          TEXT        NOT NULL,
+      origin_path_id INTEGER,
+      state          story_path_state NOT NULL,
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT story_paths_branch_unique UNIQUE (storyworld_id, branch_ref)
+    );
+
+    CREATE TABLE IF NOT EXISTS contributors (
+      id                SERIAL      PRIMARY KEY,
+      display_name      TEXT        NOT NULL,
+      platform_identity TEXT        NOT NULL,
+      github_identity   TEXT,
+      created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS contributions (
+      id             SERIAL      PRIMARY KEY,
+      storyworld_id  INTEGER     NOT NULL REFERENCES storyworlds(id),
+      path_id        INTEGER     NOT NULL REFERENCES story_paths(id),
+      commit_sha     TEXT        NOT NULL,
+      contributor_id INTEGER     REFERENCES contributors(id),
+      title          TEXT        NOT NULL,
+      summary        TEXT,
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT contributions_commit_unique UNIQUE (storyworld_id, commit_sha)
+    );
+
+    CREATE TABLE IF NOT EXISTS proposals (
+      id            SERIAL         PRIMARY KEY,
+      storyworld_id INTEGER        NOT NULL REFERENCES storyworlds(id),
+      path_id       INTEGER        NOT NULL REFERENCES story_paths(id),
+      pr_number     INTEGER        NOT NULL,
+      state         proposal_state NOT NULL,
+      submitted_at  TIMESTAMPTZ    NOT NULL,
+      decided_at    TIMESTAMPTZ,
+      CONSTRAINT proposals_pr_unique UNIQUE (storyworld_id, pr_number)
+    );
+
+    CREATE TABLE IF NOT EXISTS editor_questions (
+      id                SERIAL      PRIMARY KEY,
+      proposal_id       INTEGER     NOT NULL REFERENCES proposals(id),
+      review_comment_id INTEGER     NOT NULL UNIQUE,
+      body              TEXT        NOT NULL,
+      resolved          BOOLEAN     NOT NULL DEFAULT FALSE,
+      created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS stewards (
+      id            SERIAL      PRIMARY KEY,
+      storyworld_id INTEGER     NOT NULL REFERENCES storyworlds(id),
+      user_id       INTEGER     NOT NULL,
+      role          TEXT        NOT NULL,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS provenance_records (
+      id               SERIAL      PRIMARY KEY,
+      storyworld_id    INTEGER     NOT NULL REFERENCES storyworlds(id),
+      canon_commit_sha TEXT        NOT NULL,
+      source_path_id   INTEGER     REFERENCES story_paths(id),
+      contributor_ids  INTEGER[]   NOT NULL,
+      steward_id       INTEGER     REFERENCES stewards(id),
+      decided_at       TIMESTAMPTZ NOT NULL,
+      CONSTRAINT provenance_canon_commit_unique UNIQUE (storyworld_id, canon_commit_sha)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_story_paths_storyworld ON story_paths (storyworld_id);
+    CREATE INDEX IF NOT EXISTS idx_contributions_path ON contributions (path_id);
+    CREATE INDEX IF NOT EXISTS idx_proposals_path ON proposals (path_id);
+    CREATE INDEX IF NOT EXISTS idx_editor_questions_proposal ON editor_questions (proposal_id);
+    CREATE INDEX IF NOT EXISTS idx_stewards_storyworld ON stewards (storyworld_id);
+    CREATE INDEX IF NOT EXISTS idx_provenance_storyworld ON provenance_records (storyworld_id);
+
     -- Session store (managed by connect-pg-simple, excluded from Drizzle)
     CREATE TABLE IF NOT EXISTS sessions (
       sid    VARCHAR        NOT NULL COLLATE "default",

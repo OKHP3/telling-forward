@@ -82,3 +82,122 @@ export const GithubCallbackQueryParams = zod.object({
   state: zod.coerce.string().optional(),
   error: zod.coerce.string().optional(),
 });
+
+/**
+ * @summary List all storyworlds
+ */
+export const ListStoryworldsResponseItem = zod.object({
+  id: zod.number(),
+  repoOwner: zod.string(),
+  repoName: zod.string(),
+  title: zod.string(),
+  stewardId: zod.number().nullish(),
+  canonBranchRef: zod.string(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+export const ListStoryworldsResponse = zod.array(ListStoryworldsResponseItem);
+
+/**
+ * @summary Get a storyworld by id
+ */
+export const GetStoryworldParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetStoryworldResponse = zod.object({
+  id: zod.number(),
+  repoOwner: zod.string(),
+  repoName: zod.string(),
+  title: zod.string(),
+  stewardId: zod.number().nullish(),
+  canonBranchRef: zod.string(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary List story paths for a storyworld
+ */
+export const ListStoryPathsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListStoryPathsResponseItem = zod.object({
+  id: zod.number(),
+  storyworldId: zod.number(),
+  branchRef: zod.string(),
+  title: zod.string(),
+  originPathId: zod.number().nullish(),
+  state: zod.enum(["personal", "open", "proposed", "published-alternate"]),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+export const ListStoryPathsResponse = zod.array(ListStoryPathsResponseItem);
+
+/**
+ * @summary List contributions for a story path
+ */
+export const ListContributionsParams = zod.object({
+  id: zod.coerce.number(),
+  pathId: zod.coerce.number(),
+});
+
+export const ListContributionsResponseItem = zod.object({
+  id: zod.number(),
+  storyworldId: zod.number(),
+  pathId: zod.number(),
+  commitSha: zod.string(),
+  contributorId: zod.number().nullish(),
+  title: zod.string(),
+  summary: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const ListContributionsResponse = zod.array(
+  ListContributionsResponseItem,
+);
+
+/**
+ * @summary List proposals
+ */
+export const ListProposalsResponseItem = zod.object({
+  id: zod.number(),
+  storyworldId: zod.number(),
+  pathId: zod.number(),
+  prNumber: zod.number(),
+  state: zod.enum([
+    "draft",
+    "submitted",
+    "under-review",
+    "returned-with-notes",
+    "accepted-into-canon",
+    "published-alternate",
+  ]),
+  submittedAt: zod.coerce.date(),
+  decidedAt: zod.coerce.date().nullish(),
+});
+export const ListProposalsResponse = zod.array(ListProposalsResponseItem);
+
+/**
+ * @summary Get a proposal by id
+ */
+export const GetProposalParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetProposalResponse = zod.object({
+  id: zod.number(),
+  storyworldId: zod.number(),
+  pathId: zod.number(),
+  prNumber: zod.number(),
+  state: zod.enum([
+    "draft",
+    "submitted",
+    "under-review",
+    "returned-with-notes",
+    "accepted-into-canon",
+    "published-alternate",
+  ]),
+  submittedAt: zod.coerce.date(),
+  decidedAt: zod.coerce.date().nullish(),
+});

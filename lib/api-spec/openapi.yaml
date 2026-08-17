@@ -12,6 +12,10 @@ tags:
     description: Health operations
   - name: auth
     description: Authentication and account management
+  - name: storyworlds
+    description: Storyworlds and their story paths
+  - name: proposals
+    description: Proposals (pull-request-backed submissions)
 paths:
   /healthz:
     get:
@@ -162,6 +166,129 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /storyworlds:
+    get:
+      operationId: listStoryworlds
+      tags: [storyworlds]
+      summary: List all storyworlds
+      responses:
+        "200":
+          description: Storyworld list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Storyworld"
+
+  /storyworlds/{id}:
+    get:
+      operationId: getStoryworld
+      tags: [storyworlds]
+      summary: Get a storyworld by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Storyworld"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /storyworlds/{id}/paths:
+    get:
+      operationId: listStoryPaths
+      tags: [storyworlds]
+      summary: List story paths for a storyworld
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Story path list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StoryPath"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /storyworlds/{id}/paths/{pathId}/contributions:
+    get:
+      operationId: listContributions
+      tags: [storyworlds]
+      summary: List contributions for a story path
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: pathId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Contribution list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Contribution"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /proposals:
+    get:
+      operationId: listProposals
+      tags: [proposals]
+      summary: List proposals
+      responses:
+        "200":
+          description: Proposal list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Proposal"
+
+  /proposals/{id}:
+    get:
+      operationId: getProposal
+      tags: [proposals]
+      summary: Get a proposal by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Proposal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proposal"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   schemas:
     HealthStatus:
@@ -264,7 +391,141 @@ components:
         - user
         - github
 
+    Storyworld:
+      type: object
+      properties:
+        id:
+          type: integer
+        repoOwner:
+          type: string
+        repoName:
+          type: string
+        title:
+          type: string
+        stewardId:
+          type: integer
+          nullable: true
+        canonBranchRef:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - repoOwner
+        - repoName
+        - title
+        - canonBranchRef
+        - createdAt
+        - updatedAt
+
+    StoryPath:
+      type: object
+      properties:
+        id:
+          type: integer
+        storyworldId:
+          type: integer
+        branchRef:
+          type: string
+        title:
+          type: string
+        originPathId:
+          type: integer
+          nullable: true
+        state:
+          type: string
+          enum: [personal, open, proposed, published-alternate]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - storyworldId
+        - branchRef
+        - title
+        - state
+        - createdAt
+        - updatedAt
+
+    Contribution:
+      type: object
+      properties:
+        id:
+          type: integer
+        storyworldId:
+          type: integer
+        pathId:
+          type: integer
+        commitSha:
+          type: string
+        contributorId:
+          type: integer
+          nullable: true
+        title:
+          type: string
+        summary:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - storyworldId
+        - pathId
+        - commitSha
+        - title
+        - createdAt
+
+    Proposal:
+      type: object
+      properties:
+        id:
+          type: integer
+        storyworldId:
+          type: integer
+        pathId:
+          type: integer
+        prNumber:
+          type: integer
+        state:
+          type: string
+          enum:
+            - draft
+            - submitted
+            - under-review
+            - returned-with-notes
+            - accepted-into-canon
+            - published-alternate
+        submittedAt:
+          type: string
+          format: date-time
+        decidedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - storyworldId
+        - pathId
+        - prNumber
+        - state
+        - submittedAt
+
   responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
     BadRequest:
       description: Missing or invalid fields
       content:

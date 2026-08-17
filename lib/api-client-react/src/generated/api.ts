@@ -19,13 +19,18 @@ import type {
 import type {
   AuthResponse,
   BadRequestResponse,
+  Contribution,
   ErrorResponse,
   GithubCallbackParams,
   HealthStatus,
   LoginRequest,
   Logout200,
   MeResponse,
+  NotFoundResponse,
+  Proposal,
   RegisterRequest,
+  StoryPath,
+  Storyworld,
   UnauthorizedResponse,
 } from "./api.schemas";
 
@@ -599,6 +604,509 @@ export function useGithubCallback<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGithubCallbackQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List all storyworlds
+ */
+export const getListStoryworldsUrl = () => {
+  return `/api/storyworlds`;
+};
+
+export const listStoryworlds = async (
+  options?: RequestInit,
+): Promise<Storyworld[]> => {
+  return customFetch<Storyworld[]>(getListStoryworldsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListStoryworldsQueryKey = () => {
+  return [`/api/storyworlds`] as const;
+};
+
+export const getListStoryworldsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStoryworlds>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listStoryworlds>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListStoryworldsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listStoryworlds>>> = ({
+    signal,
+  }) => listStoryworlds({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStoryworlds>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListStoryworldsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStoryworlds>>
+>;
+export type ListStoryworldsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all storyworlds
+ */
+
+export function useListStoryworlds<
+  TData = Awaited<ReturnType<typeof listStoryworlds>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listStoryworlds>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListStoryworldsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get a storyworld by id
+ */
+export const getGetStoryworldUrl = (id: number) => {
+  return `/api/storyworlds/${id}`;
+};
+
+export const getStoryworld = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Storyworld> => {
+  return customFetch<Storyworld>(getGetStoryworldUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetStoryworldQueryKey = (id: number) => {
+  return [`/api/storyworlds/${id}`] as const;
+};
+
+export const getGetStoryworldQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStoryworld>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getStoryworld>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStoryworldQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStoryworld>>> = ({
+    signal,
+  }) => getStoryworld(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStoryworld>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetStoryworldQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStoryworld>>
+>;
+export type GetStoryworldQueryError = ErrorType<NotFoundResponse>;
+
+/**
+ * @summary Get a storyworld by id
+ */
+
+export function useGetStoryworld<
+  TData = Awaited<ReturnType<typeof getStoryworld>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getStoryworld>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetStoryworldQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List story paths for a storyworld
+ */
+export const getListStoryPathsUrl = (id: number) => {
+  return `/api/storyworlds/${id}/paths`;
+};
+
+export const listStoryPaths = async (
+  id: number,
+  options?: RequestInit,
+): Promise<StoryPath[]> => {
+  return customFetch<StoryPath[]>(getListStoryPathsUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListStoryPathsQueryKey = (id: number) => {
+  return [`/api/storyworlds/${id}/paths`] as const;
+};
+
+export const getListStoryPathsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStoryPaths>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listStoryPaths>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListStoryPathsQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listStoryPaths>>> = ({
+    signal,
+  }) => listStoryPaths(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStoryPaths>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListStoryPathsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStoryPaths>>
+>;
+export type ListStoryPathsQueryError = ErrorType<NotFoundResponse>;
+
+/**
+ * @summary List story paths for a storyworld
+ */
+
+export function useListStoryPaths<
+  TData = Awaited<ReturnType<typeof listStoryPaths>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listStoryPaths>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListStoryPathsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List contributions for a story path
+ */
+export const getListContributionsUrl = (id: number, pathId: number) => {
+  return `/api/storyworlds/${id}/paths/${pathId}/contributions`;
+};
+
+export const listContributions = async (
+  id: number,
+  pathId: number,
+  options?: RequestInit,
+): Promise<Contribution[]> => {
+  return customFetch<Contribution[]>(getListContributionsUrl(id, pathId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListContributionsQueryKey = (id: number, pathId: number) => {
+  return [`/api/storyworlds/${id}/paths/${pathId}/contributions`] as const;
+};
+
+export const getListContributionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listContributions>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  id: number,
+  pathId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listContributions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListContributionsQueryKey(id, pathId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listContributions>>
+  > = ({ signal }) =>
+    listContributions(id, pathId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(id && pathId),
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listContributions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListContributionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listContributions>>
+>;
+export type ListContributionsQueryError = ErrorType<NotFoundResponse>;
+
+/**
+ * @summary List contributions for a story path
+ */
+
+export function useListContributions<
+  TData = Awaited<ReturnType<typeof listContributions>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  id: number,
+  pathId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listContributions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListContributionsQueryOptions(id, pathId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List proposals
+ */
+export const getListProposalsUrl = () => {
+  return `/api/proposals`;
+};
+
+export const listProposals = async (
+  options?: RequestInit,
+): Promise<Proposal[]> => {
+  return customFetch<Proposal[]>(getListProposalsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListProposalsQueryKey = () => {
+  return [`/api/proposals`] as const;
+};
+
+export const getListProposalsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listProposals>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listProposals>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListProposalsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listProposals>>> = ({
+    signal,
+  }) => listProposals({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listProposals>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListProposalsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listProposals>>
+>;
+export type ListProposalsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List proposals
+ */
+
+export function useListProposals<
+  TData = Awaited<ReturnType<typeof listProposals>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listProposals>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListProposalsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get a proposal by id
+ */
+export const getGetProposalUrl = (id: number) => {
+  return `/api/proposals/${id}`;
+};
+
+export const getProposal = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Proposal> => {
+  return customFetch<Proposal>(getGetProposalUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetProposalQueryKey = (id: number) => {
+  return [`/api/proposals/${id}`] as const;
+};
+
+export const getGetProposalQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProposal>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProposal>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetProposalQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getProposal>>> = ({
+    signal,
+  }) => getProposal(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProposal>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetProposalQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProposal>>
+>;
+export type GetProposalQueryError = ErrorType<NotFoundResponse>;
+
+/**
+ * @summary Get a proposal by id
+ */
+
+export function useGetProposal<
+  TData = Awaited<ReturnType<typeof getProposal>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProposal>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProposalQueryOptions(id, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

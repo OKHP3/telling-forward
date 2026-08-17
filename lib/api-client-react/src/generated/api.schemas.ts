@@ -48,6 +48,75 @@ export interface MeResponse {
   github: GithubLinkInfo | null;
 }
 
+export interface Storyworld {
+  id: number;
+  repoOwner: string;
+  repoName: string;
+  title: string;
+  stewardId?: number | null;
+  canonBranchRef: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type StoryPathState =
+  (typeof StoryPathState)[keyof typeof StoryPathState];
+
+export const StoryPathState = {
+  personal: "personal",
+  open: "open",
+  proposed: "proposed",
+  "published-alternate": "published-alternate",
+} as const;
+
+export interface StoryPath {
+  id: number;
+  storyworldId: number;
+  branchRef: string;
+  title: string;
+  originPathId?: number | null;
+  state: StoryPathState;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Contribution {
+  id: number;
+  storyworldId: number;
+  pathId: number;
+  commitSha: string;
+  contributorId?: number | null;
+  title: string;
+  summary?: string | null;
+  createdAt: string;
+}
+
+export type ProposalState = (typeof ProposalState)[keyof typeof ProposalState];
+
+export const ProposalState = {
+  draft: "draft",
+  submitted: "submitted",
+  "under-review": "under-review",
+  "returned-with-notes": "returned-with-notes",
+  "accepted-into-canon": "accepted-into-canon",
+  "published-alternate": "published-alternate",
+} as const;
+
+export interface Proposal {
+  id: number;
+  storyworldId: number;
+  pathId: number;
+  prNumber: number;
+  state: ProposalState;
+  submittedAt: string;
+  decidedAt?: string | null;
+}
+
+/**
+ * Resource not found
+ */
+export type NotFoundResponse = ErrorResponse;
+
 /**
  * Missing or invalid fields
  */

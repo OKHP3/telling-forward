@@ -8,6 +8,7 @@
 
 export * from "./authResponse";
 export * from "./badRequestResponse";
+export * from "./contribution";
 export * from "./errorResponse";
 export * from "./githubCallbackParams";
 export * from "./githubLinkInfo";
@@ -15,6 +16,12 @@ export * from "./healthStatus";
 export * from "./loginRequest";
 export * from "./logout200";
 export * from "./meResponse";
+export * from "./notFoundResponse";
+export * from "./proposal";
+export * from "./proposalState";
 export * from "./publicUser";
 export * from "./registerRequest";
+export * from "./storyPath";
+export * from "./storyPathState";
+export * from "./storyworld";
 export * from "./unauthorizedResponse";
