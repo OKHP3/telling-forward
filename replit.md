@@ -37,22 +37,10 @@ Every commit made in Replit is automatically pushed to `github.com/OKHP3/telling
 
 ### Re-creating the hook after a fresh clone
 
+Run the committed helper script — it writes and activates the hook in one step:
+
 ```sh
-cat > .git/hooks/post-commit << 'EOF'
-#!/bin/sh
-REMOTE="github"
-BRANCH="$(git symbolic-ref --short HEAD 2>/dev/null)"
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-ASKPASS_SCRIPT="${REPO_ROOT}/scripts/git-askpass.sh"
-[ -z "$BRANCH" ] && exit 0
-[ -z "$GITHUB_PAT" ] && echo "[auto-push] GITHUB_PAT not set — skipping." >&2 && exit 0
-[ ! -x "$ASKPASS_SCRIPT" ] && echo "[auto-push] askpass script missing — skipping." >&2 && exit 0
-echo "[auto-push] Pushing '$BRANCH' to github.com/OKHP3/telling-forward..."
-if GIT_ASKPASS="$ASKPASS_SCRIPT" git push "$REMOTE" "$BRANCH" --quiet; then
-  echo "[auto-push] ✓ Pushed successfully ($BRANCH)"
-else
-  echo "[auto-push] ✗ Push failed — check GITHUB_PAT or network." >&2
-fi
-EOF
-chmod +x .git/hooks/post-commit
+sh scripts/setup-hooks.sh
 ```
+
+This is also called automatically by `scripts/post-merge.sh`, so after any task merge the hook is restored without manual intervention.
