@@ -8,3 +8,62 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface ErrorResponse {
+  error: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  /** @minLength 8 */
+  password: string;
+  /** @minLength 1 */
+  displayName: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface PublicUser {
+  id: number;
+  email: string;
+  displayName: string;
+  createdAt: string;
+}
+
+export interface GithubLinkInfo {
+  githubUsername: string;
+  githubEmail?: string | null;
+  linkedAt: string;
+}
+
+export interface AuthResponse {
+  user: PublicUser;
+}
+
+export interface MeResponse {
+  user: PublicUser;
+  github: GithubLinkInfo | null;
+}
+
+/**
+ * Missing or invalid fields
+ */
+export type BadRequestResponse = ErrorResponse;
+
+/**
+ * Not authenticated
+ */
+export type UnauthorizedResponse = ErrorResponse;
+
+export type Logout200 = {
+  ok: boolean;
+};
+
+export type GithubCallbackParams = {
+  code?: string;
+  state?: string;
+  error?: string;
+};

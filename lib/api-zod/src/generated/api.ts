@@ -14,3 +14,71 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Registers with email and password. No GitHub account required.
+ * @summary Create a new contributor account
+ */
+export const registerBodyPasswordMin = 8;
+
+export const RegisterBody = zod.object({
+  email: zod.string().email(),
+  password: zod.string().min(registerBodyPasswordMin),
+  displayName: zod.string().min(1),
+});
+
+/**
+ * @summary Log in with email and password
+ */
+export const LoginBody = zod.object({
+  email: zod.string().email(),
+  password: zod.string(),
+});
+
+export const LoginResponse = zod.object({
+  user: zod.object({
+    id: zod.number(),
+    email: zod.string().email(),
+    displayName: zod.string(),
+    createdAt: zod.coerce.date(),
+  }),
+});
+
+/**
+ * @summary End the current session
+ */
+export const LogoutResponse = zod.object({
+  ok: zod.boolean(),
+});
+
+/**
+ * Requires an active session.
+ * @summary Return the current user's profile
+ */
+export const GetMeResponse = zod.object({
+  user: zod.object({
+    id: zod.number(),
+    email: zod.string().email(),
+    displayName: zod.string(),
+    createdAt: zod.coerce.date(),
+  }),
+  github: zod.union([
+    zod.object({
+      githubUsername: zod.string(),
+      githubEmail: zod.string().nullish(),
+      linkedAt: zod.coerce.date(),
+    }),
+    zod.null(),
+  ]),
+});
+
+/**
+ * GitHub redirects here after the user authorizes the app. Links the GitHub account to the current platform account and redirects to the frontend.
+
+ * @summary GitHub OAuth callback
+ */
+export const GithubCallbackQueryParams = zod.object({
+  code: zod.coerce.string().optional(),
+  state: zod.coerce.string().optional(),
+  error: zod.coerce.string().optional(),
+});

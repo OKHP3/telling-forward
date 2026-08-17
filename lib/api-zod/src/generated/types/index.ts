@@ -6,4 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./authResponse";
+export * from "./badRequestResponse";
+export * from "./errorResponse";
+export * from "./githubCallbackParams";
+export * from "./githubLinkInfo";
 export * from "./healthStatus";
+export * from "./loginRequest";
+export * from "./logout200";
+export * from "./meResponse";
+export * from "./publicUser";
+export * from "./registerRequest";
+export * from "./unauthorizedResponse";

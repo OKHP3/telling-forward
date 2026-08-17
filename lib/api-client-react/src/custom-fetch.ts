@@ -29,6 +29,11 @@ export function setBaseUrl(url: string | null): void {
   _baseUrl = url ? url.replace(/\/+$/, "") : null;
 }
 
+/** Returns the currently configured base URL (null if same-origin). */
+export function getBaseUrl(): string | null {
+  return _baseUrl;
+}
+
 /**
  * Register a getter that supplies a bearer auth token.  Before every fetch
  * the getter is invoked; when it returns a non-null string, an
@@ -360,7 +365,13 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  // When a base URL is configured (cross-origin API), include credentials so
+  // the session cookie is sent with authenticated requests.
+  // For same-origin requests the browser always includes cookies; "include"
+  // is only strictly required for the cross-origin case but is safe to set always.
+  const credentials = init.credentials ?? (_baseUrl ? "include" : "same-origin");
+
+  const response = await fetch(input, { ...init, method, headers, credentials });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

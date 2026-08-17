@@ -11,4 +11,6 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.DATABASE_URL,
   },
+  // Exclude tables managed outside Drizzle (e.g. connect-pg-simple session store)
+  tablesFilter: ["!sessions"],
 });

@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication and account management
 paths:
   /healthz:
     get:
@@ -24,6 +26,142 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Create a new contributor account
+      description: Registers with email and password. No GitHub account required.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Account created and session started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: End the current session
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Return the current user's profile
+      description: Requires an active session.
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/github/authorize:
+    get:
+      operationId: githubAuthorize
+      tags: [auth]
+      summary: Start GitHub account linking
+      description: >
+        Redirects to GitHub's OAuth authorization page. The user must already
+        be logged in. GitHub account linking is optional — contributors do not
+        need a GitHub account to participate.
+      responses:
+        "302":
+          description: Redirect to GitHub
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          description: GitHub linking not configured on this server
+
+  /auth/github/callback:
+    get:
+      operationId: githubCallback
+      tags: [auth]
+      summary: GitHub OAuth callback
+      description: >
+        GitHub redirects here after the user authorizes the app. Links the
+        GitHub account to the current platform account and redirects to the
+        frontend.
+      parameters:
+        - name: code
+          in: query
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+        - name: error
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to frontend with github_link query param (success|denied|error)
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +172,108 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        displayName:
+          type: string
+          minLength: 1
+      required:
+        - email
+        - password
+        - displayName
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    PublicUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - displayName
+        - createdAt
+
+    GithubLinkInfo:
+      type: object
+      properties:
+        githubUsername:
+          type: string
+        githubEmail:
+          type: string
+          nullable: true
+        linkedAt:
+          type: string
+          format: date-time
+      required:
+        - githubUsername
+        - linkedAt
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/PublicUser"
+      required:
+        - user
+
+    MeResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/PublicUser"
+        github:
+          oneOf:
+            - $ref: "#/components/schemas/GithubLinkInfo"
+            - type: "null"
+      required:
+        - user
+        - github
+
+  responses:
+    BadRequest:
+      description: Missing or invalid fields
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Not authenticated
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
