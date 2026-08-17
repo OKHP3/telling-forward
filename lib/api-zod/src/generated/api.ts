@@ -179,6 +179,22 @@ export const ListProposalsResponseItem = zod.object({
 export const ListProposalsResponse = zod.array(ListProposalsResponseItem);
 
 /**
+ * Accepts a base64-encoded audio recording and returns the transcribed text. Uses OpenAI Whisper when OPENAI_API_KEY is configured on the server. Returns 503 when not configured — clients should fall back to manual text entry.
+
+ * @summary Transcribe voice narration to text
+ */
+export const TranscribeAudioBody = zod.object({
+  audioBase64: zod.string().describe("Base64-encoded audio data"),
+  mimeType: zod
+    .string()
+    .describe("MIME type of the audio (e.g. audio\/m4a, audio\/webm)"),
+});
+
+export const TranscribeAudioResponse = zod.object({
+  text: zod.string().describe("Transcribed text from the audio"),
+});
+
+/**
  * @summary Get a proposal by id
  */
 export const GetProposalParams = zod.object({

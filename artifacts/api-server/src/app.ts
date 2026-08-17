@@ -52,7 +52,10 @@ const corsOrigin: cors.CorsOptions["origin"] =
   (process.env.NODE_ENV !== "production" ? true : false);
 
 app.use(cors({ origin: corsOrigin, credentials: true }));
-app.use(express.json());
+// 20 MB covers the largest base64-encoded audio blobs the transcription
+// route accepts (~15 MB audio → ~20 MB base64). All other API payloads are
+// far smaller; the per-route guard in transcribe.ts enforces the audio cap.
+app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(

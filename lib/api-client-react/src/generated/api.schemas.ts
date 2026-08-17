@@ -91,6 +91,18 @@ export interface Contribution {
   createdAt: string;
 }
 
+export interface TranscribeRequest {
+  /** Base64-encoded audio data */
+  audioBase64: string;
+  /** MIME type of the audio (e.g. audio/m4a, audio/webm) */
+  mimeType: string;
+}
+
+export interface TranscribeResponse {
+  /** Transcribed text from the audio */
+  text: string;
+}
+
 export type ProposalState = (typeof ProposalState)[keyof typeof ProposalState];
 
 export const ProposalState = {

@@ -24,4 +24,6 @@ export * from "./registerRequest";
 export * from "./storyPath";
 export * from "./storyPathState";
 export * from "./storyworld";
+export * from "./transcribeRequest";
+export * from "./transcribeResponse";
 export * from "./unauthorizedResponse";

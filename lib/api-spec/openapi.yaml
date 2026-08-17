@@ -16,6 +16,8 @@ tags:
     description: Storyworlds and their story paths
   - name: proposals
     description: Proposals (pull-request-backed submissions)
+  - name: narrate
+    description: Voice narration and transcription for mobile contributors
 paths:
   /healthz:
     get:
@@ -268,6 +270,36 @@ paths:
                 items:
                   $ref: "#/components/schemas/Proposal"
 
+  /transcribe:
+    post:
+      operationId: transcribeAudio
+      tags: [narrate]
+      summary: Transcribe voice narration to text
+      description: >
+        Accepts a base64-encoded audio recording and returns the transcribed
+        text. Uses OpenAI Whisper when OPENAI_API_KEY is configured on the
+        server. Returns 503 when not configured — clients should fall back to
+        manual text entry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscribeRequest"
+      responses:
+        "200":
+          description: Transcribed text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscribeResponse"
+        "503":
+          description: Transcription service not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /proposals/{id}:
     get:
       operationId: getProposal
@@ -483,6 +515,25 @@ components:
         - commitSha
         - title
         - createdAt
+
+    TranscribeRequest:
+      type: object
+      properties:
+        audioBase64:
+          type: string
+          description: Base64-encoded audio data
+        mimeType:
+          type: string
+          description: "MIME type of the audio (e.g. audio/m4a, audio/webm)"
+      required: [audioBase64, mimeType]
+
+    TranscribeResponse:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Transcribed text from the audio
+      required: [text]
 
     Proposal:
       type: object
