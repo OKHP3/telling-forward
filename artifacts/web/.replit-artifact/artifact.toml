@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Telling Forward"
+description = "The primary reader and contributor interface for Telling Forward — a GitHub-backed collaborative storytelling platform. Readers browse storyworlds, follow story paths (canon and alternate), and read contributions in chronological order. Contributors view their proposed canon submissions as editorial pitches with editor feedback threaded against passages. The UI uses only product vocabulary (storyworlds, paths, saved moments, proposed canon) — never Git jargon."
+version = "1.0.0"
+id = "artifacts/web"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22333
+
+[services.development]
+run = "pnpm --filter @workspace/web run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/web", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/web/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22333"
+BASE_PATH = "/"
