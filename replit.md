@@ -30,22 +30,24 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 
 Every commit made in Replit is automatically pushed to `github.com/OKHP3/telling-forward` via a `post-commit` git hook.
 
-- **Remote**: `github` → `https://github.com/OKHP3/telling-forward.git`
-- **Auth**: The `GITHUB_PAT` secret is embedded in the remote URL and used transparently.
-- **Scope**: Pushes the current branch after each commit. If the push fails (e.g. network issue), the commit is preserved locally and the error is printed — the commit is never rolled back.
-- **Hook location**: `.git/hooks/post-commit` (not committed; must be re-created if the repo is re-cloned — see the script below).
+- **Remote**: `github` → `https://github.com/OKHP3/telling-forward.git` (no credentials stored)
+- **Auth**: The `GITHUB_PAT` Replit secret is read from the environment at push time and injected into the push URL transiently — it is never written to `.git/config` or any file.
+- **Scope**: Pushes the current branch after each commit. If the push fails (e.g. network issue or missing PAT), the commit is preserved locally and the error is printed — the commit is never rolled back.
+- **Hook location**: `.git/hooks/post-commit` (not tracked by git; must be re-created if the workspace is re-cloned — see below).
 
 ### Re-creating the hook after a fresh clone
 
 ```sh
 cat > .git/hooks/post-commit << 'EOF'
 #!/bin/sh
-REMOTE="github"
+REMOTE_URL="https://github.com/OKHP3/telling-forward.git"
 BRANCH="$(git symbolic-ref --short HEAD 2>/dev/null)"
 [ -z "$BRANCH" ] && exit 0
-echo "[auto-push] Pushing '$BRANCH' to $REMOTE..."
-if git push "$REMOTE" "$BRANCH" --quiet; then
-  echo "[auto-push] ✓ Pushed to github.com/OKHP3/telling-forward ($BRANCH)"
+[ -z "$GITHUB_PAT" ] && echo "[auto-push] GITHUB_PAT not set — skipping." >&2 && exit 0
+AUTH_URL="https://OKHP3:${GITHUB_PAT}@github.com/OKHP3/telling-forward.git"
+echo "[auto-push] Pushing '$BRANCH' to github.com/OKHP3/telling-forward..."
+if git push "$AUTH_URL" "$BRANCH" --quiet 2>/dev/null; then
+  echo "[auto-push] ✓ Pushed successfully ($BRANCH)"
 else
   echo "[auto-push] ✗ Push failed — check GITHUB_PAT or network." >&2
 fi
