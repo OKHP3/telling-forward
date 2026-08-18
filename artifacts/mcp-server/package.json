@@ -1,0 +1,26 @@
+{
+  "name": "@workspace/mcp-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Telling Forward MCP server. Exposes capsule-schema, canon-read, and draft-capsule-write tools to a user's own MCP host (Claude Code, Claude Desktop, or another MCP-capable client), so the user's own AI subscription or local model does the ingestion reasoning. This package never calls an AI provider itself and holds no AI credentials — it only talks to GitHub, using a token the user supplies.",
+  "bin": {
+    "telling-forward-mcp": "./dist/index.mjs"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "node ./build.mjs",
+    "start": "node --enable-source-maps ./dist/index.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@octokit/rest": "^21.1.1",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "esbuild": "^0.27.3",
+    "tsx": "^4.21.0"
+  }
+}

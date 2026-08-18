@@ -1,0 +1,121 @@
+# Tier-1 manuscript ingestion, per
+# docs/adr/0004-manuscript-ingestion-and-bring-your-own-ai.md.
+#
+# Converts an uploaded manuscript to markdown, segments it into chapters
+# and scenes, runs Phi-4-mini-instruct (CPU inference, local to this
+# runner) to draft candidate capsules, and files each as a GitHub Issue
+# labeled "capsule" + "state:draft" for human review on the Concept Board.
+#
+# Cost: GitHub Actions minutes only. Free on public repos; counts against
+# the free monthly allotment on private repos. No AI API key is read, no
+# AI provider is called, nothing here bills the platform owner.
+#
+# NOT YET RUN on a real GitHub Actions runner — verify end to end,
+# including actual wall-clock time, before relying on this in production.
+# The manuscript path, model revision pin, and trigger event below are
+# best-effort scaffolding pending confirmation of how uploads actually
+# reach this workflow (see the ADR's open items).
+
+name: Manuscript ingestion (Tier 1)
+
+on:
+  workflow_dispatch:
+    inputs:
+      manuscript_path:
+        description: "Path to the uploaded manuscript file within this repo (e.g. intake/my-chapter.docx)"
+        required: true
+        type: string
+      owner:
+        description: "Storyworld repo owner"
+        required: true
+        type: string
+      repo:
+        description: "Storyworld repo name"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  # Pinned to a specific Hugging Face revision (commit hash), not "main" or
+  # "latest" — reproducibility without committing the weight file itself.
+  # Placeholder: replace with the actual commit hash of the GGUF revision
+  # you intend to ship before this workflow is trusted in production.
+  HF_MODEL_REPO: "onnx-community/Phi-4-mini-instruct-GGUF"
+  HF_MODEL_REVISION: "REPLACE_WITH_PINNED_COMMIT_SHA"
+  HF_MODEL_FILE: "Phi-4-mini-instruct-Q4_K_M.gguf"
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pandoc
+        run: sudo apt-get update && sudo apt-get install -y pandoc
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ingestion dependencies
+        run: pip install -r .github/scripts/ingestion/requirements.txt
+
+      # Cache keyed on the pinned revision, so the ~2-4 GB GGUF file only
+      # downloads once per revision, not once per workflow run. This is
+      # the alternative to committing the model file into the repository
+      # (git hard-blocks files over 100 MB without LFS, and GitHub's free
+      # LFS tier is 1 GB storage + 1 GB bandwidth/month — nowhere near
+      # enough for a model file pulled on every ingestion run).
+      - name: Cache model weights
+        id: cache-model
+        uses: actions/cache@v4
+        with:
+          path: models/${{ env.HF_MODEL_FILE }}
+          key: model-${{ env.HF_MODEL_REPO }}-${{ env.HF_MODEL_REVISION }}-${{ env.HF_MODEL_FILE }}
+
+      - name: Download model weights (cache miss only)
+        if: steps.cache-model.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p models
+          python3 -c "
+          from huggingface_hub import hf_hub_download
+          import shutil
+          path = hf_hub_download(
+              repo_id='${{ env.HF_MODEL_REPO }}',
+              revision='${{ env.HF_MODEL_REVISION }}',
+              filename='${{ env.HF_MODEL_FILE }}',
+          )
+          shutil.copy(path, 'models/${{ env.HF_MODEL_FILE }}')
+          "
+
+      - name: Convert manuscript to markdown (Tier 0)
+        run: |
+          python3 .github/scripts/ingestion/convert_manuscript.py \
+            "${{ inputs.manuscript_path }}" \
+            /tmp/converted.md
+
+      - name: Segment into chapters and scenes (Tier 0)
+        run: |
+          python3 .github/scripts/ingestion/segment_scenes.py \
+            /tmp/converted.md \
+            /tmp/segments.json
+
+      - name: Extract draft capsules (Tier 1 — Phi-4-mini, CPU, local to this runner)
+        run: |
+          python3 .github/scripts/ingestion/extract_capsules.py \
+            /tmp/segments.json \
+            models/${{ env.HF_MODEL_FILE }} \
+            /tmp/capsules.json
+
+      - name: File capsules as draft GitHub Issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 .github/scripts/ingestion/file_capsules_as_issues.py \
+            /tmp/capsules.json \
+            "${{ inputs.owner }}" \
+            "${{ inputs.repo }}"
