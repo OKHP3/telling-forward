@@ -40,6 +40,7 @@ export const LoginResponse = zod.object({
     id: zod.number(),
     email: zod.string().email(),
     displayName: zod.string(),
+    emailVerified: zod.boolean(),
     createdAt: zod.coerce.date(),
   }),
 });
@@ -60,6 +61,7 @@ export const GetMeResponse = zod.object({
     id: zod.number(),
     email: zod.string().email(),
     displayName: zod.string(),
+    emailVerified: zod.boolean(),
     createdAt: zod.coerce.date(),
   }),
   github: zod.union([

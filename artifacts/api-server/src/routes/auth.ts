@@ -1,8 +1,9 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 import rateLimit from "express-rate-limit";
-import { db, usersTable, userGithubLinksTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, usersTable, userGithubLinksTable, emailVerificationsTable } from "@workspace/db";
+import { eq, and, gt } from "drizzle-orm";
 import {
   RegisterBody,
   LoginBody,
@@ -10,6 +11,7 @@ import {
   GetMeResponse,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
+import { sendVerificationEmail, isEmailConfigured } from "../lib/email";
 
 const router = Router();
 
@@ -52,8 +54,22 @@ const BCRYPT_ROUNDS = 12;
 const DUMMY_HASH =
   "$2b$12$SMCac2JC2kOpV3ghfapoQOo6utxALm8iJ3UHNVS47spex33LMiduS";
 
+/** Generate a URL-safe 32-byte random verification token (64 hex chars). */
+function generateVerificationToken(): string {
+  return randomBytes(32).toString("hex");
+}
+
 /** POST /api/auth/register — create a new platform account */
 router.post("/register", registerLimiter, async (req, res) => {
+  // Fail fast in production when no mail transport is configured so we never
+  // create an unverifiable account that is permanently locked out of submissions.
+  if (process.env["NODE_ENV"] === "production" && !isEmailConfigured()) {
+    res.status(503).json({
+      error: "Email service not configured — contact the platform administrator",
+    });
+    return;
+  }
+
   const parsed = RegisterBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
@@ -81,8 +97,24 @@ router.post("/register", registerLimiter, async (req, res) => {
       id: usersTable.id,
       email: usersTable.email,
       displayName: usersTable.displayName,
+      emailVerified: usersTable.emailVerified,
       createdAt: usersTable.createdAt,
     });
+
+  // Create an email verification token (expires in 24 hours)
+  const token = generateVerificationToken();
+  await db.insert(emailVerificationsTable).values({
+    userId: user.id,
+    token,
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+  });
+
+  // Send verification email — non-fatal if sending fails; user can resend
+  try {
+    await sendVerificationEmail(user.email, token);
+  } catch (emailErr) {
+    req.log.error({ err: emailErr, userId: user.id }, "Failed to send verification email");
+  }
 
   req.session.userId = user.id;
   res.status(201).json({ user });
@@ -125,6 +157,7 @@ router.post("/login", loginLimiter, async (req, res) => {
         id: user.id,
         email: user.email,
         displayName: user.displayName,
+        emailVerified: user.emailVerified,
         createdAt: user.createdAt,
       },
     }),
@@ -151,6 +184,7 @@ router.get("/me", requireAuth, async (req, res) => {
       id: usersTable.id,
       email: usersTable.email,
       displayName: usersTable.displayName,
+      emailVerified: usersTable.emailVerified,
       createdAt: usersTable.createdAt,
       updatedAt: usersTable.updatedAt,
     })
@@ -180,6 +214,118 @@ router.get("/me", requireAuth, async (req, res) => {
       github: githubLink ?? null,
     }),
   );
+});
+
+// ---------------------------------------------------------------------------
+// Email verification
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/auth/verify-email?token=...
+ * Exchanges a verification token for a verified account.
+ * Safe to call without an active session (e.g. from email link in any browser).
+ */
+router.get("/verify-email", async (req, res) => {
+  const token = typeof req.query["token"] === "string" ? req.query["token"] : null;
+  if (!token) {
+    res.status(400).json({ error: "token query parameter is required" });
+    return;
+  }
+
+  const now = new Date();
+
+  const [verification] = await db
+    .select()
+    .from(emailVerificationsTable)
+    .where(
+      and(
+        eq(emailVerificationsTable.token, token),
+        gt(emailVerificationsTable.expiresAt, now),
+      ),
+    )
+    .limit(1);
+
+  if (!verification) {
+    res.status(400).json({ error: "Verification link is invalid or has expired" });
+    return;
+  }
+
+  // Mark the user as verified and delete the token atomically
+  await db.transaction(async (tx) => {
+    await tx
+      .update(usersTable)
+      .set({ emailVerified: true })
+      .where(eq(usersTable.id, verification.userId));
+
+    await tx
+      .delete(emailVerificationsTable)
+      .where(eq(emailVerificationsTable.userId, verification.userId));
+  });
+
+  req.log.info({ userId: verification.userId }, "Email verified");
+  res.json({ ok: true, message: "Email verified successfully" });
+});
+
+/** 3 resend requests per IP per hour — prevents email flooding */
+const resendLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Too many resend requests — please try again later" },
+});
+
+/**
+ * POST /api/auth/resend-verification
+ * Re-sends the verification email for the logged-in user.
+ */
+router.post("/resend-verification", resendLimiter, requireAuth, async (req, res) => {
+  const [user] = await db
+    .select({ id: usersTable.id, email: usersTable.email, emailVerified: usersTable.emailVerified })
+    .from(usersTable)
+    .where(eq(usersTable.id, req.session.userId!))
+    .limit(1);
+
+  if (!user) {
+    req.session.destroy(() => {});
+    res.status(401).json({ error: "Session refers to a deleted account" });
+    return;
+  }
+
+  if (user.emailVerified) {
+    res.status(400).json({ error: "Email address is already verified" });
+    return;
+  }
+
+  // Fail fast in production when no mail transport is configured
+  if (process.env["NODE_ENV"] === "production" && !isEmailConfigured()) {
+    res.status(503).json({
+      error: "Email service not configured — contact the platform administrator",
+    });
+    return;
+  }
+
+  // Replace any existing tokens for this user with a fresh one
+  await db
+    .delete(emailVerificationsTable)
+    .where(eq(emailVerificationsTable.userId, user.id));
+
+  const token = generateVerificationToken();
+  await db.insert(emailVerificationsTable).values({
+    userId: user.id,
+    token,
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+  });
+
+  try {
+    await sendVerificationEmail(user.email, token);
+  } catch (emailErr) {
+    req.log.error({ err: emailErr, userId: user.id }, "Failed to resend verification email");
+    res.status(502).json({ error: "Failed to send verification email — please try again" });
+    return;
+  }
+
+  res.json({ ok: true, message: "Verification email sent" });
 });
 
 // ---------------------------------------------------------------------------

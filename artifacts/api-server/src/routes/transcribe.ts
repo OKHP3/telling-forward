@@ -8,7 +8,7 @@
  */
 import { Router, type IRouter } from "express";
 import { TranscribeAudioBody } from "@workspace/api-zod";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireVerified } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
@@ -46,6 +46,7 @@ function transcribeRateLimit(
 router.post(
   "/transcribe",
   requireAuth,
+  requireVerified,
   transcribeRateLimit,
   async (req, res) => {
     const apiKey = process.env["OPENAI_API_KEY"];

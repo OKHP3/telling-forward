@@ -29,6 +29,21 @@ export async function ensureSchema(): Promise<void> {
       linked_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    -- Migration: add email_verified to existing users rows.
+    -- CREATE TABLE IF NOT EXISTS will not add columns to an existing table.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS
+      email_verified BOOLEAN NOT NULL DEFAULT FALSE;
+
+    CREATE TABLE IF NOT EXISTS email_verifications (
+      id         SERIAL      PRIMARY KEY,
+      user_id    INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token      TEXT        NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_email_verifications_user ON email_verifications (user_id);
+    CREATE INDEX IF NOT EXISTS idx_email_verifications_token ON email_verifications (token);
+
     -- Telling Forward enums (must mirror lib/db/src/schema/telling-forward.ts)
     DO $$ BEGIN
       CREATE TYPE story_path_state AS ENUM
