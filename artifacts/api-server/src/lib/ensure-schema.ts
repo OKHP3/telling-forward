@@ -29,6 +29,61 @@ export async function ensureSchema(): Promise<void> {
       linked_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    -- Migration: add email_verified to existing users rows.
+    -- CREATE TABLE IF NOT EXISTS will not add columns to an existing table.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS
+      email_verified BOOLEAN NOT NULL DEFAULT FALSE;
+
+    CREATE TABLE IF NOT EXISTS email_verifications (
+      id         SERIAL      PRIMARY KEY,
+      user_id    INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token      TEXT        NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_email_verifications_user ON email_verifications (user_id);
+    CREATE INDEX IF NOT EXISTS idx_email_verifications_token ON email_verifications (token);
+
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id         SERIAL      PRIMARY KEY,
+      user_id    INTEGER     NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT        NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    -- Migrations for existing tables created with the old schema (plaintext token,
+    -- no UNIQUE on user_id). Must run BEFORE the CREATE INDEX statements below so
+    -- the column exists when the index is built.
+    DO $$
+    BEGIN
+      -- Rename token → token_hash if the old column is present.
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'password_reset_tokens' AND column_name = 'token'
+      ) THEN
+        ALTER TABLE password_reset_tokens RENAME COLUMN token TO token_hash;
+      END IF;
+
+      -- Add UNIQUE constraint on user_id if not already present.
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = 'password_reset_tokens'::regclass
+          AND contype = 'u'
+          AND conkey = ARRAY(
+            SELECT attnum FROM pg_attribute
+            WHERE attrelid = 'password_reset_tokens'::regclass
+              AND attname = 'user_id'
+          )
+      ) THEN
+        ALTER TABLE password_reset_tokens
+          ADD CONSTRAINT password_reset_tokens_user_id_unique UNIQUE (user_id);
+      END IF;
+    END $$;
+
+    CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user       ON password_reset_tokens (user_id);
+    CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token_hash ON password_reset_tokens (token_hash);
+
     -- Telling Forward enums (must mirror lib/db/src/schema/telling-forward.ts)
     DO $$ BEGIN
       CREATE TYPE story_path_state AS ENUM
@@ -140,6 +195,45 @@ export async function ensureSchema(): Promise<void> {
           ALTER COLUMN review_comment_id TYPE BIGINT;
       END IF;
     END $$;
+
+    -- Migration: add storyworlds.seed (nullable) introduced for Reader discovery cards.
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name  = 'storyworlds'
+          AND column_name = 'seed'
+      ) THEN
+        ALTER TABLE storyworlds ADD COLUMN seed TEXT;
+      END IF;
+    END $$;
+
+    -- Migration: add contributions.agent_assisted (boolean, default false) for AI-assistance disclosure.
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name  = 'contributions'
+          AND column_name = 'agent_assisted'
+      ) THEN
+        ALTER TABLE contributions ADD COLUMN agent_assisted BOOLEAN NOT NULL DEFAULT FALSE;
+      END IF;
+    END $$;
+
+    -- Migration: add account-level login lockout columns to users.
+    -- These survive server restarts (unlike the old in-memory express-rate-limit
+    -- store) and are shared across all server instances.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS
+      failed_login_attempts INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS
+      locked_until TIMESTAMPTZ;
+
+    -- Per-user transcription rate-limit tracking.
+    -- Replaces the original in-memory Map in transcribe.ts so that counters
+    -- survive restarts and are consistent across instances.
+    CREATE TABLE IF NOT EXISTS transcribe_usage (
+      user_id  INTEGER     NOT NULL PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      count    INTEGER     NOT NULL DEFAULT 0,
+      reset_at TIMESTAMPTZ NOT NULL
+    );
 
     CREATE INDEX IF NOT EXISTS idx_story_paths_storyworld ON story_paths (storyworld_id);
     CREATE INDEX IF NOT EXISTS idx_contributions_path ON contributions (path_id);

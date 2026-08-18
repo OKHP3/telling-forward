@@ -292,7 +292,7 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
     res.json({ ok: true, storyworld_id, owner, repo, summary });
   } catch (err) {
     logger.error({ err, storyworldId: storyworld_id }, "Reconciliation error");
-    res.status(500).json({ error: "Reconciliation failed", detail: String(err) });
+    res.status(500).json({ error: "Reconciliation failed" });
   }
 });
 

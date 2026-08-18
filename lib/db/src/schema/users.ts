@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, boolean, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -7,6 +7,13 @@ export const usersTable = pgTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   displayName: text("display_name").notNull(),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  // Account-level brute-force lockout — durable across restarts and shared
+  // across all server instances. Incremented on each wrong-password attempt;
+  // cleared on a successful login. lockedUntil is set once failedLoginAttempts
+  // reaches LOCKOUT_THRESHOLD and acts as the authoritative lock guard.
+  failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

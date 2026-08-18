@@ -85,6 +85,59 @@ export interface CreatePullRequestReviewParams {
   event: "COMMENT" | "REQUEST_CHANGES";
 }
 
+// ---------------------------------------------------------------------------
+// Issues (Capsule data layer — ADR-0001 §Capsules)
+// ---------------------------------------------------------------------------
+
+export interface GitHubIssue {
+  number: number;
+  title: string;
+  body: string | null;
+  state: "open" | "closed";
+  /** Raw label names only — callers extract type/role from the `capsule:*` / `role:*` prefix */
+  labels: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListIssuesParams {
+  owner: string;
+  repo: string;
+  /** Filter by label name(s) — all must be present */
+  labels?: string[];
+  state?: "open" | "closed" | "all";
+}
+
+export interface CreateIssueParams {
+  owner: string;
+  repo: string;
+  title: string;
+  body?: string;
+  labels?: string[];
+}
+
+export interface UpdateIssueParams {
+  owner: string;
+  repo: string;
+  issueNumber: number;
+  title?: string;
+  body?: string;
+  /** Full replacement label list — omit to leave labels unchanged */
+  labels?: string[];
+}
+
+export interface CloseIssueParams {
+  owner: string;
+  repo: string;
+  issueNumber: number;
+}
+
+export interface EnsureLabelsEntry {
+  name: string;
+  color: string; // 6-hex without '#'
+  description?: string;
+}
+
 export interface GitHubClientInterface {
   listBranches(owner: string, repo: string): Promise<GitHubBranch[]>;
   listCommitsForBranch(
@@ -127,6 +180,20 @@ export interface GitHubClientInterface {
   createPullRequestReview(
     params: CreatePullRequestReviewParams,
   ): Promise<number>;
+  // Issues
+  listIssues(params: ListIssuesParams): Promise<GitHubIssue[]>;
+  createIssue(params: CreateIssueParams): Promise<GitHubIssue>;
+  updateIssue(params: UpdateIssueParams): Promise<GitHubIssue>;
+  closeIssue(params: CloseIssueParams): Promise<void>;
+  /**
+   * Idempotently ensure the given labels exist on the repo.
+   * Creates missing labels; silently skips ones that already exist.
+   */
+  ensureLabels(
+    owner: string,
+    repo: string,
+    labels: EnsureLabelsEntry[],
+  ): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -313,6 +380,119 @@ class OctokitGitHubClient implements GitHubClientInterface {
       event,
     });
     return data.id;
+  }
+
+  // ── Issues ──────────────────────────────────────────────────────────────
+
+  async listIssues(params: ListIssuesParams): Promise<GitHubIssue[]> {
+    const { owner, repo, labels, state = "open" } = params;
+    const results: GitHubIssue[] = [];
+    for await (const page of this.octokit.paginate.iterator(
+      this.octokit.rest.issues.listForRepo,
+      {
+        owner,
+        repo,
+        state,
+        labels: labels?.join(","),
+        per_page: 100,
+      },
+    )) {
+      for (const issue of page.data) {
+        // Skip pull requests (GitHub includes them in issues API)
+        if (issue.pull_request) continue;
+        results.push({
+          number: issue.number,
+          title: issue.title,
+          body: issue.body ?? null,
+          state: issue.state === "open" ? "open" : "closed",
+          labels: issue.labels.map((l) =>
+            typeof l === "string" ? l : (l.name ?? ""),
+          ),
+          createdAt: issue.created_at,
+          updatedAt: issue.updated_at,
+        });
+      }
+    }
+    return results;
+  }
+
+  async createIssue(params: CreateIssueParams): Promise<GitHubIssue> {
+    const { owner, repo, title, body, labels } = params;
+    const { data } = await this.octokit.rest.issues.create({
+      owner,
+      repo,
+      title,
+      body,
+      labels,
+    });
+    return {
+      number: data.number,
+      title: data.title,
+      body: data.body ?? null,
+      state: data.state === "open" ? "open" : "closed",
+      labels: data.labels.map((l) =>
+        typeof l === "string" ? l : (l.name ?? ""),
+      ),
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+  }
+
+  async updateIssue(params: UpdateIssueParams): Promise<GitHubIssue> {
+    const { owner, repo, issueNumber, title, body, labels } = params;
+    const { data } = await this.octokit.rest.issues.update({
+      owner,
+      repo,
+      issue_number: issueNumber,
+      ...(title !== undefined && { title }),
+      ...(body !== undefined && { body }),
+      ...(labels !== undefined && { labels }),
+    });
+    return {
+      number: data.number,
+      title: data.title,
+      body: data.body ?? null,
+      state: data.state === "open" ? "open" : "closed",
+      labels: data.labels.map((l) =>
+        typeof l === "string" ? l : (l.name ?? ""),
+      ),
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+  }
+
+  async closeIssue(params: CloseIssueParams): Promise<void> {
+    const { owner, repo, issueNumber } = params;
+    await this.octokit.rest.issues.update({
+      owner,
+      repo,
+      issue_number: issueNumber,
+      state: "closed",
+    });
+  }
+
+  async ensureLabels(
+    owner: string,
+    repo: string,
+    labels: EnsureLabelsEntry[],
+  ): Promise<void> {
+    await Promise.all(
+      labels.map(async ({ name, color, description }) => {
+        try {
+          await this.octokit.rest.issues.createLabel({
+            owner,
+            repo,
+            name,
+            color,
+            description,
+          });
+        } catch (err: unknown) {
+          // 422 = label already exists — safe to ignore
+          const status = (err as { status?: number }).status;
+          if (status !== 422) throw err;
+        }
+      }),
+    );
   }
 
   /**

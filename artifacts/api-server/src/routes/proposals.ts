@@ -277,10 +277,7 @@ router.post(
           { err: ghErr, prNumber: proposal.prNumber },
           "GitHub merge failed",
         );
-        res.status(502).json({
-          error: "GitHub merge failed",
-          detail: String(ghErr),
-        });
+        res.status(502).json({ error: "GitHub merge failed" });
         return;
       }
 
@@ -488,10 +485,7 @@ router.post(
           { err: ghErr, prNumber: proposal.prNumber },
           "GitHub review comment failed",
         );
-        res.status(502).json({
-          error: "GitHub review comment failed",
-          detail: String(ghErr),
-        });
+        res.status(502).json({ error: "GitHub review comment failed" });
         return;
       }
 

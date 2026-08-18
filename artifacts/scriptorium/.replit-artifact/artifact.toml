@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/scriptorium/"
+title = "Telling Forward Scriptorium"
+description = "A dark-themed alternative reader and story browser for the Telling Forward platform. Uses a forge-like manuscript aesthetic — deep inkwell backgrounds, amber-gold accents, slab serif display type, monospace chrome — drawn from the OverKill Hill P³ brand palette. Readers can browse storyworlds, explore story paths, and read contributions. No login required."
+version = "1.0.0"
+id = "artifacts/scriptorium"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/scriptorium/" ]
+localPort = 22339
+
+[services.development]
+run = "pnpm --filter @workspace/scriptorium run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/scriptorium", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/scriptorium/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22339"
+BASE_PATH = "/scriptorium/"

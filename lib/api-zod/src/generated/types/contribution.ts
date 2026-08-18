@@ -14,5 +14,11 @@ export interface Contribution {
   contributorId?: number | null;
   title: string;
   summary?: string | null;
+  /** True if this scene was drafted with AI assistance. Always visible in the Reader App — never hover-only.
+   */
+  agentAssisted: boolean;
+  /** Display name of the contributor who authored this scene, resolved from the contributors table. Null when no contributor is recorded or the contributor has no display name.
+   */
+  contributorDisplayName?: string | null;
   createdAt: Date;
 }

@@ -13,6 +13,9 @@ export interface Storyworld {
   title: string;
   stewardId?: number | null;
   canonBranchRef: string;
+  /** A short seed sentence surfaced on the Reader discovery page. Null when the world creator has not set one yet.
+   */
+  seed?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

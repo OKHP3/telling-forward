@@ -93,6 +93,12 @@ export const ListStoryworldsResponseItem = zod.object({
   title: zod.string(),
   stewardId: zod.number().nullish(),
   canonBranchRef: zod.string(),
+  seed: zod
+    .string()
+    .nullish()
+    .describe(
+      "A short seed sentence surfaced on the Reader discovery page. Null when the world creator has not set one yet.\n",
+    ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -112,6 +118,12 @@ export const GetStoryworldResponse = zod.object({
   title: zod.string(),
   stewardId: zod.number().nullish(),
   canonBranchRef: zod.string(),
+  seed: zod
+    .string()
+    .nullish()
+    .describe(
+      "A short seed sentence surfaced on the Reader discovery page. Null when the world creator has not set one yet.\n",
+    ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -151,11 +163,242 @@ export const ListContributionsResponseItem = zod.object({
   contributorId: zod.number().nullish(),
   title: zod.string(),
   summary: zod.string().nullish(),
+  agentAssisted: zod
+    .boolean()
+    .describe(
+      "True if this scene was drafted with AI assistance. Always visible in the Reader App — never hover-only.\n",
+    ),
+  contributorDisplayName: zod
+    .string()
+    .nullish()
+    .describe(
+      "Display name of the contributor who authored this scene, resolved from the contributors table. Null when no contributor is recorded or the contributor has no display name.\n",
+    ),
   createdAt: zod.coerce.date(),
 });
 export const ListContributionsResponse = zod.array(
   ListContributionsResponseItem,
 );
+
+/**
+ * Returns open capsules (GitHub Issues tagged capsule:*) for the storyworld. Requires authentication.
+
+ * @summary List concept capsules for a storyworld
+ */
+export const ListCapsulesParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const listCapsulesResponseMaturityMin = 0;
+export const listCapsulesResponseMaturityMax = 10;
+
+export const ListCapsulesResponseItem = zod
+  .object({
+    id: zod
+      .number()
+      .describe(
+        "GitHub Issue number — the canonical identity of this capsule.",
+      ),
+    storyworldId: zod.number(),
+    title: zod.string().describe("Capsule name as entered by the author."),
+    type: zod.enum(["character", "arc", "event"]),
+    roleTag: zod
+      .string()
+      .nullish()
+      .describe(
+        "Author-defined role label (e.g. protagonist, antagonist, mentor). null if no role has been assigned.\n",
+      ),
+    epiphanyNote: zod
+      .string()
+      .nullish()
+      .describe("Freeform depth note — the GitHub Issue body."),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+    maturity: zod
+      .number()
+      .min(listCapsulesResponseMaturityMin)
+      .max(listCapsulesResponseMaturityMax)
+      .nullish()
+      .describe(
+        "Author-set maturity rung (0–10, Rung Ladder). Stored as a `rung:N` GitHub label. Does not gate any action — observation only.\n",
+      ),
+  })
+  .describe(
+    "A concept capsule — an atomic story idea (character, arc, or planned event) backed by a GitHub Issue in the storyworld's repo.\n",
+  );
+export const ListCapsulesResponse = zod.array(ListCapsulesResponseItem);
+
+/**
+ * Creates a GitHub Issue in the storyworld's repo and returns the mapped capsule. Requires authentication and steward role.
+
+ * @summary Create a concept capsule
+ */
+export const CreateCapsuleParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const CreateCapsuleBody = zod.object({
+  title: zod.string().min(1).describe("Capsule name."),
+  type: zod.enum(["character", "arc", "event"]),
+  roleTag: zod
+    .string()
+    .optional()
+    .describe(
+      "Author-defined role label (e.g. protagonist, antagonist). Stored as a `role:<value>` GitHub label.\n",
+    ),
+  epiphanyNote: zod
+    .string()
+    .optional()
+    .describe("Freeform detail — the GitHub Issue body."),
+});
+
+/**
+ * Updates the GitHub Issue backing the capsule. Requires authentication and steward role.
+
+ * @summary Update a concept capsule
+ */
+export const UpdateCapsuleParams = zod.object({
+  id: zod.coerce.number(),
+  capsuleId: zod.coerce.number().describe("GitHub Issue number"),
+});
+
+export const updateCapsuleBodyMaturityMin = 0;
+export const updateCapsuleBodyMaturityMax = 10;
+
+export const UpdateCapsuleBody = zod
+  .object({
+    title: zod.string().min(1).optional(),
+    roleTag: zod.string().nullish(),
+    epiphanyNote: zod.string().nullish(),
+    maturity: zod
+      .number()
+      .min(updateCapsuleBodyMaturityMin)
+      .max(updateCapsuleBodyMaturityMax)
+      .nullish()
+      .describe("Author-set maturity rung (0–10). Pass null to clear."),
+  })
+  .describe("Partial update — only provided fields are changed.");
+
+export const updateCapsuleResponseMaturityMin = 0;
+export const updateCapsuleResponseMaturityMax = 10;
+
+export const UpdateCapsuleResponse = zod
+  .object({
+    id: zod
+      .number()
+      .describe(
+        "GitHub Issue number — the canonical identity of this capsule.",
+      ),
+    storyworldId: zod.number(),
+    title: zod.string().describe("Capsule name as entered by the author."),
+    type: zod.enum(["character", "arc", "event"]),
+    roleTag: zod
+      .string()
+      .nullish()
+      .describe(
+        "Author-defined role label (e.g. protagonist, antagonist, mentor). null if no role has been assigned.\n",
+      ),
+    epiphanyNote: zod
+      .string()
+      .nullish()
+      .describe("Freeform depth note — the GitHub Issue body."),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+    maturity: zod
+      .number()
+      .min(updateCapsuleResponseMaturityMin)
+      .max(updateCapsuleResponseMaturityMax)
+      .nullish()
+      .describe(
+        "Author-set maturity rung (0–10, Rung Ladder). Stored as a `rung:N` GitHub label. Does not gate any action — observation only.\n",
+      ),
+  })
+  .describe(
+    "A concept capsule — an atomic story idea (character, arc, or planned event) backed by a GitHub Issue in the storyworld's repo.\n",
+  );
+
+/**
+ * Closes the GitHub Issue backing the capsule (soft delete — issue remains on GitHub). Requires authentication and steward role.
+
+ * @summary Archive a concept capsule
+ */
+export const DeleteCapsuleParams = zod.object({
+  id: zod.coerce.number(),
+  capsuleId: zod.coerce.number().describe("GitHub Issue number"),
+});
+
+/**
+ * Promotes a capsule to the Scene Writer by streaming an AI-generated opening scene via Server-Sent Events. The response is `text/event-stream`; each event carries `{ content }` chunks and a final `{ done: true }` event. Use native fetch + ReadableStream on the client — Orval does not generate hooks for streaming responses. Requires authentication and steward role.
+
+ * @summary Generate an agent-assisted scene draft from a capsule (streaming SSE)
+ */
+export const PromoteCapsuleParams = zod.object({
+  id: zod.coerce.number(),
+  capsuleId: zod.coerce
+    .number()
+    .describe("GitHub Issue number of the capsule to promote."),
+});
+
+/**
+ * Takes an accepted scene (provided as `sourceText`) and uses the AI layer to produce a deliberately discontinuous raw-material capsule — not a summary, a divergent seed. The returned proposal is not created on the board until the author explicitly accepts it. Requires authentication and steward role.
+
+ * @summary Generate a divergent variant capsule from an accepted scene (prose-level inversion)
+ */
+export const DisruptCapsuleParams = zod.object({
+  id: zod.coerce.number(),
+  capsuleId: zod.coerce
+    .number()
+    .describe("GitHub Issue number of the capsule being disrupted."),
+});
+
+export const DisruptCapsuleBody = zod
+  .object({
+    sourceText: zod
+      .string()
+      .min(1)
+      .describe(
+        "The accepted scene text to disrupt. Truncated server-side beyond 3 000 chars.",
+      ),
+  })
+  .describe(
+    "Source material for the Disrupt action — the accepted scene prose to diverge from.\n",
+  );
+
+export const DisruptCapsuleResponse = zod
+  .object({
+    title: zod.string().describe("Suggested capsule name."),
+    type: zod.enum(["character", "arc", "event"]),
+    epiphanyNote: zod
+      .string()
+      .describe("AI-generated insight note seeding the new capsule."),
+  })
+  .describe(
+    "A proposed new capsule generated by Disrupt or Invert — not yet on the board. The author must explicitly accept it to create it.\n",
+  );
+
+/**
+ * Produces a new capsule representing the symbolic shadow of the source capsule — not its antonym, but its structural mirror with reversed purpose or charge. The returned proposal is not created on the board until the author explicitly accepts it. Requires authentication and steward role.
+
+ * @summary Generate the symbolic inversion of a capsule (concept-level inversion)
+ */
+export const InvertCapsuleParams = zod.object({
+  id: zod.coerce.number(),
+  capsuleId: zod.coerce
+    .number()
+    .describe("GitHub Issue number of the capsule to invert."),
+});
+
+export const InvertCapsuleResponse = zod
+  .object({
+    title: zod.string().describe("Suggested capsule name."),
+    type: zod.enum(["character", "arc", "event"]),
+    epiphanyNote: zod
+      .string()
+      .describe("AI-generated insight note seeding the new capsule."),
+  })
+  .describe(
+    "A proposed new capsule generated by Disrupt or Invert — not yet on the board. The author must explicitly accept it to create it.\n",
+  );
 
 /**
  * Returns proposals for a storyworld ordered by submission date descending. Requires authentication and steward role for the storyworld.

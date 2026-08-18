@@ -63,10 +63,14 @@ app.post(
   githubWebhookHandler,
 );
 
-// 20 MB covers the largest base64-encoded audio blobs the transcription
-// route accepts (~15 MB audio → ~20 MB base64). All other API payloads are
-// far smaller; the per-route guard in transcribe.ts enforces the audio cap.
-app.use(express.json({ limit: "20mb" }));
+// Path-conditional body parser — exactly one JSON parse per request.
+// /api/transcribe needs 20 MB for base64-encoded audio blobs (~15 MB audio).
+// Every other endpoint is capped at 64 KB; large payloads are rejected before
+// they are buffered, preventing memory-exhaustion via oversized request bodies.
+app.use((req, res, next) => {
+  const limit = req.path === "/api/transcribe" ? "20mb" : "64kb";
+  express.json({ limit })(req, res, next);
+});
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
