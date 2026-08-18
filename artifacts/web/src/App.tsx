@@ -18,6 +18,8 @@ import { PathReader } from '@/pages/path-reader';
 import { ProposalView } from '@/pages/proposal-view';
 import { Submissions } from '@/pages/submissions';
 import { StewardDashboard } from '@/pages/steward-dashboard';
+import { ForgotPassword } from '@/pages/forgot-password';
+import { ResetPassword } from '@/pages/reset-password';
 
 const queryClient = new QueryClient();
 
@@ -27,6 +29,8 @@ function Router() {
       <RoutedErrorBoundary>
         <Switch>
           <Route path="/" component={Home} />
+          <Route path="/forgot-password" component={ForgotPassword} />
+          <Route path="/reset-password" component={ResetPassword} />
           <Route path="/submissions" component={Submissions} />
           <Route path="/worlds/:worldId/steward" component={StewardDashboard} />
           <Route path="/worlds/:worldId" component={WorldDetail} />

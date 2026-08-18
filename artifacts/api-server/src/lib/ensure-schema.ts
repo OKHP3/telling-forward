@@ -44,6 +44,46 @@ export async function ensureSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_email_verifications_user ON email_verifications (user_id);
     CREATE INDEX IF NOT EXISTS idx_email_verifications_token ON email_verifications (token);
 
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id         SERIAL      PRIMARY KEY,
+      user_id    INTEGER     NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT        NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    -- Migrations for existing tables created with the old schema (plaintext token,
+    -- no UNIQUE on user_id). Must run BEFORE the CREATE INDEX statements below so
+    -- the column exists when the index is built.
+    DO $$
+    BEGIN
+      -- Rename token → token_hash if the old column is present.
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'password_reset_tokens' AND column_name = 'token'
+      ) THEN
+        ALTER TABLE password_reset_tokens RENAME COLUMN token TO token_hash;
+      END IF;
+
+      -- Add UNIQUE constraint on user_id if not already present.
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = 'password_reset_tokens'::regclass
+          AND contype = 'u'
+          AND conkey = ARRAY(
+            SELECT attnum FROM pg_attribute
+            WHERE attrelid = 'password_reset_tokens'::regclass
+              AND attname = 'user_id'
+          )
+      ) THEN
+        ALTER TABLE password_reset_tokens
+          ADD CONSTRAINT password_reset_tokens_user_id_unique UNIQUE (user_id);
+      END IF;
+    END $$;
+
+    CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user       ON password_reset_tokens (user_id);
+    CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token_hash ON password_reset_tokens (token_hash);
+
     -- Telling Forward enums (must mirror lib/db/src/schema/telling-forward.ts)
     DO $$ BEGIN
       CREATE TYPE story_path_state AS ENUM

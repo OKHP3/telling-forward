@@ -1,8 +1,8 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import { randomBytes } from "crypto";
+import { randomBytes, createHash } from "crypto";
 import rateLimit from "express-rate-limit";
-import { db, usersTable, userGithubLinksTable, emailVerificationsTable } from "@workspace/db";
+import { db, usersTable, userGithubLinksTable, emailVerificationsTable, passwordResetTokensTable } from "@workspace/db";
 import { eq, and, gt } from "drizzle-orm";
 import {
   RegisterBody,
@@ -11,7 +11,7 @@ import {
   GetMeResponse,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
-import { sendVerificationEmail, isEmailConfigured } from "../lib/email";
+import { sendVerificationEmail, sendPasswordResetEmail, isEmailConfigured } from "../lib/email";
 
 const router = Router();
 
@@ -57,6 +57,22 @@ const DUMMY_HASH =
 /** Generate a URL-safe 32-byte random verification token (64 hex chars). */
 function generateVerificationToken(): string {
   return randomBytes(32).toString("hex");
+}
+
+/**
+ * Generate a password reset token pair.
+ * @returns rawToken  — sent to the user in the email URL (never stored)
+ * @returns tokenHash — SHA-256 digest stored in the database
+ */
+function generateResetToken(): { rawToken: string; tokenHash: string } {
+  const rawToken = randomBytes(32).toString("hex");
+  const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+  return { rawToken, tokenHash };
+}
+
+/** Hash an incoming raw reset token for safe DB lookup. */
+function hashResetToken(rawToken: string): string {
+  return createHash("sha256").update(rawToken).digest("hex");
 }
 
 /** POST /api/auth/register — create a new platform account */
@@ -326,6 +342,146 @@ router.post("/resend-verification", resendLimiter, requireAuth, async (req, res)
   }
 
   res.json({ ok: true, message: "Verification email sent" });
+});
+
+// ---------------------------------------------------------------------------
+// Password reset
+// ---------------------------------------------------------------------------
+
+/** 5 forgot-password requests per IP per hour — limits token generation rate */
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Too many password reset requests — please try again later" },
+});
+
+/** 5 reset attempts per IP per hour — limits brute-force on the token */
+const resetPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Too many password reset attempts — please try again later" },
+});
+
+/**
+ * POST /api/auth/forgot-password
+ * Accepts an email address, creates a 1-hour reset token, and sends a
+ * password reset link.  Always returns 200 regardless of whether the email
+ * exists in the database — this prevents email-enumeration attacks.
+ */
+router.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
+  // Normalise and basic-validate the email without revealing account existence.
+  const rawEmail = typeof req.body?.email === "string" ? req.body.email.trim() : "";
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail);
+  if (!isValidEmail) {
+    // Still 200 — callers must not be able to enumerate valid emails.
+    res.json({ ok: true, message: "If that email is registered you will receive a reset link shortly" });
+    return;
+  }
+  const email = rawEmail;
+
+  // Always respond 200 before doing any work that could leak timing info
+  // about whether the account exists.
+  res.json({ ok: true, message: "If that email is registered you will receive a reset link shortly" });
+
+  // --- background: look up user, create token, send email ---
+  try {
+    const [user] = await db
+      .select({ id: usersTable.id, email: usersTable.email })
+      .from(usersTable)
+      .where(eq(usersTable.email, email.toLowerCase()))
+      .limit(1);
+
+    if (!user) return; // no account — silently done
+
+    if (process.env["NODE_ENV"] === "production" && !isEmailConfigured()) {
+      req.log.error({ email }, "Forgot-password: email service not configured");
+      return;
+    }
+
+    // Generate a token pair: raw token for the email URL, hash for the DB.
+    // The raw token is never stored — a DB read cannot yield a usable credential.
+    const { rawToken, tokenHash } = generateResetToken();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    // Atomically replace any existing token for this user via an upsert on the
+    // UNIQUE (user_id) constraint. Two concurrent forgot-password requests will
+    // serialize at the DB level; only one token is ever live per account.
+    await db
+      .insert(passwordResetTokensTable)
+      .values({ userId: user.id, tokenHash, expiresAt })
+      .onConflictDoUpdate({
+        target: passwordResetTokensTable.userId,
+        set: { tokenHash, expiresAt, createdAt: new Date() },
+      });
+
+    await sendPasswordResetEmail(user.email, rawToken);
+  } catch (err) {
+    req.log.error({ err }, "Forgot-password background processing failed");
+  }
+});
+
+/**
+ * POST /api/auth/reset-password
+ * Validates a reset token and replaces the user's password.
+ * The token is single-use and deleted immediately on success.
+ * Returns 400 for expired/invalid tokens; does not reveal which.
+ */
+router.post("/reset-password", resetPasswordLimiter, async (req, res) => {
+  const rawToken = typeof req.body?.token === "string" ? req.body.token.trim() : "";
+  const newPassword = typeof req.body?.newPassword === "string" ? req.body.newPassword : "";
+  if (!rawToken) {
+    res.status(400).json({ error: "token is required" });
+    return;
+  }
+  if (newPassword.length < 8) {
+    res.status(400).json({ error: "Password must be at least 8 characters" });
+    return;
+  }
+
+  // Hash the incoming raw token before any DB access — the stored value is
+  // always the digest, never the credential itself.
+  const tokenHash = hashResetToken(rawToken);
+  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+  // Atomically consume the token and update the password inside one
+  // transaction. The DELETE…RETURNING is the critical section: only one
+  // concurrent request can successfully delete a given token_hash row.
+  // The second concurrent request gets an empty .returning() result and
+  // returns 400 without touching the password — closing the TOCTOU race.
+  let resetUserId: number | undefined;
+
+  await db.transaction(async (tx) => {
+    const [consumed] = await tx
+      .delete(passwordResetTokensTable)
+      .where(
+        and(
+          eq(passwordResetTokensTable.tokenHash, tokenHash),
+          gt(passwordResetTokensTable.expiresAt, new Date()),
+        ),
+      )
+      .returning({ userId: passwordResetTokensTable.userId });
+
+    if (!consumed) return; // invalid or expired — nothing to do
+
+    resetUserId = consumed.userId;
+
+    await tx
+      .update(usersTable)
+      .set({ passwordHash })
+      .where(eq(usersTable.id, consumed.userId));
+  });
+
+  if (!resetUserId) {
+    res.status(400).json({ error: "Reset link is invalid or has expired" });
+    return;
+  }
+
+  req.log.info({ userId: resetUserId }, "Password reset completed");
+  res.json({ ok: true, message: "Password updated successfully" });
 });
 
 // ---------------------------------------------------------------------------

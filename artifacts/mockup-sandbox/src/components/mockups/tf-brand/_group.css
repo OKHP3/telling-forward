@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ─── Telling Forward — OKH-inspired brand token layer ─────────────────── */
+/* Borrowed from OverKill Hill P³ forge palette; adapted for literary craft. */
+
+:root {
+  /* OKH foundation palette */
+  --okh-espresso:    #2a2320;
+  --okh-teal:        #1c3a34;
+  --okh-orange:      #c46a2c;
+  --okh-amber:       #e6a03c;
+  --okh-rust:        #5b3a27;
+  --okh-ochre:       #a06e28;
+  --okh-paper:       #f6f2ee;
+  --okh-paper-deep:  #ede8e2;
+  --okh-gray:        #6b7280;
+
+  /* Dark surface tokens (shared with dark variants) */
+  --tf-dark-bg:      #0d1117;
+  --tf-surface:      #111827;
+  --tf-surface-soft: #181f26;
+  --tf-fg:           #e5e7eb;
+  --tf-muted:        #9ca3af;
+  --tf-border:       rgba(249,250,251,0.08);
+
+  /* Typography */
+  --font-display: 'Alfa Slab One', sans-serif;
+  --font-body:    'DM Sans', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+
+  /* Motion */
+  --t-fast:   150ms ease;
+  --t-normal: 300ms ease;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }

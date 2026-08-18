@@ -98,3 +98,67 @@ export async function sendVerificationEmail(
 
   logger.info({ email }, "Verification email sent");
 }
+
+/**
+ * Send a password reset link to an existing user.
+ *
+ * Follows the same SMTP / dev-fallback logic as sendVerificationEmail.
+ * In production with no SMTP configured this throws; callers must guard with
+ * isEmailConfigured() before creating the reset token.
+ */
+export async function sendPasswordResetEmail(
+  email: string,
+  token: string,
+): Promise<void> {
+  const frontendBase =
+    process.env["FRONTEND_URL"] ??
+    process.env["API_BASE_URL"] ??
+    `http://localhost:${process.env["PORT"] ?? 8080}`;
+  // The reset link points to a frontend page that renders the "choose new
+  // password" form and submits it to POST /api/auth/reset-password.
+  const resetUrl = `${frontendBase}/reset-password?token=${token}`;
+
+  if (!isEmailConfigured()) {
+    if (IS_PRODUCTION) {
+      throw new Error(
+        "Email service not configured — set SMTP_HOST, SMTP_USER, and SMTP_PASS",
+      );
+    }
+    // Development only: print the link to stdout.
+    console.log(`\n🔑  Password reset link for ${email}:\n   ${resetUrl}\n`);
+    return;
+  }
+
+  const transport = createTransport();
+  await transport.sendMail({
+    from: SMTP_FROM,
+    to: email,
+    subject: "Reset your Telling Forward password",
+    text: [
+      "You requested a password reset for your Telling Forward account.",
+      "",
+      "Click the link below to choose a new password:",
+      resetUrl,
+      "",
+      "This link expires in 1 hour.",
+      "If you did not request a password reset, you can safely ignore this email.",
+      "Your password will not change until you follow the link above.",
+    ].join("\n"),
+    html: `
+      <p>You requested a password reset for your <strong>Telling Forward</strong> account.</p>
+      <p>Click the button below to choose a new password:</p>
+      <p>
+        <a href="${resetUrl}"
+           style="display:inline-block;padding:10px 20px;background:#1a1a2e;color:#fff;border-radius:4px;text-decoration:none">
+          Reset password
+        </a>
+      </p>
+      <p>Or copy this link into your browser:<br>
+        <a href="${resetUrl}">${resetUrl}</a>
+      </p>
+      <p><small>This link expires in 1 hour. If you did not request a password reset, you can safely ignore this email — your password will not change.</small></p>
+    `,
+  });
+
+  logger.info({ email }, "Password reset email sent");
+}
