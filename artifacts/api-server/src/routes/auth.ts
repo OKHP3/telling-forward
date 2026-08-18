@@ -1,5 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import rateLimit from "express-rate-limit";
 import { db, usersTable, userGithubLinksTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import {
@@ -11,6 +12,32 @@ import {
 import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
+
+// ---------------------------------------------------------------------------
+// Rate limiters
+//
+// Both limiters use in-memory storage (suitable for a single-process server
+// or prototype; swap to a Redis store when horizontally scaling).
+// The `Retry-After` header is set automatically by express-rate-limit.
+// ---------------------------------------------------------------------------
+
+/** 10 login attempts per IP per 15 minutes */
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: "draft-7", // RateLimit-* + Retry-After headers (RFC 9110)
+  legacyHeaders: false,
+  message: { error: "Too many login attempts — please try again in 15 minutes" },
+});
+
+/** 5 registration attempts per IP per hour */
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Too many registration attempts — please try again later" },
+});
 
 const BCRYPT_ROUNDS = 12;
 
@@ -26,7 +53,7 @@ const DUMMY_HASH =
   "$2b$12$SMCac2JC2kOpV3ghfapoQOo6utxALm8iJ3UHNVS47spex33LMiduS";
 
 /** POST /api/auth/register — create a new platform account */
-router.post("/register", async (req, res) => {
+router.post("/register", registerLimiter, async (req, res) => {
   const parsed = RegisterBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
@@ -62,7 +89,7 @@ router.post("/register", async (req, res) => {
 });
 
 /** POST /api/auth/login — authenticate and create a session */
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
   const parsed = LoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
