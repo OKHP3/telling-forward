@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
+import type { PublicUser } from '@workspace/api-client-react';
 
-export function SystemHeader() {
+interface SystemHeaderProps {
+  user: PublicUser | null;
+  onSignIn: () => void;
+  onSignOut: () => void;
+}
+
+export function SystemHeader({ user, onSignIn, onSignOut }: SystemHeaderProps) {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -29,6 +36,25 @@ export function SystemHeader() {
           <span className="text-[#34d399] pb-[2px]">ONLINE</span>
         </div>
         <span className="text-[#6b7280] pb-[2px]">{timeString}</span>
+        <span className="text-muted-foreground/30 text-sm pb-[2px]">│</span>
+        {user ? (
+          <div className="flex items-center gap-3">
+            <span className="text-muted-foreground pb-[2px] hidden sm:block">{user.displayName}</span>
+            <button
+              onClick={onSignOut}
+              className="text-[#e6a03c] hover:opacity-70 pb-[2px] transition-opacity font-mono tracking-wider"
+            >
+              [EXIT]
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={onSignIn}
+            className="text-[#e6a03c] hover:opacity-70 pb-[2px] transition-opacity font-mono tracking-wider"
+          >
+            [AUTH]
+          </button>
+        )}
       </div>
     </header>
   );

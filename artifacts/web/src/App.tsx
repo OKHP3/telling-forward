@@ -12,6 +12,7 @@ import {
 } from 'wouter';
 
 import { ThemeProvider } from '@/hooks/use-theme';
+import { AuthProvider } from '@/contexts/auth-context';
 import { AppLayout } from '@/components/layout';
 import { Home } from '@/pages/home';
 import { WorldDetail } from '@/pages/world-detail';
@@ -59,12 +60,14 @@ function App() {
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </TooltipProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

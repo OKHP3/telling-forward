@@ -1,18 +1,15 @@
-import { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
-import { BookOpen, Settings } from "lucide-react";
+import { BookOpen, Settings, LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth-context";
+import { AuthModal } from "@/components/auth-modal";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
-  const { data: meData } = useGetMe({
-    query: {
-      retry: false,
-      queryKey: getGetMeQueryKey(),
-    },
-  });
+  const { user, logout } = useAuth();
+  const [authOpen, setAuthOpen] = useState(false);
 
   return (
     <div className="min-h-[100dvh] flex flex-col font-sans">
@@ -52,17 +49,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </Link>
           </nav>
 
-          {/* Right rail: theme toggle + user/settings */}
+          {/* Right rail */}
           <div className="flex items-center gap-2">
             <ThemeToggle />
 
-            {meData?.user ? (
+            {user ? (
               <div className="flex items-center gap-1.5 ml-1">
                 <div className="text-sm text-muted-foreground flex items-center gap-2" data-testid="text-username">
                   <span className="h-7 w-7 rounded-full bg-secondary flex items-center justify-center text-xs font-semibold text-secondary-foreground shrink-0">
-                    {meData.user.displayName.charAt(0).toUpperCase()}
+                    {user.displayName.charAt(0).toUpperCase()}
                   </span>
-                  <span className="hidden sm:inline-block text-sm">{meData.user.displayName}</span>
+                  <span className="hidden sm:inline-block text-sm">{user.displayName}</span>
                 </div>
                 <Link
                   href="/settings"
@@ -78,11 +75,24 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 >
                   <Settings className="h-4 w-4" />
                 </Link>
+                <button
+                  onClick={() => logout()}
+                  aria-label="Sign out"
+                  title="Sign out"
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
+                  data-testid="button-logout"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
               </div>
             ) : (
-              <span className="text-sm text-muted-foreground ml-1" data-testid="text-guest">
-                Guest Reader
-              </span>
+              <button
+                onClick={() => setAuthOpen(true)}
+                className="ml-1 px-3 py-1.5 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+                data-testid="button-sign-in"
+              >
+                Sign in
+              </button>
             )}
           </div>
         </div>
@@ -101,6 +111,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <p className="italic font-serif">A quiet place for stories to grow.</p>
         </div>
       </footer>
+
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 }

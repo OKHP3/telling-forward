@@ -1,8 +1,13 @@
+import { useState } from 'react';
 import { Link } from 'wouter';
+import { useAuth } from '@/contexts/auth-context';
+import { AuthModal } from '@/components/auth-modal';
 
 export function Masthead() {
+  const { user, logout } = useAuth();
+  const [authOpen, setAuthOpen] = useState(false);
   const currentDate = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  
+
   return (
     <div className="w-full">
       <div className="flex justify-between items-end pb-4 border-b-[3px] border-[#2a2320]">
@@ -17,6 +22,26 @@ export function Masthead() {
         <div className="text-right">
           <div className="font-mono text-sm text-[#2a2320]">Vol. II · No. 7</div>
           <div className="font-mono text-sm text-[#2a2320]">{currentDate}</div>
+          <div className="mt-2">
+            {user ? (
+              <div className="flex items-center justify-end gap-3">
+                <span className="font-mono text-xs text-[#2a2320] opacity-70">{user.displayName}</span>
+                <button
+                  onClick={() => logout()}
+                  className="font-mono text-xs text-[#c46a2c] hover:underline"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setAuthOpen(true)}
+                className="font-mono text-xs text-[#c46a2c] hover:underline"
+              >
+                Sign in
+              </button>
+            )}
+          </div>
         </div>
       </div>
       <div className="border-b-[3px] border-[#c46a2c] mt-1" />
@@ -26,6 +51,8 @@ export function Masthead() {
         <Link href="/" className="hover:text-[#c46a2c]">Paths</Link>
         <Link href="/" className="hover:text-[#c46a2c]">Archive</Link>
       </div>
+
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 }

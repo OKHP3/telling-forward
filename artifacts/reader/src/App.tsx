@@ -11,6 +11,7 @@ import {
   Router as WouterRouter,
 } from 'wouter';
 
+import { AuthProvider } from '@/contexts/auth-context';
 import DiscoveryPage from './pages/discovery';
 import WorldLandingPage from './pages/world';
 import PathReaderPage from './pages/path';
@@ -38,12 +39,14 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+            <Router />
+          </WouterRouter>
+          <Toaster />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

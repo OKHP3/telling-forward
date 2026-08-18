@@ -10,6 +10,7 @@ import {
   useLocation,
   Router as WouterRouter,
 } from 'wouter';
+import { AuthProvider } from '@/contexts/auth-context';
 import { Layout } from './components/layout';
 import Discovery from './pages/discovery';
 import WorldDetail from './pages/world-detail';
@@ -40,12 +41,14 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+            <Router />
+          </WouterRouter>
+          <Toaster />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
