@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { randomBytes, createHash } from "crypto";
 import rateLimit from "express-rate-limit";
 import { db, usersTable, userGithubLinksTable, emailVerificationsTable, passwordResetTokensTable } from "@workspace/db";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, sql } from "drizzle-orm";
 import {
   RegisterBody,
   LoginBody,
@@ -16,14 +16,18 @@ import { sendVerificationEmail, sendPasswordResetEmail, isEmailConfigured } from
 const router = Router();
 
 // ---------------------------------------------------------------------------
-// Rate limiters
+// Rate limiters (IP-based, in-memory — first-line defence only)
 //
-// Both limiters use in-memory storage (suitable for a single-process server
-// or prototype; swap to a Redis store when horizontally scaling).
-// The `Retry-After` header is set automatically by express-rate-limit.
+// These provide a fast early rejection for obviously abusive IPs but are NOT
+// the primary lockout mechanism because the in-memory store resets on server
+// restart and is not shared across instances.
+//
+// The primary lockout for login brute-force is account-level, stored in the
+// database (users.failed_login_attempts / users.locked_until — see below).
+// That counter is durable across restarts and consistent across instances.
 // ---------------------------------------------------------------------------
 
-/** 10 login attempts per IP per 15 minutes */
+/** 10 login attempts per IP per 15 minutes (supplemental to account lockout) */
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -40,6 +44,16 @@ const registerLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many registration attempts — please try again later" },
 });
+
+// ---------------------------------------------------------------------------
+// Account-level login lockout constants
+//
+// After LOCKOUT_THRESHOLD consecutive wrong-password attempts the account is
+// locked for LOCKOUT_DURATION_MS. The lock is stored in the database so it
+// survives server restarts and is shared across all instances.
+// ---------------------------------------------------------------------------
+const LOCKOUT_THRESHOLD = 10;          // failed attempts before locking
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 const BCRYPT_ROUNDS = 12;
 
@@ -159,10 +173,63 @@ router.post("/login", loginLimiter, async (req, res) => {
     return;
   }
 
+  // ---------------------------------------------------------------------------
+  // Account-level lockout check (database-backed, survives restarts)
+  // ---------------------------------------------------------------------------
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    const retryAfterSeconds = Math.ceil(
+      (user.lockedUntil.getTime() - Date.now()) / 1000,
+    );
+    res.set("Retry-After", String(retryAfterSeconds));
+    res.status(429).json({
+      error:
+        "Account temporarily locked due to too many failed sign-in attempts — please try again later",
+    });
+    return;
+  }
+
   const valid = await bcrypt.compare(password, user.passwordHash);
+
   if (!valid) {
+    // Atomically increment the failure counter entirely within the database.
+    // Using sql`failed_login_attempts + 1` means the DB evaluates the
+    // expression against the current committed row value after acquiring a
+    // write lock, so two concurrent wrong-password requests each produce a
+    // distinct increment — no lost-update race.
+    //
+    // The WHERE guard (locked_until IS NULL OR locked_until <= NOW()) is also
+    // evaluated atomically: if a concurrent request just set the lock, this
+    // UPDATE matches 0 rows and we still return 401 (the lock is in effect).
+    await db
+      .update(usersTable)
+      .set({
+        failedLoginAttempts: sql`failed_login_attempts + 1`,
+        lockedUntil: sql`
+          CASE
+            WHEN failed_login_attempts + 1 >= ${LOCKOUT_THRESHOLD}
+            THEN NOW() + (${String(LOCKOUT_DURATION_MS)} || ' milliseconds')::interval
+            ELSE locked_until
+          END`,
+      })
+      .where(
+        and(
+          eq(usersTable.id, user.id),
+          // Do not overwrite an active lock that a concurrent request just set.
+          sql`(locked_until IS NULL OR locked_until <= NOW())`,
+        ),
+      );
+
     res.status(401).json({ error: "Invalid email or password" });
     return;
+  }
+
+  // Successful login — clear any accumulated failure state.
+  // Simple unconditional write; no read-modify-write race here.
+  if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+    await db
+      .update(usersTable)
+      .set({ failedLoginAttempts: 0, lockedUntil: null })
+      .where(eq(usersTable.id, user.id));
   }
 
   req.session.userId = user.id;

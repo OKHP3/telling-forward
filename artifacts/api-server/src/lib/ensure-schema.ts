@@ -218,6 +218,23 @@ export async function ensureSchema(): Promise<void> {
       END IF;
     END $$;
 
+    -- Migration: add account-level login lockout columns to users.
+    -- These survive server restarts (unlike the old in-memory express-rate-limit
+    -- store) and are shared across all server instances.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS
+      failed_login_attempts INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS
+      locked_until TIMESTAMPTZ;
+
+    -- Per-user transcription rate-limit tracking.
+    -- Replaces the original in-memory Map in transcribe.ts so that counters
+    -- survive restarts and are consistent across instances.
+    CREATE TABLE IF NOT EXISTS transcribe_usage (
+      user_id  INTEGER     NOT NULL PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      count    INTEGER     NOT NULL DEFAULT 0,
+      reset_at TIMESTAMPTZ NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_story_paths_storyworld ON story_paths (storyworld_id);
     CREATE INDEX IF NOT EXISTS idx_contributions_path ON contributions (path_id);
     CREATE INDEX IF NOT EXISTS idx_proposals_path ON proposals (path_id);

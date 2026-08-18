@@ -5,38 +5,81 @@
  * Requires an authenticated session and enforces per-user rate limiting.
  * Returns 503 when OPENAI_API_KEY is not set so the mobile client can fall
  * back to manual text entry gracefully.
+ *
+ * Rate limiting is database-backed (transcribe_usage table) using a single
+ * atomic INSERT … ON CONFLICT DO UPDATE statement so:
+ *   - Counters survive server restarts and are consistent across instances.
+ *   - Concurrent requests from the same user are serialized by the row-level
+ *     write lock that Postgres acquires during the upsert, preventing
+ *     lost-update races that could allow more than MAX_RPH requests per hour.
  */
 import { Router, type IRouter } from "express";
 import { TranscribeAudioBody } from "@workspace/api-zod";
 import { requireAuth, requireVerified } from "../middlewares/auth";
+import { pool } from "@workspace/db";
 
 const router: IRouter = Router();
 
-// Per-user rate limit: MAX_RPH requests per rolling hour
-const MAX_RPH = 20;
-const userWindows = new Map<number, { count: number; resetAt: number }>();
+// Per-user rate limit: MAX_RPH requests per rolling hour.
+// Exported for testing.
+export const MAX_RPH = 20;
 
-function transcribeRateLimit(
+/**
+ * Single-statement atomic per-user transcription rate limiter.
+ *
+ * The INSERT … ON CONFLICT DO UPDATE acquires a row-level write lock on the
+ * user's transcribe_usage row before evaluating the CASE expression, so
+ * concurrent requests from the same user (or the same user across scaled
+ * instances) serialize at the database level.
+ *
+ * The CASE logic:
+ *   - Window expired → reset count to 1 and start a new window (allowed).
+ *   - count < MAX_RPH → increment (allowed).
+ *   - count >= MAX_RPH → set count = MAX_RPH + 1 as a sentinel (rejected).
+ *
+ * Reading count > MAX_RPH in RETURNING means the request was rejected without
+ * actually incrementing; MAX_RPH + 1 stays until the window resets, after
+ * which the first request resets it to 1. No separate read is needed.
+ */
+async function transcribeRateLimit(
   req: import("express").Request,
   res: import("express").Response,
   next: import("express").NextFunction,
-): void {
+): Promise<void> {
   const userId = req.session.userId!;
-  const now = Date.now();
-  const win = userWindows.get(userId);
+  const resetAt = new Date(Date.now() + 3_600_000); // 1 hour from now
 
-  if (!win || now >= win.resetAt) {
-    userWindows.set(userId, { count: 1, resetAt: now + 3_600_000 });
-    next();
-    return;
-  }
-  if (win.count >= MAX_RPH) {
+  const { rows } = await pool.query<{ count: number; reset_at: Date }>(
+    `INSERT INTO transcribe_usage (user_id, count, reset_at)
+     VALUES ($1, 1, $2)
+     ON CONFLICT (user_id) DO UPDATE SET
+       count = CASE
+                 WHEN transcribe_usage.reset_at <= NOW()         THEN 1
+                 WHEN transcribe_usage.count    <  $3            THEN transcribe_usage.count + 1
+                 ELSE                                                 $3 + 1
+               END,
+       reset_at = CASE
+                    WHEN transcribe_usage.reset_at <= NOW() THEN $2
+                    ELSE                                         transcribe_usage.reset_at
+                  END
+     RETURNING count, reset_at`,
+    [userId, resetAt, MAX_RPH],
+  );
+
+  const row = rows[0];
+  if (!row || row.count > MAX_RPH) {
+    const windowEnds = row ? row.reset_at : resetAt;
+    const retryAfterSeconds = Math.max(
+      1,
+      Math.ceil((windowEnds.getTime() - Date.now()) / 1000),
+    );
+    res.set("Retry-After", String(retryAfterSeconds));
     res.status(429).json({
       error: `Transcription limit reached (${MAX_RPH} per hour). Try again later.`,
     });
     return;
   }
-  win.count++;
+
   next();
 }
 
