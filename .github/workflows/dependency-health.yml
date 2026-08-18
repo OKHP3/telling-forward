@@ -1,0 +1,32 @@
+name: Dependency health
+
+on:
+  pull_request:
+    paths:
+      - '**/package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'scripts/check-technology-updates.mjs'
+      - '.github/workflows/dependency-health.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node --check scripts/check-technology-updates.mjs
+      - run: node scripts/check-technology-updates.mjs > technology-inventory-ci.md
+      - run: pnpm run typecheck
+      - run: pnpm run build

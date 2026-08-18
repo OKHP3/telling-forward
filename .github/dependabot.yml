@@ -1,0 +1,32 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories:
+      - /
+      - /artifacts/api-server
+      - /artifacts/archive
+      - /artifacts/broadsheet
+      - /artifacts/mcp-server
+      - /artifacts/mobile
+      - /artifacts/mockup-sandbox
+      - /artifacts/reader
+      - /artifacts/scriptorium
+      - /artifacts/signal-noise
+      - /artifacts/web
+      - /lib/api-client-react
+      - /lib/api-spec
+      - /lib/api-zod
+      - /lib/db
+      - /lib/integrations-openai-ai-react
+      - /lib/integrations-openai-ai-server
+      - /scripts
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    versioning-strategy: increase
+    groups:
+      production-dependencies:
+        dependency-type: production
+      development-dependencies:
+        dependency-type: development
