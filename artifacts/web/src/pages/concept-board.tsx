@@ -1,5 +1,18 @@
+/**
+ * Concept Board — /worlds/:worldId/board
+ *
+ * Steward-only planning surface: capsules (characters, arcs, events) as index cards.
+ *
+ * Creative actions on each capsule:
+ *   • Promote to Scene Writer   — Maturation (PME): hand capsule to agent-assisted drafting
+ *   • Invert                    — Concept inversion (CIE): AI generates symbolic shadow capsule
+ *   • Disrupt                   — Prose inversion (PIE): AI diverges from an accepted scene
+ *
+ * Maturity rung (R0–R10) is an author-set observation. It never gates any action.
+ */
+
 import { useState } from "react";
-import { Link, useParams } from "wouter";
+import { Link, useParams, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetStoryworld,
@@ -24,6 +37,8 @@ import {
   X,
   Check,
   Loader2,
+  FlipHorizontal2,
+  Shuffle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +73,93 @@ const TYPE_META = {
 
 type CapsuleType = keyof typeof TYPE_META;
 
+// Proposal returned by Invert / Disrupt before the author accepts it to the board
+interface CapsuleProposal {
+  title:        string;
+  type:         CapsuleType;
+  epiphanyNote: string;
+}
+
+// ---------------------------------------------------------------------------
+// Maturity rung badge (observation only — never gates any action)
+// ---------------------------------------------------------------------------
+
+function MaturityRung({ value }: { value: number | null | undefined }) {
+  if (value === null || value === undefined) return null;
+  return (
+    <span
+      title={`Maturity rung ${value} of 10`}
+      className="text-xs font-mono text-muted-foreground/70 bg-secondary/60 px-1.5 py-0.5 rounded border border-border/40 tabular-nums"
+    >
+      R{value}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Proposal preview card (accept-to-board / dismiss)
+// ---------------------------------------------------------------------------
+
+function ProposalCard({
+  proposal,
+  label,
+  onAccept,
+  onDismiss,
+  isAccepting,
+}: {
+  proposal:   CapsuleProposal;
+  label:      string;
+  onAccept:   () => void;
+  onDismiss:  () => void;
+  isAccepting: boolean;
+}) {
+  const meta = TYPE_META[proposal.type] ?? TYPE_META.character;
+  const Icon = meta.icon;
+  return (
+    <div className="mt-4 p-4 rounded-lg border border-primary/25 bg-primary/[0.04] dark:bg-primary/[0.06] space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-medium text-primary/80 uppercase tracking-wide">{label}</span>
+        <button
+          onClick={onDismiss}
+          className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Dismiss proposal"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <div className="flex items-start gap-2">
+        <span className={cn("inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border font-medium shrink-0", meta.badge)}>
+          <Icon className="h-3 w-3" />
+          {meta.label}
+        </span>
+        <h4 className="font-serif font-medium text-foreground leading-snug">{proposal.title}</h4>
+      </div>
+
+      {proposal.epiphanyNote && (
+        <p className="text-sm text-muted-foreground leading-relaxed">{proposal.epiphanyNote}</p>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          onClick={onAccept}
+          disabled={isAccepting}
+          className="flex items-center gap-1.5 h-7 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+        >
+          {isAccepting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+          Accept to board
+        </button>
+        <button
+          onClick={onDismiss}
+          className="h-7 px-3 rounded-md border border-border/60 text-xs text-muted-foreground hover:bg-accent/40 transition-colors"
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Capsule card
 // ---------------------------------------------------------------------------
@@ -69,23 +171,36 @@ function CapsuleCard({
   onToggle,
   onDeleted,
 }: {
-  capsule: Capsule;
-  worldId: number;
+  capsule:    Capsule;
+  worldId:    number;
   isExpanded: boolean;
-  onToggle: () => void;
-  onDeleted: () => void;
+  onToggle:   () => void;
+  onDeleted:  () => void;
 }) {
   const { toast } = useToast();
-  const qc = useQueryClient();
-  const meta = TYPE_META[capsule.type as CapsuleType] ?? TYPE_META.character;
+  const qc        = useQueryClient();
+  const [, navigate] = useLocation();
+  const meta     = TYPE_META[capsule.type as CapsuleType] ?? TYPE_META.character;
   const TypeIcon = meta.icon;
 
-  // Edit state
-  const [editing, setEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(capsule.title);
-  const [editNote, setEditNote] = useState(capsule.epiphanyNote ?? "");
-  const [editRole, setEditRole] = useState(capsule.roleTag ?? "");
+  // ── Edit state ────────────────────────────────────────────────────────────
+  const [editing,     setEditing]     = useState(false);
+  const [editTitle,   setEditTitle]   = useState(capsule.title);
+  const [editNote,    setEditNote]    = useState(capsule.epiphanyNote ?? "");
+  const [editRole,    setEditRole]    = useState(capsule.roleTag ?? "");
+  const [editMaturity, setEditMaturity] = useState<number | null>(
+    capsule.maturity !== undefined ? capsule.maturity : null,
+  );
 
+  // ── Creative action state (Invert / Disrupt) ──────────────────────────────
+  const [activeAction,   setActiveAction]   = useState<"invert" | "disrupt" | null>(null);
+  const [disruptText,    setDisruptText]    = useState("");
+  const [isActing,       setIsActing]       = useState(false);
+  const [actionError,    setActionError]    = useState<string | null>(null);
+  const [pendingProposal, setPendingProposal] = useState<CapsuleProposal | null>(null);
+  const [isAccepting,    setIsAccepting]   = useState(false);
+
+  // ── Mutations ─────────────────────────────────────────────────────────────
   const { mutate: updateCapsule, isPending: isUpdating } = useUpdateCapsule({
     mutation: {
       onSuccess: () => {
@@ -108,15 +223,30 @@ function CapsuleCard({
     },
   });
 
+  const { mutate: createCapsule, isPending: isCreatingFromProposal } = useCreateCapsule({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getListCapsulesQueryKey(worldId) });
+        setPendingProposal(null);
+        setActiveAction(null);
+        toast({ title: "Capsule added to the board" });
+      },
+      onError: () => toast({ title: "Could not add capsule", variant: "destructive" }),
+    },
+  });
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
   function handleSaveEdit() {
     if (!editTitle.trim()) return;
     updateCapsule({
-      id: worldId,
+      id:        worldId,
       capsuleId: capsule.id,
       data: {
-        title: editTitle.trim(),
+        title:        editTitle.trim(),
         epiphanyNote: editNote || null,
-        roleTag: editRole.trim() || null,
+        roleTag:      editRole.trim() || null,
+        maturity:     editMaturity,
       },
     });
   }
@@ -126,6 +256,76 @@ function CapsuleCard({
     deleteCapsule({ id: worldId, capsuleId: capsule.id });
   }
 
+  async function handleInvert() {
+    setActiveAction("invert");
+    setIsActing(true);
+    setActionError(null);
+    setPendingProposal(null);
+    try {
+      const res = await fetch(`/api/storyworlds/${worldId}/capsules/${capsule.id}/invert`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setActionError(body.error ?? "Inversion failed. Please try again.");
+        return;
+      }
+      setPendingProposal(await res.json() as CapsuleProposal);
+    } catch {
+      setActionError("Network error. Please try again.");
+    } finally {
+      setIsActing(false);
+    }
+  }
+
+  async function handleDisruptSubmit() {
+    if (!disruptText.trim()) return;
+    setIsActing(true);
+    setActionError(null);
+    setPendingProposal(null);
+    try {
+      const res = await fetch(`/api/storyworlds/${worldId}/capsules/${capsule.id}/disrupt`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceText: disruptText }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setActionError(body.error ?? "Disruption failed. Please try again.");
+        return;
+      }
+      setPendingProposal(await res.json() as CapsuleProposal);
+    } catch {
+      setActionError("Network error. Please try again.");
+    } finally {
+      setIsActing(false);
+    }
+  }
+
+  function handleAcceptProposal() {
+    if (!pendingProposal) return;
+    setIsAccepting(true);
+    createCapsule({
+      id:   worldId,
+      data: {
+        title:        pendingProposal.title,
+        type:         pendingProposal.type,
+        epiphanyNote: pendingProposal.epiphanyNote || undefined,
+      },
+    });
+    setIsAccepting(false);
+  }
+
+  function cancelAction() {
+    setActiveAction(null);
+    setDisruptText("");
+    setActionError(null);
+    setPendingProposal(null);
+  }
+
   const expanded = isExpanded;
 
   return (
@@ -133,17 +333,14 @@ function CapsuleCard({
       className={cn(
         "group bg-card border border-l-4 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-md",
         meta.card,
-        expanded ? "col-span-full shadow-lg" : "cursor-pointer hover:border-primary/40"
+        expanded ? "col-span-full shadow-lg" : "cursor-pointer hover:border-primary/40",
       )}
       onClick={!expanded ? onToggle : undefined}
     >
-      {/* Card header (always visible) */}
+      {/* ── Card header (always visible) ───────────────────────────────── */}
       <div className={cn("p-4 flex items-start justify-between gap-3", expanded && "border-b border-border/40")}>
         <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border",
-            meta.badge
-          )}>
+          <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-md border", meta.badge)}>
             <TypeIcon className="h-4 w-4" />
           </div>
           <div className="flex-1 min-w-0">
@@ -170,6 +367,7 @@ function CapsuleCard({
                   {capsule.roleTag}
                 </span>
               )}
+              <MaturityRung value={capsule.maturity} />
             </div>
           </div>
         </div>
@@ -182,16 +380,17 @@ function CapsuleCard({
         </button>
       </div>
 
-      {/* Epiphany note preview (collapsed) */}
+      {/* ── Epiphany note preview (collapsed) ──────────────────────────── */}
       {!expanded && capsule.epiphanyNote && (
         <p className="px-4 pb-3 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
           {capsule.epiphanyNote}
         </p>
       )}
 
-      {/* Expanded detail */}
+      {/* ── Expanded detail ─────────────────────────────────────────────── */}
       {expanded && (
         <div className="p-5 grid md:grid-cols-[1fr_auto] gap-6">
+          {/* Left: epiphany note / edit form */}
           <div className="space-y-4">
             {editing ? (
               <div className="space-y-3">
@@ -218,6 +417,38 @@ function CapsuleCard({
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                   />
                 </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                    Maturity rung (0–10)
+                    <span className="ml-1.5 text-muted-foreground/60 normal-case tracking-normal font-normal">
+                      — observation only, never gates any action
+                    </span>
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range"
+                      min={0}
+                      max={10}
+                      step={1}
+                      value={editMaturity ?? 0}
+                      onChange={e => setEditMaturity(parseInt(e.target.value, 10))}
+                      className="flex-1 accent-primary"
+                    />
+                    <span className="text-sm font-mono w-7 text-center tabular-nums">
+                      {editMaturity !== null ? `R${editMaturity}` : "—"}
+                    </span>
+                    {editMaturity !== null && (
+                      <button
+                        type="button"
+                        onClick={() => setEditMaturity(null)}
+                        className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                        title="Clear maturity rung"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   <button
                     onClick={e => { e.stopPropagation(); handleSaveEdit(); }}
@@ -228,7 +459,14 @@ function CapsuleCard({
                     Save
                   </button>
                   <button
-                    onClick={e => { e.stopPropagation(); setEditing(false); setEditTitle(capsule.title); setEditNote(capsule.epiphanyNote ?? ""); setEditRole(capsule.roleTag ?? ""); }}
+                    onClick={e => {
+                      e.stopPropagation();
+                      setEditing(false);
+                      setEditTitle(capsule.title);
+                      setEditNote(capsule.epiphanyNote ?? "");
+                      setEditRole(capsule.roleTag ?? "");
+                      setEditMaturity(capsule.maturity !== undefined ? capsule.maturity : null);
+                    }}
                     className="h-8 px-3 rounded-md border border-input text-sm text-muted-foreground hover:bg-accent/50 transition-colors"
                   >
                     Cancel
@@ -251,24 +489,118 @@ function CapsuleCard({
                 )}
               </div>
             )}
+
+            {/* ── Disrupt source text input ───────────────────────────── */}
+            {!editing && activeAction === "disrupt" && !pendingProposal && (
+              <div className="p-4 rounded-lg border border-amber-200/60 dark:border-amber-800/30 bg-amber-50/40 dark:bg-amber-950/10 space-y-3">
+                <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                  Paste an accepted scene to disrupt — the AI will generate a deliberately discontinuous variant
+                </p>
+                <textarea
+                  value={disruptText}
+                  onChange={e => setDisruptText(e.target.value)}
+                  rows={6}
+                  placeholder="Paste the accepted scene text here…"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                />
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={e => { e.stopPropagation(); void handleDisruptSubmit(); }}
+                    disabled={isActing || !disruptText.trim()}
+                    className="flex items-center gap-1.5 h-7 px-3 rounded-md bg-amber-600 dark:bg-amber-700 text-white text-xs font-medium hover:bg-amber-700 dark:hover:bg-amber-600 disabled:opacity-50 transition-colors"
+                  >
+                    {isActing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Shuffle className="h-3 w-3" />}
+                    Generate disruption
+                  </button>
+                  <button
+                    onClick={e => { e.stopPropagation(); cancelAction(); }}
+                    className="h-7 px-3 rounded-md border border-border/60 text-xs text-muted-foreground hover:bg-accent/40 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {actionError && (
+                  <p className="text-xs text-destructive">{actionError}</p>
+                )}
+              </div>
+            )}
+
+            {/* ── Invert loading state ────────────────────────────────── */}
+            {!editing && activeAction === "invert" && isActing && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating symbolic inversion…
+              </div>
+            )}
+            {!editing && activeAction === "invert" && actionError && !isActing && (
+              <p className="text-sm text-destructive">{actionError}</p>
+            )}
+
+            {/* ── Pending proposal (accept / dismiss) ─────────────────── */}
+            {pendingProposal && (
+              <ProposalCard
+                proposal={pendingProposal}
+                label={activeAction === "invert" ? "Inversion capsule — preview" : "Disruption capsule — preview"}
+                onAccept={handleAcceptProposal}
+                onDismiss={cancelAction}
+                isAccepting={isAccepting || isCreatingFromProposal}
+              />
+            )}
           </div>
 
+          {/* Right: action buttons */}
           {!editing && (
             <div className="flex md:flex-col gap-2 shrink-0">
+              {/* Promote to Scene Writer */}
               <button
-                onClick={e => { e.stopPropagation(); /* Promote to Scene Writer placeholder */ toast({ title: "Scene Writer", description: "Scene Writer is coming in the next release." }); }}
+                onClick={e => {
+                  e.stopPropagation();
+                  navigate(`/worlds/${worldId}/scene-writer/${capsule.id}`);
+                }}
                 className="flex items-center gap-2 h-9 px-3 rounded-lg border border-primary/40 bg-primary/5 text-primary text-sm font-medium hover:bg-primary/10 transition-colors whitespace-nowrap"
               >
                 <Sparkles className="h-3.5 w-3.5 shrink-0" />
-                Promote to Scene Writer
+                Promote
               </button>
+
+              {/* Invert */}
               <button
-                onClick={e => { e.stopPropagation(); setEditing(true); }}
+                onClick={e => {
+                  e.stopPropagation();
+                  cancelAction();
+                  void handleInvert();
+                }}
+                disabled={isActing}
+                className="flex items-center gap-2 h-9 px-3 rounded-lg border border-border/60 text-muted-foreground text-sm hover:bg-accent/40 hover:text-foreground transition-colors disabled:opacity-50"
+              >
+                <FlipHorizontal2 className="h-3.5 w-3.5 shrink-0" />
+                Invert
+              </button>
+
+              {/* Disrupt */}
+              <button
+                onClick={e => {
+                  e.stopPropagation();
+                  cancelAction();
+                  setActiveAction("disrupt");
+                }}
+                disabled={isActing}
+                className="flex items-center gap-2 h-9 px-3 rounded-lg border border-border/60 text-muted-foreground text-sm hover:bg-accent/40 hover:text-foreground transition-colors disabled:opacity-50"
+              >
+                <Shuffle className="h-3.5 w-3.5 shrink-0" />
+                Disrupt
+              </button>
+
+              {/* Edit */}
+              <button
+                onClick={e => { e.stopPropagation(); cancelAction(); setEditing(true); }}
                 className="flex items-center gap-2 h-9 px-3 rounded-lg border border-border/60 text-muted-foreground text-sm hover:bg-accent/40 hover:text-foreground transition-colors"
               >
                 <Pencil className="h-3.5 w-3.5 shrink-0" />
                 Edit
               </button>
+
+              {/* Archive */}
               <button
                 onClick={e => { e.stopPropagation(); handleArchive(); }}
                 disabled={isDeleting}
@@ -294,14 +626,14 @@ function CreateCapsuleCard({
   onDone,
 }: {
   worldId: number;
-  onDone: () => void;
+  onDone:  () => void;
 }) {
   const { toast } = useToast();
-  const qc = useQueryClient();
-  const [title, setTitle] = useState("");
-  const [type, setType] = useState<CapsuleType>("character");
+  const qc        = useQueryClient();
+  const [title,   setTitle]   = useState("");
+  const [type,    setType]    = useState<CapsuleType>("character");
   const [roleTag, setRoleTag] = useState("");
-  const [note, setNote] = useState("");
+  const [note,    setNote]    = useState("");
 
   const { mutate: createCapsule, isPending } = useCreateCapsule({
     mutation: {
@@ -318,12 +650,12 @@ function CreateCapsuleCard({
     e.preventDefault();
     if (!title.trim()) return;
     createCapsule({
-      id: worldId,
+      id:   worldId,
       data: {
         title: title.trim(),
         type,
         ...(roleTag.trim() && { roleTag: roleTag.trim() }),
-        ...(note.trim() && { epiphanyNote: note.trim() }),
+        ...(note.trim()    && { epiphanyNote: note.trim() }),
       },
     });
   }
@@ -333,10 +665,7 @@ function CreateCapsuleCard({
   return (
     <form
       onSubmit={handleSubmit}
-      className={cn(
-        "col-span-full bg-card border border-l-4 rounded-xl p-5 space-y-4",
-        meta.card
-      )}
+      className={cn("col-span-full bg-card border border-l-4 rounded-xl p-5 space-y-4", meta.card)}
     >
       <div className="flex items-center justify-between">
         <h3 className="font-serif text-lg font-medium text-foreground">New capsule</h3>
@@ -370,7 +699,7 @@ function CreateCapsuleCard({
           </label>
           <div className="grid grid-cols-3 gap-1.5">
             {(["character", "arc", "event"] as CapsuleType[]).map(t => {
-              const m = TYPE_META[t];
+              const m    = TYPE_META[t];
               const Icon = m.icon;
               return (
                 <button
@@ -381,7 +710,7 @@ function CreateCapsuleCard({
                     "flex flex-col items-center gap-1 py-2 rounded-lg border-2 text-xs font-medium transition-all",
                     type === t
                       ? cn("border-current", m.badge)
-                      : "border-border/60 text-muted-foreground hover:border-primary/40"
+                      : "border-border/60 text-muted-foreground hover:border-primary/40",
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -448,8 +777,8 @@ function FilterPill({
   onClick,
   children,
 }: {
-  active: boolean;
-  onClick: () => void;
+  active:   boolean;
+  onClick:  () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -459,7 +788,7 @@ function FilterPill({
         "px-3 py-1 rounded-full text-xs font-medium border transition-all",
         active
           ? "bg-primary text-primary-foreground border-primary"
-          : "bg-secondary/50 text-muted-foreground border-border/60 hover:border-primary/40 hover:text-foreground"
+          : "bg-secondary/50 text-muted-foreground border-border/60 hover:border-primary/40 hover:text-foreground",
       )}
     >
       {children}
@@ -472,7 +801,7 @@ function FilterPill({
 // ---------------------------------------------------------------------------
 
 export function ConceptBoard() {
-  const params = useParams();
+  const params  = useParams();
   const worldId = params.worldId ? parseInt(params.worldId, 10) : 0;
 
   const { data: world } = useGetStoryworld(worldId, {
@@ -481,25 +810,25 @@ export function ConceptBoard() {
 
   const { data: capsules = [], isLoading, error } = useListCapsules(worldId, {
     query: {
-      enabled: !!worldId,
-      queryKey: getListCapsulesQueryKey(worldId),
+      enabled:   !!worldId,
+      queryKey:  getListCapsulesQueryKey(worldId),
       staleTime: 30_000,
     },
   });
 
-  const [filterType, setFilterType] = useState<CapsuleType | "all">("all");
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [filterType,  setFilterType]  = useState<CapsuleType | "all">("all");
+  const [expandedId,  setExpandedId]  = useState<number | null>(null);
+  const [creating,    setCreating]    = useState(false);
 
   const filtered = filterType === "all"
     ? capsules
     : capsules.filter(c => c.type === filterType);
 
   const counts = {
-    all: capsules.length,
+    all:       capsules.length,
     character: capsules.filter(c => c.type === "character").length,
-    arc: capsules.filter(c => c.type === "arc").length,
-    event: capsules.filter(c => c.type === "event").length,
+    arc:       capsules.filter(c => c.type === "arc").length,
+    event:     capsules.filter(c => c.type === "event").length,
   };
 
   function handleToggle(id: number) {

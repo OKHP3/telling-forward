@@ -14,4 +14,10 @@ export interface UpdateCapsuleBody {
   title?: string;
   roleTag?: string | null;
   epiphanyNote?: string | null;
+  /**
+   * Author-set maturity rung (0–10). Pass null to clear.
+   * @minimum 0
+   * @maximum 10
+   */
+  maturity?: number | null;
 }

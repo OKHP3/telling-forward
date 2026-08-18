@@ -21,8 +21,10 @@ import type {
   AuthResponse,
   BadRequestResponse,
   Capsule,
+  CapsuleProposalResponse,
   Contribution,
   CreateCapsuleBody,
+  DisruptCapsuleBody,
   ErrorResponse,
   GithubCallbackParams,
   HealthStatus,
@@ -1329,6 +1331,286 @@ export const useDeleteCapsule = <
   TContext
 > => {
   return useMutation(getDeleteCapsuleMutationOptions(options));
+};
+
+/**
+ * Promotes a capsule to the Scene Writer by streaming an AI-generated opening scene via Server-Sent Events. The response is `text/event-stream`; each event carries `{ content }` chunks and a final `{ done: true }` event. Use native fetch + ReadableStream on the client — Orval does not generate hooks for streaming responses. Requires authentication and steward role.
+
+ * @summary Generate an agent-assisted scene draft from a capsule (streaming SSE)
+ */
+export const getPromoteCapsuleUrl = (id: number, capsuleId: number) => {
+  return `/api/storyworlds/${id}/capsules/${capsuleId}/promote`;
+};
+
+export const promoteCapsule = async (
+  id: number,
+  capsuleId: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getPromoteCapsuleUrl(id, capsuleId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getPromoteCapsuleMutationOptions = <
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof promoteCapsule>>,
+    TError,
+    { id: number; capsuleId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof promoteCapsule>>,
+  TError,
+  { id: number; capsuleId: number },
+  TContext
+> => {
+  const mutationKey = ["promoteCapsule"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof promoteCapsule>>,
+    { id: number; capsuleId: number }
+  > = (props) => {
+    const { id, capsuleId } = props ?? {};
+
+    return promoteCapsule(id, capsuleId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PromoteCapsuleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof promoteCapsule>>
+>;
+
+export type PromoteCapsuleMutationError = ErrorType<
+  UnauthorizedResponse | ErrorResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Generate an agent-assisted scene draft from a capsule (streaming SSE)
+ */
+export const usePromoteCapsule = <
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof promoteCapsule>>,
+    TError,
+    { id: number; capsuleId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof promoteCapsule>>,
+  TError,
+  { id: number; capsuleId: number },
+  TContext
+> => {
+  return useMutation(getPromoteCapsuleMutationOptions(options));
+};
+
+/**
+ * Takes an accepted scene (provided as `sourceText`) and uses the AI layer to produce a deliberately discontinuous raw-material capsule — not a summary, a divergent seed. The returned proposal is not created on the board until the author explicitly accepts it. Requires authentication and steward role.
+
+ * @summary Generate a divergent variant capsule from an accepted scene (prose-level inversion)
+ */
+export const getDisruptCapsuleUrl = (id: number, capsuleId: number) => {
+  return `/api/storyworlds/${id}/capsules/${capsuleId}/disrupt`;
+};
+
+export const disruptCapsule = async (
+  id: number,
+  capsuleId: number,
+  disruptCapsuleBody: DisruptCapsuleBody,
+  options?: RequestInit,
+): Promise<CapsuleProposalResponse> => {
+  return customFetch<CapsuleProposalResponse>(
+    getDisruptCapsuleUrl(id, capsuleId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(disruptCapsuleBody),
+    },
+  );
+};
+
+export const getDisruptCapsuleMutationOptions = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof disruptCapsule>>,
+    TError,
+    { id: number; capsuleId: number; data: BodyType<DisruptCapsuleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof disruptCapsule>>,
+  TError,
+  { id: number; capsuleId: number; data: BodyType<DisruptCapsuleBody> },
+  TContext
+> => {
+  const mutationKey = ["disruptCapsule"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof disruptCapsule>>,
+    { id: number; capsuleId: number; data: BodyType<DisruptCapsuleBody> }
+  > = (props) => {
+    const { id, capsuleId, data } = props ?? {};
+
+    return disruptCapsule(id, capsuleId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DisruptCapsuleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof disruptCapsule>>
+>;
+export type DisruptCapsuleMutationBody = BodyType<DisruptCapsuleBody>;
+export type DisruptCapsuleMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Generate a divergent variant capsule from an accepted scene (prose-level inversion)
+ */
+export const useDisruptCapsule = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof disruptCapsule>>,
+    TError,
+    { id: number; capsuleId: number; data: BodyType<DisruptCapsuleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof disruptCapsule>>,
+  TError,
+  { id: number; capsuleId: number; data: BodyType<DisruptCapsuleBody> },
+  TContext
+> => {
+  return useMutation(getDisruptCapsuleMutationOptions(options));
+};
+
+/**
+ * Produces a new capsule representing the symbolic shadow of the source capsule — not its antonym, but its structural mirror with reversed purpose or charge. The returned proposal is not created on the board until the author explicitly accepts it. Requires authentication and steward role.
+
+ * @summary Generate the symbolic inversion of a capsule (concept-level inversion)
+ */
+export const getInvertCapsuleUrl = (id: number, capsuleId: number) => {
+  return `/api/storyworlds/${id}/capsules/${capsuleId}/invert`;
+};
+
+export const invertCapsule = async (
+  id: number,
+  capsuleId: number,
+  options?: RequestInit,
+): Promise<CapsuleProposalResponse> => {
+  return customFetch<CapsuleProposalResponse>(
+    getInvertCapsuleUrl(id, capsuleId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getInvertCapsuleMutationOptions = <
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof invertCapsule>>,
+    TError,
+    { id: number; capsuleId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof invertCapsule>>,
+  TError,
+  { id: number; capsuleId: number },
+  TContext
+> => {
+  const mutationKey = ["invertCapsule"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof invertCapsule>>,
+    { id: number; capsuleId: number }
+  > = (props) => {
+    const { id, capsuleId } = props ?? {};
+
+    return invertCapsule(id, capsuleId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type InvertCapsuleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof invertCapsule>>
+>;
+
+export type InvertCapsuleMutationError = ErrorType<
+  UnauthorizedResponse | ErrorResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Generate the symbolic inversion of a capsule (concept-level inversion)
+ */
+export const useInvertCapsule = <
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof invertCapsule>>,
+    TError,
+    { id: number; capsuleId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof invertCapsule>>,
+  TError,
+  { id: number; capsuleId: number },
+  TContext
+> => {
+  return useMutation(getInvertCapsuleMutationOptions(options));
 };
 
 /**

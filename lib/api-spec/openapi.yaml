@@ -399,6 +399,131 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /storyworlds/{id}/capsules/{capsuleId}/promote:
+    post:
+      operationId: promoteCapsule
+      tags: [storyworlds]
+      summary: Generate an agent-assisted scene draft from a capsule (streaming SSE)
+      description: >
+        Promotes a capsule to the Scene Writer by streaming an AI-generated opening scene
+        via Server-Sent Events. The response is `text/event-stream`; each event carries
+        `{ content }` chunks and a final `{ done: true }` event. Use native fetch + ReadableStream
+        on the client — Orval does not generate hooks for streaming responses.
+        Requires authentication and steward role.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: capsuleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: GitHub Issue number of the capsule to promote.
+      responses:
+        "200":
+          description: Streaming SSE — text/event-stream
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not a steward for this storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /storyworlds/{id}/capsules/{capsuleId}/disrupt:
+    post:
+      operationId: disruptCapsule
+      tags: [storyworlds]
+      summary: Generate a divergent variant capsule from an accepted scene (prose-level inversion)
+      description: >
+        Takes an accepted scene (provided as `sourceText`) and uses the AI layer to produce
+        a deliberately discontinuous raw-material capsule — not a summary, a divergent seed.
+        The returned proposal is not created on the board until the author explicitly accepts it.
+        Requires authentication and steward role.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: capsuleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: GitHub Issue number of the capsule being disrupted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DisruptCapsuleBody"
+      responses:
+        "200":
+          description: Proposed disruption capsule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CapsuleProposalResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not a steward for this storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /storyworlds/{id}/capsules/{capsuleId}/invert:
+    post:
+      operationId: invertCapsule
+      tags: [storyworlds]
+      summary: Generate the symbolic inversion of a capsule (concept-level inversion)
+      description: >
+        Produces a new capsule representing the symbolic shadow of the source capsule —
+        not its antonym, but its structural mirror with reversed purpose or charge.
+        The returned proposal is not created on the board until the author explicitly accepts it.
+        Requires authentication and steward role.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: capsuleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: GitHub Issue number of the capsule to invert.
+      responses:
+        "200":
+          description: Proposed inversion capsule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CapsuleProposalResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not a steward for this storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /storyworlds/{id}/proposals:
     get:
       operationId: listStoryworldProposals
@@ -883,6 +1008,14 @@ components:
         updatedAt:
           type: string
           format: date-time
+        maturity:
+          type: integer
+          minimum: 0
+          maximum: 10
+          nullable: true
+          description: >
+            Author-set maturity rung (0–10, Rung Ladder). Stored as a `rung:N`
+            GitHub label. Does not gate any action — observation only.
       required:
         - id
         - storyworldId
@@ -926,6 +1059,40 @@ components:
         epiphanyNote:
           type: string
           nullable: true
+        maturity:
+          type: integer
+          minimum: 0
+          maximum: 10
+          nullable: true
+          description: Author-set maturity rung (0–10). Pass null to clear.
+
+    CapsuleProposalResponse:
+      type: object
+      description: >
+        A proposed new capsule generated by Disrupt or Invert — not yet on the board.
+        The author must explicitly accept it to create it.
+      properties:
+        title:
+          type: string
+          description: Suggested capsule name.
+        type:
+          type: string
+          enum: [character, arc, event]
+        epiphanyNote:
+          type: string
+          description: AI-generated insight note seeding the new capsule.
+      required: [title, type, epiphanyNote]
+
+    DisruptCapsuleBody:
+      type: object
+      description: >
+        Source material for the Disrupt action — the accepted scene prose to diverge from.
+      properties:
+        sourceText:
+          type: string
+          minLength: 1
+          description: The accepted scene text to disrupt. Truncated server-side beyond 3 000 chars.
+      required: [sourceText]
 
     ReturnProposalBody:
       type: object

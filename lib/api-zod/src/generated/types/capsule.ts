@@ -25,4 +25,11 @@ export interface Capsule {
   epiphanyNote?: string | null;
   createdAt: Date;
   updatedAt: Date;
+  /**
+   * Author-set maturity rung (0–10, Rung Ladder). Stored as a `rung:N` GitHub label. Does not gate any action — observation only.
+
+   * @minimum 0
+   * @maximum 10
+   */
+  maturity?: number | null;
 }

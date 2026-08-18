@@ -23,6 +23,7 @@ import { ForgotPassword } from '@/pages/forgot-password';
 import { ResetPassword } from '@/pages/reset-password';
 import { Settings } from '@/pages/settings';
 import { ConceptBoard } from '@/pages/concept-board';
+import { SceneWriter } from '@/pages/scene-writer';
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ function Router() {
           <Route path="/submissions" component={Submissions} />
           <Route path="/settings" component={Settings} />
           <Route path="/worlds/:worldId/board" component={ConceptBoard} />
+          <Route path="/worlds/:worldId/scene-writer/:capsuleId" component={SceneWriter} />
           <Route path="/worlds/:worldId/steward" component={StewardDashboard} />
           <Route path="/worlds/:worldId" component={WorldDetail} />
           <Route path="/worlds/:worldId/paths/:pathId" component={PathReader} />
