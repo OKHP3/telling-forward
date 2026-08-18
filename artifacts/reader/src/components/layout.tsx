@@ -1,11 +1,9 @@
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
-import { AuthModal } from "@/components/auth-modal";
 
 export function ReaderLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
-  const [authOpen, setAuthOpen] = useState(false);
 
   return (
     <div
@@ -34,12 +32,12 @@ export function ReaderLayout({ children }: { children: ReactNode }) {
                 </button>
               </>
             ) : (
-              <button
-                onClick={() => setAuthOpen(true)}
+              <Link
+                href="/sign-in"
                 className="text-sm font-medium tracking-wide uppercase text-muted-foreground hover:text-primary transition-colors"
               >
                 Sign in
-              </button>
+              </Link>
             )}
           </div>
         </div>
@@ -48,8 +46,6 @@ export function ReaderLayout({ children }: { children: ReactNode }) {
       <main className="w-full flex-1 flex flex-col items-center px-4 pb-24">
         {children}
       </main>
-
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 }

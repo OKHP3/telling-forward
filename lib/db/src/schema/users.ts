@@ -5,8 +5,12 @@ import { z } from "zod/v4";
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  // Nullable: Clerk-authenticated users have no local password hash.
+  passwordHash: text("password_hash"),
   displayName: text("display_name").notNull(),
+  // Clerk user ID — populated on first sign-in via JIT provisioning.
+  // NULL for legacy bcrypt-only accounts that have not yet signed in via Clerk.
+  clerkId: text("clerk_id").unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   // Account-level brute-force lockout — durable across restarts and shared
   // across all server instances. Incremented on each wrong-password attempt;

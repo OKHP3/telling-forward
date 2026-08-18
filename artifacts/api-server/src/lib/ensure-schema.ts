@@ -250,5 +250,11 @@ export async function ensureSchema(): Promise<void> {
       CONSTRAINT sessions_pkey PRIMARY KEY (sid) NOT DEFERRABLE INITIALLY IMMEDIATE
     );
     CREATE INDEX IF NOT EXISTS IDX_sessions_expire ON sessions (expire);
+
+    -- Clerk authentication support.
+    -- password_hash is now nullable: Clerk-only users have no local bcrypt hash.
+    -- clerk_id links the Clerk user identity to this local account row.
+    ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS clerk_id TEXT UNIQUE;
   `);
 }

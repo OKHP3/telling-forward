@@ -1,73 +1,49 @@
-import {
-  createContext,
-  useContext,
-  useCallback,
-  type ReactNode,
-} from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import {
-  useGetMe,
-  useLogin,
-  useRegister,
-  useLogout,
-  type PublicUser,
-  type LoginRequest,
-  type RegisterRequest,
-} from '@workspace/api-client-react';
+/**
+ * auth-context.tsx — Clerk-backed auth hook for the Signal/Noise app.
+ */
+import { useUser, useClerk } from "@clerk/react";
 
-interface AuthContextValue {
+export interface PublicUser {
+  id: number;
+  email: string;
+  displayName: string;
+  emailVerified: boolean;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface AuthContextValue {
   user: PublicUser | null;
   isLoading: boolean;
-  login: (data: LoginRequest) => Promise<void>;
-  register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue>({
-  user: null,
-  isLoading: true,
-  login: async () => {},
-  register: async () => {},
-  logout: async () => {},
-});
+export function useAuth(): AuthContextValue {
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const queryClient = useQueryClient();
-
-  const { data: me, isLoading } = useGetMe();
-
-  const { mutateAsync: loginMutate } = useLogin();
-  const { mutateAsync: registerMutate } = useRegister();
-  const { mutateAsync: logoutMutate } = useLogout();
-
-  const login = useCallback(
-    async (data: LoginRequest) => {
-      await loginMutate({ data });
-      await queryClient.invalidateQueries();
+  return {
+    user: user
+      ? {
+          id: 0,
+          email: user.primaryEmailAddress?.emailAddress ?? "",
+          displayName:
+            [user.firstName, user.lastName]
+              .filter(Boolean)
+              .join(" ")
+              .trim() ||
+            user.username ||
+            user.primaryEmailAddress?.emailAddress?.split("@")[0] ||
+            "User",
+          emailVerified:
+            user.primaryEmailAddress?.verification?.status === "verified",
+          createdAt: user.createdAt ?? new Date(),
+          updatedAt: user.updatedAt ?? new Date(),
+        }
+      : null,
+    isLoading: !isLoaded,
+    logout: async () => {
+      await signOut();
     },
-    [loginMutate, queryClient],
-  );
-
-  const register = useCallback(
-    async (data: RegisterRequest) => {
-      await registerMutate({ data });
-      await queryClient.invalidateQueries();
-    },
-    [registerMutate, queryClient],
-  );
-
-  const logout = useCallback(async () => {
-    await logoutMutate();
-    await queryClient.invalidateQueries();
-  }, [logoutMutate, queryClient]);
-
-  return (
-    <AuthContext.Provider
-      value={{ user: me?.user ?? null, isLoading, login, register, logout }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  };
 }
-
-export const useAuth = () => useContext(AuthContext);

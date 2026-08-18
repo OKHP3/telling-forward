@@ -11,11 +11,13 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@clerk/express": "^2.1.57",
+    "@clerk/shared": "^4.29.1",
     "@octokit/graphql": "^8.2.2",
     "@octokit/rest": "^21.1.1",
     "@workspace/api-zod": "workspace:*",
-    "@workspace/integrations-openai-ai-server": "workspace:*",
     "@workspace/db": "workspace:*",
+    "@workspace/integrations-openai-ai-server": "workspace:*",
     "bcryptjs": "^3.0.3",
     "connect-pg-simple": "^10.0.0",
     "cookie-parser": "^1.4.7",
@@ -24,6 +26,7 @@
     "express": "^5",
     "express-rate-limit": "^8.6.2",
     "express-session": "^1.19.0",
+    "http-proxy-middleware": "^4.2.0",
     "nodemailer": "^9.0.5",
     "pino": "^9",
     "pino-http": "^10"

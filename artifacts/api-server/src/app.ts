@@ -3,10 +3,17 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import { clerkMiddleware } from "@clerk/express";
+import { publishableKeyFromHost } from "@clerk/shared/keys";
 import { pool } from "@workspace/db";
 import router from "./routes";
 import { githubWebhookHandler } from "./routes/webhooks";
 import { logger } from "./lib/logger";
+import {
+  CLERK_PROXY_PATH,
+  clerkProxyMiddleware,
+  getClerkProxyHost,
+} from "./middlewares/clerkProxyMiddleware";
 
 // Session store backed by PostgreSQL — survives server restarts
 const PgStore = connectPgSimple(session);
@@ -63,6 +70,12 @@ app.post(
   githubWebhookHandler,
 );
 
+// Clerk Frontend API proxy — streams raw bytes to Clerk's CDN and must be
+// mounted BEFORE body parsers (express.json parses the body into memory;
+// the proxy needs to stream the raw bytes through to Clerk's servers).
+// In development the proxy is a no-op (see clerkProxyMiddleware).
+app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+
 // Path-conditional body parser — exactly one JSON parse per request.
 // /api/transcribe needs 20 MB for base64-encoded audio blobs (~15 MB audio).
 // Every other endpoint is capped at 64 KB; large payloads are rejected before
@@ -73,6 +86,22 @@ app.use((req, res, next) => {
 });
 app.use(express.urlencoded({ extended: true }));
 
+// Clerk middleware — parses the Clerk session JWT (cookie or Authorization
+// bearer) and populates req.auth. Must come after body parsers because it
+// reads body-parsed cookies, and before route handlers so getAuth(req) works.
+app.use(
+  clerkMiddleware((req) => ({
+    publishableKey: publishableKeyFromHost(
+      getClerkProxyHost(req) ?? "",
+      process.env.CLERK_PUBLISHABLE_KEY,
+    ),
+  })),
+);
+
+// Express session — kept as the "bridge" layer between Clerk identity and the
+// numeric req.session.userId that all existing route handlers expect.
+// requireAuth (in middlewares/auth.ts) reads the Clerk userId, looks up the
+// local user row, and sets req.session.userId for the current request.
 app.use(
   session({
     name: "sid",

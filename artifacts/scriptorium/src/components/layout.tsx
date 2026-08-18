@@ -1,11 +1,9 @@
-import { useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { Link } from 'wouter';
 import { useAuth } from '@/contexts/auth-context';
-import { AuthModal } from '@/components/auth-modal';
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
-  const [authOpen, setAuthOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col font-sans relative">
@@ -32,12 +30,12 @@ export function Layout({ children }: { children: ReactNode }) {
               </button>
             </>
           ) : (
-            <button
-              onClick={() => setAuthOpen(true)}
+            <Link
+              href="/sign-in"
               className="font-mono text-[0.7rem] font-medium text-primary tracking-widest uppercase hover:opacity-70 transition-opacity"
             >
               Sign in
-            </button>
+            </Link>
           )}
         </div>
       </nav>
@@ -50,8 +48,6 @@ export function Layout({ children }: { children: ReactNode }) {
         <span className="font-mono text-[0.6rem] text-muted-foreground tracking-wider">Built by <span className="text-primary">OverKill Hill P³</span></span>
         <span className="font-mono text-[0.6rem] text-muted-foreground tracking-wider">© 2026 · overkillhill.com</span>
       </footer>
-
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 }

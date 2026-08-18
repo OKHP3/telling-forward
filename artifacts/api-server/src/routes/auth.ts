@@ -188,6 +188,11 @@ router.post("/login", loginLimiter, async (req, res) => {
     return;
   }
 
+  // Clerk-provisioned users have no local password hash — treat as invalid credentials.
+  if (!user.passwordHash) {
+    res.status(401).json({ error: 'Invalid email or password' });
+    return;
+  }
   const valid = await bcrypt.compare(password, user.passwordHash);
 
   if (!valid) {

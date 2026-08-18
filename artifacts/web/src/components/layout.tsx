@@ -1,15 +1,13 @@
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { BookOpen, Settings, LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
-import { AuthModal } from "@/components/auth-modal";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
-  const [authOpen, setAuthOpen] = useState(false);
 
   return (
     <div className="min-h-[100dvh] flex flex-col font-sans">
@@ -86,13 +84,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => setAuthOpen(true)}
+              <Link
+                href="/sign-in"
                 className="ml-1 px-3 py-1.5 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
                 data-testid="button-sign-in"
               >
                 Sign in
-              </button>
+              </Link>
             )}
           </div>
         </div>
@@ -111,8 +109,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <p className="italic font-serif">A quiet place for stories to grow.</p>
         </div>
       </footer>
-
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 }

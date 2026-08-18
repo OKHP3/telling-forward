@@ -1,11 +1,8 @@
-import { useState } from 'react';
 import { Link } from 'wouter';
 import { useAuth } from '@/contexts/auth-context';
-import { AuthModal } from '@/components/auth-modal';
 
 export function Masthead() {
   const { user, logout } = useAuth();
-  const [authOpen, setAuthOpen] = useState(false);
   const currentDate = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
@@ -34,12 +31,12 @@ export function Masthead() {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => setAuthOpen(true)}
+              <Link
+                href="/sign-in"
                 className="font-mono text-xs text-[#c46a2c] hover:underline"
               >
                 Sign in
-              </button>
+              </Link>
             )}
           </div>
         </div>
@@ -51,8 +48,6 @@ export function Masthead() {
         <Link href="/" className="hover:text-[#c46a2c]">Paths</Link>
         <Link href="/" className="hover:text-[#c46a2c]">Archive</Link>
       </div>
-
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 }

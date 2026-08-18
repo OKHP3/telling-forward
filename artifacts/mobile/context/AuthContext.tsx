@@ -1,75 +1,105 @@
-import React, {
-  createContext,
-  useContext,
-  ReactNode,
-  useCallback,
-} from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import React, { createContext, useContext, useEffect, ReactNode } from 'react';
 import {
-  useGetMe,
-  useLogin,
-  useRegister,
-  useLogout,
-  type PublicUser,
-  type LoginRequest,
-  type RegisterRequest,
-} from '@workspace/api-client-react';
+  ClerkProvider,
+  ClerkLoaded,
+  useAuth as useClerkAuth,
+  useUser,
+  useClerk,
+} from '@clerk/expo';
+import { tokenCache } from '@clerk/expo/token-cache';
+import { setAuthTokenGetter } from '@workspace/api-client-react';
+
+const PUBLISHABLE_KEY = process.env['EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY'] ?? '';
+
+// ---------------------------------------------------------------------------
+// Context shape
+// ---------------------------------------------------------------------------
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  username: string;
+}
 
 interface AuthContextValue {
-  user: PublicUser | null;
+  user: AuthUser | null;
   isLoading: boolean;
-  login: (data: LoginRequest) => Promise<void>;
-  register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   isLoading: true,
-  login: async () => {},
-  register: async () => {},
   logout: async () => {},
 });
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const queryClient = useQueryClient();
+// ---------------------------------------------------------------------------
+// Token bridge — wires Clerk session token into the API client's Bearer header
+// ---------------------------------------------------------------------------
 
-  // A 401 here means "not logged in" — React Query puts it in error state.
-  // useQuery does not throw by default, so the component won't crash.
-  // We treat missing data as logged-out.
-  const { data: me, isLoading } = useGetMe();
+function ClerkTokenBridge() {
+  const { getToken } = useClerkAuth();
 
-  const { mutateAsync: loginMutate } = useLogin();
-  const { mutateAsync: registerMutate } = useRegister();
-  const { mutateAsync: logoutMutate } = useLogout();
+  useEffect(() => {
+    setAuthTokenGetter(async () => getToken());
+    return () => {
+      setAuthTokenGetter(null);
+    };
+  }, [getToken]);
 
-  const login = useCallback(
-    async (data: LoginRequest) => {
-      await loginMutate({ data });
-      await queryClient.invalidateQueries();
-    },
-    [loginMutate, queryClient],
-  );
+  return null;
+}
 
-  const register = useCallback(
-    async (data: RegisterRequest) => {
-      await registerMutate({ data });
-      await queryClient.invalidateQueries();
-    },
-    [registerMutate, queryClient],
-  );
+// ---------------------------------------------------------------------------
+// Inner provider — lives inside ClerkLoaded, so Clerk hooks are safe to call
+// ---------------------------------------------------------------------------
 
-  const logout = useCallback(async () => {
-    await logoutMutate();
-    await queryClient.invalidateQueries();
-  }, [logoutMutate, queryClient]);
+function AuthContextProvider({ children }: { children: ReactNode }) {
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
+
+  const authUser: AuthUser | null =
+    isLoaded && user
+      ? {
+          id: user.id,
+          email: user.primaryEmailAddress?.emailAddress ?? '',
+          username: user.username ?? user.firstName ?? user.id,
+        }
+      : null;
 
   return (
     <AuthContext.Provider
-      value={{ user: me?.user ?? null, isLoading, login, register, logout }}
+      value={{
+        user: authUser,
+        isLoading: !isLoaded,
+        logout: () => signOut(),
+      }}
     >
       {children}
     </AuthContext.Provider>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Public exports
+// ---------------------------------------------------------------------------
+
+/**
+ * AuthProvider wraps ClerkProvider so that the entire app tree has access
+ * to Clerk hooks.  It also installs a ClerkTokenBridge that keeps the API
+ * client's auth header in sync with the active Clerk session.
+ *
+ * Usage in _layout.tsx (unchanged from before):
+ *   <AuthProvider>{children}</AuthProvider>
+ */
+export function AuthProvider({ children }: { children: ReactNode }) {
+  return (
+    <ClerkProvider publishableKey={PUBLISHABLE_KEY} tokenCache={tokenCache}>
+      <ClerkLoaded>
+        <ClerkTokenBridge />
+        <AuthContextProvider>{children}</AuthContextProvider>
+      </ClerkLoaded>
+    </ClerkProvider>
   );
 }
 
