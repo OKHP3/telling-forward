@@ -83,9 +83,10 @@ async function transcribeRateLimit(
   next();
 }
 
-// The app-level JSON middleware is configured for 20 MB (see app.ts) to
-// accommodate base64 audio payloads. The per-route size guard below is the
-// authoritative cap; the global limit is a backstop against unbounded reads.
+// The app-level path-conditional JSON middleware (see app.ts) applies 20 MB
+// specifically for this route and 64 KB for all others. The per-route payload
+// size check below is an additional defence against requests just under the
+// parser limit that are still too large for Whisper.
 router.post(
   "/transcribe",
   requireAuth,
