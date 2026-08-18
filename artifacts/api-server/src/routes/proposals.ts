@@ -11,7 +11,7 @@
  */
 
 import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, and, inArray, desc } from "drizzle-orm";
 import {
   db,
   proposalsTable,
@@ -19,6 +19,7 @@ import {
   storyPathsTable,
   editorQuestionsTable,
   provenanceRecordsTable,
+  stewardsTable,
 } from "@workspace/db";
 import {
   GetProposalParams,
@@ -37,6 +38,18 @@ import { getGitHubClient } from "../lib/github";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
+
+// ---------------------------------------------------------------------------
+// Error sentinel for optimistic-concurrency conflicts
+// ---------------------------------------------------------------------------
+
+/** Thrown when a state-conditional UPDATE matched 0 rows (concurrent modification). */
+class ConcurrentModificationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ConcurrentModificationError";
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Allowed state transitions for steward actions
@@ -124,11 +137,25 @@ router.post(
         return;
       }
 
+      // State-conditional update: if another steward or webhook changed the
+      // state between our read and this update, 0 rows are returned → 409.
       const [updated] = await db
         .update(proposalsTable)
         .set({ state: "under-review" })
-        .where(eq(proposalsTable.id, proposal.id))
+        .where(
+          and(
+            eq(proposalsTable.id, proposal.id),
+            inArray(proposalsTable.state, ["submitted", "returned-with-notes"] as const),
+          ),
+        )
         .returning();
+
+      if (!updated) {
+        res.status(409).json({
+          error: "Proposal state changed concurrently — reload and try again",
+        });
+        return;
+      }
 
       logger.info(
         { proposalId: proposal.id, prevState: proposal.state },
@@ -173,7 +200,14 @@ router.post(
         return;
       }
 
-      if (!ACCEPT_FROM.has(proposal.state)) {
+      // Recovery path: the webhook may have already moved the proposal to
+      // "accepted-into-canon" before a retry reaches this point (e.g. the
+      // initial request merged the PR on GitHub, then the DB transaction
+      // failed, and the closed-PR webhook arrived first). In that case we
+      // allow the retry through so it can create the missing provenance record.
+      const isRecoveryAccept = proposal.state === "accepted-into-canon";
+
+      if (!isRecoveryAccept && !ACCEPT_FROM.has(proposal.state)) {
         res.status(409).json({
           error: `Cannot accept proposal from state "${proposal.state}"`,
         });
@@ -202,15 +236,42 @@ router.post(
 
       const path = pathRows[0];
 
-      // Merge the PR on GitHub
+      // Get the merge SHA from GitHub. For the recovery path the PR is already
+      // merged so we skip the merge call. For normal acceptance we merge first,
+      // then fall through to the DB writes. Checking GitHub before merging
+      // also handles the case where a previous request merged the PR but its
+      // DB transaction failed — the retry reuses the existing SHA without
+      // attempting a second merge.
       let mergeCommitSha: string;
       try {
-        mergeCommitSha = await gh.mergePullRequest({
-          owner: world.repoOwner,
-          repo: world.repoName,
-          prNumber: proposal.prNumber,
-          commitTitle: `Accept "${path?.title ?? `path #${proposal.pathId}`}" into canon`,
-        });
+        const prStatus = await gh.getPullRequest(
+          world.repoOwner,
+          world.repoName,
+          proposal.prNumber,
+        );
+
+        if (prStatus?.merged && prStatus.mergeCommitSha) {
+          // PR is already merged — reuse the SHA (retry or recovery path).
+          logger.info(
+            { prNumber: proposal.prNumber, sha: prStatus.mergeCommitSha },
+            "PR already merged — reusing merge SHA",
+          );
+          mergeCommitSha = prStatus.mergeCommitSha;
+        } else if (isRecoveryAccept) {
+          // Should not happen: proposal says accepted but PR isn't merged.
+          // Treat as a transient GitHub inconsistency and let the caller retry.
+          res.status(502).json({
+            error: "Proposal is accepted but PR is not yet reflected as merged on GitHub — try again shortly",
+          });
+          return;
+        } else {
+          mergeCommitSha = await gh.mergePullRequest({
+            owner: world.repoOwner,
+            repo: world.repoName,
+            prNumber: proposal.prNumber,
+            commitTitle: `Accept "${path?.title ?? `path #${proposal.pathId}`}" into canon`,
+          });
+        }
       } catch (ghErr) {
         logger.error(
           { err: ghErr, prNumber: proposal.prNumber },
@@ -225,31 +286,84 @@ router.post(
 
       const now = new Date();
 
-      // Transition proposal state + write provenance record (atomic via Promise.all)
-      const [[updatedProposal], [provenanceRecord]] = await Promise.all([
-        db
-          .update(proposalsTable)
-          .set({ state: "accepted-into-canon", decidedAt: now })
-          .where(eq(proposalsTable.id, proposal.id))
-          .returning(),
-        db
-          .insert(provenanceRecordsTable)
-          .values({
-            storyworldId: proposal.storyworldId,
-            canonCommitSha: mergeCommitSha,
-            sourcePathId: proposal.pathId,
-            contributorIds: [], // populated by contributor identity task
-            stewardId: null, // steward lookup deferred to steward identity task
-            decidedAt: now,
-          })
-          .returning(),
-      ]);
+      // Look up the steward record for this storyworld + acting user
+      const stewardRows = await db
+        .select()
+        .from(stewardsTable)
+        .where(
+          and(
+            eq(stewardsTable.storyworldId, proposal.storyworldId),
+            eq(stewardsTable.userId, req.session.userId as number),
+          ),
+        )
+        .limit(1);
+      const stewardId = stewardRows[0]?.id ?? null;
 
-      // Also update the story path state to published-alternate (merged)
-      await db
-        .update(storyPathsTable)
-        .set({ state: "published-alternate", updatedAt: now })
-        .where(eq(storyPathsTable.id, proposal.pathId));
+      // Transition proposal state + write provenance record atomically.
+      // The provenance insert checks for an existing record first so that a
+      // retry after a partial failure (or a recovery after the webhook ran
+      // first) never creates duplicate ledger entries.
+      const { updatedProposal, provenanceRecord } = await db.transaction(
+        async (tx) => {
+          // State-conditional update: valid from ACCEPT_FROM states plus
+          // "accepted-into-canon" (recovery path — webhook ran first).
+          // If 0 rows returned, a concurrent return/review overwrote the state;
+          // throw to roll back the entire transaction.
+          const [updatedProposal] = await tx
+            .update(proposalsTable)
+            .set({ state: "accepted-into-canon", decidedAt: now })
+            .where(
+              and(
+                eq(proposalsTable.id, proposal.id),
+                inArray(proposalsTable.state, [
+                  "submitted",
+                  "under-review",
+                  "accepted-into-canon",
+                ] as const),
+              ),
+            )
+            .returning();
+
+          if (!updatedProposal) {
+            throw new ConcurrentModificationError(
+              "Proposal state changed concurrently — cannot accept",
+            );
+          }
+
+          // Insert the provenance record with a DB-level idempotency guard.
+          // The unique constraint on (storyworldId, canonCommitSha) is the
+          // authoritative key. On retry, the same merge SHA produces a conflict
+          // and we get the existing record back via RETURNING — no select-then-
+          // insert race and no duplicate ledger entries.
+          const [provenanceRecord] = await tx
+            .insert(provenanceRecordsTable)
+            .values({
+              storyworldId: proposal.storyworldId,
+              canonCommitSha: mergeCommitSha,
+              sourcePathId: proposal.pathId,
+              contributorIds: [], // populated by contributor identity task
+              stewardId,
+              decidedAt: now,
+            })
+            .onConflictDoUpdate({
+              target: [
+                provenanceRecordsTable.storyworldId,
+                provenanceRecordsTable.canonCommitSha,
+              ],
+              // No-op update on retry — all fields stay as originally written.
+              // We still get the existing row back via RETURNING.
+              set: { decidedAt: provenanceRecordsTable.decidedAt },
+            })
+            .returning();
+
+          await tx
+            .update(storyPathsTable)
+            .set({ state: "published-alternate", updatedAt: now })
+            .where(eq(storyPathsTable.id, proposal.pathId));
+
+          return { updatedProposal, provenanceRecord };
+        },
+      );
 
       logger.info(
         {
@@ -267,6 +381,12 @@ router.post(
       });
       res.json(responsePayload);
     } catch (err) {
+      if (err instanceof ConcurrentModificationError) {
+        res.status(409).json({
+          error: "Proposal state changed concurrently — reload and try again",
+        });
+        return;
+      }
       req.log.error({ err }, "acceptProposal error");
       res.status(500).json({ error: "Failed to accept proposal" });
     }
@@ -328,16 +448,41 @@ router.post(
 
       const gh = getGitHubClient();
 
-      // Post review comment to GitHub PR
+      // Post review comment to GitHub PR — but first check whether a matching
+      // REQUEST_CHANGES review was already posted. This makes the operation
+      // recoverable: if a previous request successfully posted the review but
+      // then failed to commit the DB records, a retry reuses the existing
+      // review ID rather than posting a duplicate to GitHub.
       let reviewId: number;
       try {
-        reviewId = await gh.createPullRequestReview({
-          owner: world.repoOwner,
-          repo: world.repoName,
-          prNumber: proposal.prNumber,
-          body: body.data.editorQuestion,
-          event: "REQUEST_CHANGES",
-        });
+        const existingReviews = await gh.listPullRequestReviews(
+          world.repoOwner,
+          world.repoName,
+          proposal.prNumber,
+        );
+        // GitHub returns "CHANGES_REQUESTED" in the reviews list response,
+        // even though the event is submitted as "REQUEST_CHANGES".
+        const existingReview = existingReviews.find(
+          (r) =>
+            r.state === "CHANGES_REQUESTED" &&
+            r.body === body.data.editorQuestion,
+        );
+
+        if (existingReview) {
+          logger.info(
+            { prNumber: proposal.prNumber, reviewId: existingReview.id },
+            "Matching REQUEST_CHANGES review already exists — reusing for recovery",
+          );
+          reviewId = existingReview.id;
+        } else {
+          reviewId = await gh.createPullRequestReview({
+            owner: world.repoOwner,
+            repo: world.repoName,
+            prNumber: proposal.prNumber,
+            body: body.data.editorQuestion,
+            event: "REQUEST_CHANGES",
+          });
+        }
       } catch (ghErr) {
         logger.error(
           { err: ghErr, prNumber: proposal.prNumber },
@@ -350,19 +495,57 @@ router.post(
         return;
       }
 
-      // Update proposal state + create editor_question row (atomic via Promise.all)
-      const [[updatedProposal]] = await Promise.all([
-        db
+      // Update proposal state + create editor_question row atomically.
+      // The editor_questions insert is idempotent on reviewCommentId so that
+      // if the pull_request_review webhook fires concurrently and wins the
+      // race, this transaction still succeeds without a duplicate-key error.
+      //
+      // The proposal UPDATE is state-conditional: if another steward accepted
+      // or merged the proposal between our read and this transaction (e.g. a
+      // concurrent accept), 0 rows are updated, we return null, and the
+      // transaction commits empty (no state is overwritten). The caller then
+      // returns 409. The GitHub review that was already posted stays on the PR
+      // but does not corrupt the DB ledger.
+      const updatedProposal = await db.transaction(async (tx) => {
+        const [updated] = await tx
           .update(proposalsTable)
           .set({ state: "returned-with-notes" })
-          .where(eq(proposalsTable.id, proposal.id))
-          .returning(),
-        db.insert(editorQuestionsTable).values({
-          proposalId: proposal.id,
-          reviewCommentId: reviewId,
-          body: body.data.editorQuestion,
-        }),
-      ]);
+          .where(
+            and(
+              eq(proposalsTable.id, proposal.id),
+              inArray(proposalsTable.state, ["submitted", "under-review"] as const),
+            ),
+          )
+          .returning();
+
+        if (!updated) {
+          // State changed concurrently — do not insert the editor question.
+          // Return null to signal 409 to the caller; transaction commits empty.
+          return null;
+        }
+
+        await tx
+          .insert(editorQuestionsTable)
+          .values({
+            proposalId: proposal.id,
+            reviewCommentId: reviewId,
+            body: body.data.editorQuestion,
+          })
+          .onConflictDoUpdate({
+            target: editorQuestionsTable.reviewCommentId,
+            set: { body: body.data.editorQuestion },
+          });
+
+        return updated;
+      });
+
+      if (!updatedProposal) {
+        res.status(409).json({
+          error:
+            "Proposal state changed concurrently — the GitHub review was posted but the editorial state was not updated. Reload the proposal.",
+        });
+        return;
+      }
 
       logger.info(
         { proposalId: proposal.id, reviewId },

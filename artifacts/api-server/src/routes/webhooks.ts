@@ -20,7 +20,7 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { Request, Response } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql as drizzleSql } from "drizzle-orm";
 import {
   db,
   storyworldsTable,
@@ -243,7 +243,23 @@ async function handlePullRequest(payload: PullRequestPayload): Promise<void> {
   const isClosed = pr.state === "closed";
   const pathState = prToPathState(pr.merged, isClosed);
 
-  // Upsert the story path; drive its state from the PR lifecycle
+  // Terminal events (closed) always apply GitHub's authoritative outcome.
+  // Non-terminal events (opened, synchronize, reopened) must never overwrite
+  // an editorial or terminal state that was already established.
+  const isTerminalEvent = action === "closed";
+
+  // Upsert the story path; drive its state from the PR lifecycle.
+  // Non-terminal events must not overwrite "published-alternate" in case a
+  // prior closed/merged delivery already set the terminal outcome.
+  const pathStateSet = isTerminalEvent
+    ? drizzleSql`excluded.state`
+    : drizzleSql`
+        CASE
+          WHEN ${storyPathsTable.state} IN ('published-alternate')
+          THEN ${storyPathsTable.state}
+          ELSE excluded.state
+        END`;
+
   const [path] = await db
     .insert(storyPathsTable)
     .values({
@@ -254,7 +270,7 @@ async function handlePullRequest(payload: PullRequestPayload): Promise<void> {
     })
     .onConflictDoUpdate({
       target: [storyPathsTable.storyworldId, storyPathsTable.branchRef],
-      set: { state: pathState, updatedAt: new Date() },
+      set: { state: pathStateSet, updatedAt: new Date() },
     })
     .returning();
 
@@ -266,6 +282,29 @@ async function handlePullRequest(payload: PullRequestPayload): Promise<void> {
     pr.merged_at ?? pr.closed_at
       ? new Date((pr.merged_at ?? pr.closed_at)!)
       : null;
+
+  // Terminal events (closed/merged) always apply GitHub's authoritative outcome.
+  // Non-terminal events (synchronize, opened, reopened) must NOT overwrite:
+  //   - editorial states a steward has set ("under-review", "returned-with-notes")
+  //   - a terminal outcome that a prior event already established ("accepted-into-canon")
+  // For terminal events, decidedAt always updates. For non-terminal events,
+  // preserve decidedAt alongside any preserved state.
+  const stateSet = isTerminalEvent
+    ? drizzleSql`excluded.state`
+    : drizzleSql`
+        CASE
+          WHEN ${proposalsTable.state} IN ('under-review', 'returned-with-notes', 'accepted-into-canon')
+          THEN ${proposalsTable.state}
+          ELSE excluded.state
+        END`;
+  const decidedAtSet = isTerminalEvent
+    ? decidedAt
+    : drizzleSql`
+        CASE
+          WHEN ${proposalsTable.state} IN ('under-review', 'returned-with-notes', 'accepted-into-canon')
+          THEN ${proposalsTable.decidedAt}
+          ELSE excluded.decided_at
+        END`;
 
   await db
     .insert(proposalsTable)
@@ -279,7 +318,7 @@ async function handlePullRequest(payload: PullRequestPayload): Promise<void> {
     })
     .onConflictDoUpdate({
       target: [proposalsTable.storyworldId, proposalsTable.prNumber],
-      set: { state: proposalState, decidedAt },
+      set: { state: stateSet, decidedAt: decidedAtSet },
     });
 
   logger.info(

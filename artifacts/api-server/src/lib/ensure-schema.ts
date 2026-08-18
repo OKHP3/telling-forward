@@ -100,7 +100,7 @@ export async function ensureSchema(): Promise<void> {
     CREATE TABLE IF NOT EXISTS editor_questions (
       id                SERIAL      PRIMARY KEY,
       proposal_id       INTEGER     NOT NULL REFERENCES proposals(id),
-      review_comment_id INTEGER     NOT NULL UNIQUE,
+      review_comment_id BIGINT      NOT NULL UNIQUE,
       body              TEXT        NOT NULL,
       resolved          BOOLEAN     NOT NULL DEFAULT FALSE,
       created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -124,6 +124,22 @@ export async function ensureSchema(): Promise<void> {
       decided_at       TIMESTAMPTZ NOT NULL,
       CONSTRAINT provenance_canon_commit_unique UNIQUE (storyworld_id, canon_commit_sha)
     );
+
+    -- Migration: upgrade review_comment_id from INTEGER to BIGINT if needed.
+    -- GitHub review IDs are 64-bit; INTEGER silently truncates large values.
+    -- CREATE TABLE IF NOT EXISTS won't alter existing columns, so we apply this
+    -- explicitly. The DO block is a no-op when the column is already BIGINT.
+    DO $$ BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name   = 'editor_questions'
+          AND column_name  = 'review_comment_id'
+          AND data_type    = 'integer'
+      ) THEN
+        ALTER TABLE editor_questions
+          ALTER COLUMN review_comment_id TYPE BIGINT;
+      END IF;
+    END $$;
 
     CREATE INDEX IF NOT EXISTS idx_story_paths_storyworld ON story_paths (storyworld_id);
     CREATE INDEX IF NOT EXISTS idx_contributions_path ON contributions (path_id);

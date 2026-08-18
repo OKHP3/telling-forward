@@ -34,12 +34,20 @@ export interface GitHubPullRequest {
   number: number;
   state: "open" | "closed";
   merged: boolean;
+  /** SHA of the merge commit; only present when merged === true */
+  mergeCommitSha: string | null;
   title: string;
   headRef: string;
   baseRef: string;
   createdAt: string;
   closedAt: string | null;
   mergedAt: string | null;
+}
+
+export interface GitHubPullRequestReview {
+  id: number;
+  state: string; // e.g. "COMMENTED", "REQUEST_CHANGES", "APPROVED"
+  body: string;
 }
 
 export interface CreateBranchParams {
@@ -94,6 +102,15 @@ export interface GitHubClientInterface {
     repo: string,
     prNumber: number,
   ): Promise<GitHubPullRequest | null>;
+  /**
+   * Return all reviews for a pull request (most recent first).
+   * Used to detect whether a review was already posted before retrying.
+   */
+  listPullRequestReviews(
+    owner: string,
+    repo: string,
+    prNumber: number,
+  ): Promise<GitHubPullRequestReview[]>;
   createBranch(params: CreateBranchParams): Promise<void>;
   createCommit(params: CreateCommitParams): Promise<string>;
   /**
@@ -181,6 +198,7 @@ class OctokitGitHubClient implements GitHubClientInterface {
           number: pr.number,
           state: pr.state === "open" ? "open" : "closed",
           merged: !!pr.merged_at,
+          mergeCommitSha: pr.merge_commit_sha ?? null,
           title: pr.title,
           headRef: pr.head.ref,
           baseRef: pr.base.ref,
@@ -208,6 +226,7 @@ class OctokitGitHubClient implements GitHubClientInterface {
         number: pr.number,
         state: pr.state === "open" ? "open" : "closed",
         merged: !!pr.merged_at,
+        mergeCommitSha: pr.merge_commit_sha ?? null,
         title: pr.title,
         headRef: pr.head.ref,
         baseRef: pr.base.ref,
@@ -218,6 +237,24 @@ class OctokitGitHubClient implements GitHubClientInterface {
     } catch {
       return null;
     }
+  }
+
+  async listPullRequestReviews(
+    owner: string,
+    repo: string,
+    prNumber: number,
+  ): Promise<GitHubPullRequestReview[]> {
+    const results: GitHubPullRequestReview[] = [];
+    for await (const page of this.octokit.paginate.iterator(
+      this.octokit.rest.pulls.listReviews,
+      { owner, repo, pull_number: prNumber, per_page: 100 },
+    )) {
+      for (const r of page.data) {
+        results.push({ id: r.id, state: r.state, body: r.body });
+      }
+    }
+    // Return most-recent first so callers find the latest matching review
+    return results.reverse();
   }
 
   /**

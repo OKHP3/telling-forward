@@ -17,7 +17,7 @@
  */
 
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql as drizzleSql } from "drizzle-orm";
 import {
   db,
   storyworldsTable,
@@ -210,6 +210,22 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
       const pathState = prToPathState(pr.merged, isClosed);
       const proposalState = prToProposalState(pr.state, pr.merged);
 
+      // Terminal events (closed/merged) always apply GitHub's authoritative
+      // outcome. Non-terminal events (open PRs) must NOT overwrite editorial
+      // states a steward has already set ("under-review", "returned-with-notes")
+      // or a terminal outcome ("accepted-into-canon") that was established by a
+      // prior webhook delivery. This mirrors the guard in routes/webhooks.ts.
+      const isTerminalEvent = isClosed;
+
+      const pathStateSet = isTerminalEvent
+        ? drizzleSql`excluded.state`
+        : drizzleSql`
+            CASE
+              WHEN ${storyPathsTable.state} IN ('published-alternate')
+              THEN ${storyPathsTable.state}
+              ELSE excluded.state
+            END`;
+
       // Ensure the head branch has a story path with the correct state
       const [path] = await db
         .insert(storyPathsTable)
@@ -221,8 +237,7 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
         })
         .onConflictDoUpdate({
           target: [storyPathsTable.storyworldId, storyPathsTable.branchRef],
-          // Always bring path state in line with the PR's current outcome
-          set: { state: pathState, updatedAt: new Date() },
+          set: { state: pathStateSet, updatedAt: new Date() },
         })
         .returning();
 
@@ -234,7 +249,24 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
           ? new Date((pr.mergedAt ?? pr.closedAt)!)
           : null;
 
-      // Upsert proposal, updating state and decidedAt from live GitHub data
+      const proposalStateSet = isTerminalEvent
+        ? drizzleSql`excluded.state`
+        : drizzleSql`
+            CASE
+              WHEN ${proposalsTable.state} IN ('under-review', 'returned-with-notes', 'accepted-into-canon')
+              THEN ${proposalsTable.state}
+              ELSE excluded.state
+            END`;
+      const decidedAtSet = isTerminalEvent
+        ? decidedAt
+        : drizzleSql`
+            CASE
+              WHEN ${proposalsTable.state} IN ('under-review', 'returned-with-notes', 'accepted-into-canon')
+              THEN ${proposalsTable.decidedAt}
+              ELSE excluded.decided_at
+            END`;
+
+      // Upsert proposal; only overwrite state when GitHub's outcome is terminal.
       await db
         .insert(proposalsTable)
         .values({
@@ -247,8 +279,7 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
         })
         .onConflictDoUpdate({
           target: [proposalsTable.storyworldId, proposalsTable.prNumber],
-          // Overwrite state + decidedAt so stale rows are corrected
-          set: { state: proposalState, decidedAt },
+          set: { state: proposalStateSet, decidedAt: decidedAtSet },
         });
 
       summary["proposals_upserted"] = (summary["proposals_upserted"] ?? 0) + 1;
