@@ -196,6 +196,28 @@ export async function ensureSchema(): Promise<void> {
       END IF;
     END $$;
 
+    -- Migration: add storyworlds.seed (nullable) introduced for Reader discovery cards.
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name  = 'storyworlds'
+          AND column_name = 'seed'
+      ) THEN
+        ALTER TABLE storyworlds ADD COLUMN seed TEXT;
+      END IF;
+    END $$;
+
+    -- Migration: add contributions.agent_assisted (boolean, default false) for AI-assistance disclosure.
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name  = 'contributions'
+          AND column_name = 'agent_assisted'
+      ) THEN
+        ALTER TABLE contributions ADD COLUMN agent_assisted BOOLEAN NOT NULL DEFAULT FALSE;
+      END IF;
+    END $$;
+
     CREATE INDEX IF NOT EXISTS idx_story_paths_storyworld ON story_paths (storyworld_id);
     CREATE INDEX IF NOT EXISTS idx_contributions_path ON contributions (path_id);
     CREATE INDEX IF NOT EXISTS idx_proposals_path ON proposals (path_id);

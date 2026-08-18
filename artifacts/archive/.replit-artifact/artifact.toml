@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/archive/"
+title = "Telling Forward Archive"
+description = "A civic, editorial-style public portal for the Telling Forward platform. Warm paper background, ink typography, coral accents, and a public landing page showing live platform stats, storyworld archives, and contribution dispatches. The most public-facing of the reader surfaces."
+version = "1.0.0"
+id = "artifacts/archive"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/archive/" ]
+localPort = 18953
+
+[services.development]
+run = "pnpm --filter @workspace/archive run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/archive", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/archive/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18953"
+BASE_PATH = "/archive/"

@@ -49,6 +49,9 @@ export const storyworldsTable = pgTable("storyworlds", {
   title: text("title").notNull(),
   stewardId: integer("steward_id"),
   canonBranchRef: text("canon_branch_ref").notNull(),
+  // A short seed sentence surfaced on the Reader discovery page.
+  // Not required — worlds without a seed fall back to the repo name.
+  seed: text("seed"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -98,6 +101,9 @@ export const contributionsTable = pgTable("contributions", {
   ),
   title: text("title").notNull(),
   summary: text("summary"),
+  // True if this scene was drafted with AI assistance (Scene Writer / PME).
+  // Always visible in the Reader; never hover-only. Part of the theme contract.
+  agentAssisted: boolean("agent_assisted").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

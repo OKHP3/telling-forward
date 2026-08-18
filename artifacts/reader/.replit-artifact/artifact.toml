@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/reader/"
+title = "Telling Forward Reader"
+description = "A purpose-built reading app for Telling Forward storyworlds. Renders canon story paths as readable prose with the Editorial theme. No login required. Each scene shows contributor attribution and agent-assistance disclosure. Branch points appear as footnote-style callouts so readers can see where the story diverges."
+version = "1.0.0"
+id = "artifacts/reader"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/reader/" ]
+localPort = 22063
+
+[services.development]
+run = "pnpm --filter @workspace/reader run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/reader", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/reader/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22063"
+BASE_PATH = "/reader/"

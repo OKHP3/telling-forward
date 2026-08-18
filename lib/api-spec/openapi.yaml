@@ -879,6 +879,12 @@ components:
           nullable: true
         canonBranchRef:
           type: string
+        seed:
+          type: string
+          nullable: true
+          description: >
+            A short seed sentence surfaced on the Reader discovery page.
+            Null when the world creator has not set one yet.
         createdAt:
           type: string
           format: date-time
@@ -945,6 +951,18 @@ components:
         summary:
           type: string
           nullable: true
+        agentAssisted:
+          type: boolean
+          description: >
+            True if this scene was drafted with AI assistance.
+            Always visible in the Reader App — never hover-only.
+        contributorDisplayName:
+          type: string
+          nullable: true
+          description: >
+            Display name of the contributor who authored this scene,
+            resolved from the contributors table. Null when no contributor
+            is recorded or the contributor has no display name.
         createdAt:
           type: string
           format: date-time
@@ -954,6 +972,7 @@ components:
         - pathId
         - commitSha
         - title
+        - agentAssisted
         - createdAt
 
     TranscribeRequest:

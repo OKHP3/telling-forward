@@ -5,6 +5,7 @@ import {
   storyworldsTable,
   storyPathsTable,
   contributionsTable,
+  contributorsTable,
   proposalsTable,
 } from "@workspace/db";
 import {
@@ -144,8 +145,23 @@ router.get("/:id/paths/:pathId/contributions", async (req, res) => {
   }
   try {
     const rows = await db
-      .select()
+      .select({
+        id: contributionsTable.id,
+        storyworldId: contributionsTable.storyworldId,
+        pathId: contributionsTable.pathId,
+        commitSha: contributionsTable.commitSha,
+        contributorId: contributionsTable.contributorId,
+        title: contributionsTable.title,
+        summary: contributionsTable.summary,
+        agentAssisted: contributionsTable.agentAssisted,
+        createdAt: contributionsTable.createdAt,
+        contributorDisplayName: contributorsTable.displayName,
+      })
       .from(contributionsTable)
+      .leftJoin(
+        contributorsTable,
+        eq(contributionsTable.contributorId, contributorsTable.id),
+      )
       .where(
         and(
           eq(contributionsTable.storyworldId, params.data.id),

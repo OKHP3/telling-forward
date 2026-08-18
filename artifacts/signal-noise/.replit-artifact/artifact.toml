@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/signal-noise/"
+title = "Telling Forward Signal/Noise"
+description = "A terminal-aesthetic submission tracker for the Telling Forward platform. Dark hacker-green UI, state chips with glowing colored dots, corner-bracket card decorations, and a real-time submission queue wired to the proposals API."
+version = "1.0.0"
+id = "artifacts/signal-noise"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/signal-noise/" ]
+localPort = 18378
+
+[services.development]
+run = "pnpm --filter @workspace/signal-noise run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/signal-noise", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/signal-noise/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18378"
+BASE_PATH = "/signal-noise/"

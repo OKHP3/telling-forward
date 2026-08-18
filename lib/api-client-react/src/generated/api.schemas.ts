@@ -55,6 +55,9 @@ export interface Storyworld {
   title: string;
   stewardId?: number | null;
   canonBranchRef: string;
+  /** A short seed sentence surfaced on the Reader discovery page. Null when the world creator has not set one yet.
+   */
+  seed?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -88,6 +91,12 @@ export interface Contribution {
   contributorId?: number | null;
   title: string;
   summary?: string | null;
+  /** True if this scene was drafted with AI assistance. Always visible in the Reader App — never hover-only.
+   */
+  agentAssisted: boolean;
+  /** Display name of the contributor who authored this scene, resolved from the contributors table. Null when no contributor is recorded or the contributor has no display name.
+   */
+  contributorDisplayName?: string | null;
   createdAt: string;
 }
 

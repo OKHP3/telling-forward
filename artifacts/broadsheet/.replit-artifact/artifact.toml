@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/broadsheet/"
+title = "Telling Forward Broadsheet"
+description = "A newspaper broadsheet-themed reader for the Telling Forward platform. Warm parchment paper, dark espresso type, terracotta orange accents, and a rigorous editorial typographic grid. Readers browse storyworlds and read contributions in a print-inspired front-page layout. No login required."
+version = "1.0.0"
+id = "artifacts/broadsheet"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/broadsheet/" ]
+localPort = 19866
+
+[services.development]
+run = "pnpm --filter @workspace/broadsheet run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/broadsheet", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/broadsheet/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19866"
+BASE_PATH = "/broadsheet/"

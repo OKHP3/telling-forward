@@ -93,6 +93,12 @@ export const ListStoryworldsResponseItem = zod.object({
   title: zod.string(),
   stewardId: zod.number().nullish(),
   canonBranchRef: zod.string(),
+  seed: zod
+    .string()
+    .nullish()
+    .describe(
+      "A short seed sentence surfaced on the Reader discovery page. Null when the world creator has not set one yet.\n",
+    ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -112,6 +118,12 @@ export const GetStoryworldResponse = zod.object({
   title: zod.string(),
   stewardId: zod.number().nullish(),
   canonBranchRef: zod.string(),
+  seed: zod
+    .string()
+    .nullish()
+    .describe(
+      "A short seed sentence surfaced on the Reader discovery page. Null when the world creator has not set one yet.\n",
+    ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -151,6 +163,17 @@ export const ListContributionsResponseItem = zod.object({
   contributorId: zod.number().nullish(),
   title: zod.string(),
   summary: zod.string().nullish(),
+  agentAssisted: zod
+    .boolean()
+    .describe(
+      "True if this scene was drafted with AI assistance. Always visible in the Reader App — never hover-only.\n",
+    ),
+  contributorDisplayName: zod
+    .string()
+    .nullish()
+    .describe(
+      "Display name of the contributor who authored this scene, resolved from the contributors table. Null when no contributor is recorded or the contributor has no display name.\n",
+    ),
   createdAt: zod.coerce.date(),
 });
 export const ListContributionsResponse = zod.array(
