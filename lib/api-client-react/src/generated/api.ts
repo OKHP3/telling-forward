@@ -20,7 +20,9 @@ import type {
   AcceptProposalResponse,
   AuthResponse,
   BadRequestResponse,
+  Capsule,
   Contribution,
+  CreateCapsuleBody,
   ErrorResponse,
   GithubCallbackParams,
   HealthStatus,
@@ -36,6 +38,7 @@ import type {
   TranscribeRequest,
   TranscribeResponse,
   UnauthorizedResponse,
+  UpdateCapsuleBody,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -956,6 +959,377 @@ export function useListContributions<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Returns open capsules (GitHub Issues tagged capsule:*) for the storyworld. Requires authentication.
+
+ * @summary List concept capsules for a storyworld
+ */
+export const getListCapsulesUrl = (id: number) => {
+  return `/api/storyworlds/${id}/capsules`;
+};
+
+export const listCapsules = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Capsule[]> => {
+  return customFetch<Capsule[]>(getListCapsulesUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCapsulesQueryKey = (id: number) => {
+  return [`/api/storyworlds/${id}/capsules`] as const;
+};
+
+export const getListCapsulesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCapsules>>,
+  TError = ErrorType<UnauthorizedResponse | NotFoundResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listCapsules>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCapsulesQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCapsules>>> = ({
+    signal,
+  }) => listCapsules(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCapsules>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListCapsulesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCapsules>>
+>;
+export type ListCapsulesQueryError = ErrorType<
+  UnauthorizedResponse | NotFoundResponse
+>;
+
+/**
+ * @summary List concept capsules for a storyworld
+ */
+
+export function useListCapsules<
+  TData = Awaited<ReturnType<typeof listCapsules>>,
+  TError = ErrorType<UnauthorizedResponse | NotFoundResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listCapsules>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListCapsulesQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Creates a GitHub Issue in the storyworld's repo and returns the mapped capsule. Requires authentication and steward role.
+
+ * @summary Create a concept capsule
+ */
+export const getCreateCapsuleUrl = (id: number) => {
+  return `/api/storyworlds/${id}/capsules`;
+};
+
+export const createCapsule = async (
+  id: number,
+  createCapsuleBody: CreateCapsuleBody,
+  options?: RequestInit,
+): Promise<Capsule> => {
+  return customFetch<Capsule>(getCreateCapsuleUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createCapsuleBody),
+  });
+};
+
+export const getCreateCapsuleMutationOptions = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCapsule>>,
+    TError,
+    { id: number; data: BodyType<CreateCapsuleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCapsule>>,
+  TError,
+  { id: number; data: BodyType<CreateCapsuleBody> },
+  TContext
+> => {
+  const mutationKey = ["createCapsule"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCapsule>>,
+    { id: number; data: BodyType<CreateCapsuleBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return createCapsule(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCapsuleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCapsule>>
+>;
+export type CreateCapsuleMutationBody = BodyType<CreateCapsuleBody>;
+export type CreateCapsuleMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Create a concept capsule
+ */
+export const useCreateCapsule = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCapsule>>,
+    TError,
+    { id: number; data: BodyType<CreateCapsuleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createCapsule>>,
+  TError,
+  { id: number; data: BodyType<CreateCapsuleBody> },
+  TContext
+> => {
+  return useMutation(getCreateCapsuleMutationOptions(options));
+};
+
+/**
+ * Updates the GitHub Issue backing the capsule. Requires authentication and steward role.
+
+ * @summary Update a concept capsule
+ */
+export const getUpdateCapsuleUrl = (id: number, capsuleId: number) => {
+  return `/api/storyworlds/${id}/capsules/${capsuleId}`;
+};
+
+export const updateCapsule = async (
+  id: number,
+  capsuleId: number,
+  updateCapsuleBody: UpdateCapsuleBody,
+  options?: RequestInit,
+): Promise<Capsule> => {
+  return customFetch<Capsule>(getUpdateCapsuleUrl(id, capsuleId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateCapsuleBody),
+  });
+};
+
+export const getUpdateCapsuleMutationOptions = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCapsule>>,
+    TError,
+    { id: number; capsuleId: number; data: BodyType<UpdateCapsuleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCapsule>>,
+  TError,
+  { id: number; capsuleId: number; data: BodyType<UpdateCapsuleBody> },
+  TContext
+> => {
+  const mutationKey = ["updateCapsule"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCapsule>>,
+    { id: number; capsuleId: number; data: BodyType<UpdateCapsuleBody> }
+  > = (props) => {
+    const { id, capsuleId, data } = props ?? {};
+
+    return updateCapsule(id, capsuleId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCapsuleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCapsule>>
+>;
+export type UpdateCapsuleMutationBody = BodyType<UpdateCapsuleBody>;
+export type UpdateCapsuleMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Update a concept capsule
+ */
+export const useUpdateCapsule = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCapsule>>,
+    TError,
+    { id: number; capsuleId: number; data: BodyType<UpdateCapsuleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateCapsule>>,
+  TError,
+  { id: number; capsuleId: number; data: BodyType<UpdateCapsuleBody> },
+  TContext
+> => {
+  return useMutation(getUpdateCapsuleMutationOptions(options));
+};
+
+/**
+ * Closes the GitHub Issue backing the capsule (soft delete — issue remains on GitHub). Requires authentication and steward role.
+
+ * @summary Archive a concept capsule
+ */
+export const getDeleteCapsuleUrl = (id: number, capsuleId: number) => {
+  return `/api/storyworlds/${id}/capsules/${capsuleId}`;
+};
+
+export const deleteCapsule = async (
+  id: number,
+  capsuleId: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteCapsuleUrl(id, capsuleId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteCapsuleMutationOptions = <
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCapsule>>,
+    TError,
+    { id: number; capsuleId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteCapsule>>,
+  TError,
+  { id: number; capsuleId: number },
+  TContext
+> => {
+  const mutationKey = ["deleteCapsule"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteCapsule>>,
+    { id: number; capsuleId: number }
+  > = (props) => {
+    const { id, capsuleId } = props ?? {};
+
+    return deleteCapsule(id, capsuleId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteCapsuleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteCapsule>>
+>;
+
+export type DeleteCapsuleMutationError = ErrorType<
+  UnauthorizedResponse | ErrorResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Archive a concept capsule
+ */
+export const useDeleteCapsule = <
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCapsule>>,
+    TError,
+    { id: number; capsuleId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteCapsule>>,
+  TError,
+  { id: number; capsuleId: number },
+  TContext
+> => {
+  return useMutation(getDeleteCapsuleMutationOptions(options));
+};
 
 /**
  * Returns proposals for a storyworld ordered by submission date descending. Requires authentication and steward role for the storyworld.

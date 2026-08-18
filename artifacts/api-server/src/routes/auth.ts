@@ -635,4 +635,39 @@ router.get("/github/callback", requireAuth, async (req, res) => {
   res.redirect(`${FRONTEND_URL}?github_link=success`);
 });
 
+// PATCH /api/auth/profile — update display name
+router.patch("/profile", requireAuth, async (req, res) => {
+  const { displayName } = req.body as Record<string, unknown>;
+  if (
+    typeof displayName !== "string" ||
+    displayName.trim().length === 0 ||
+    displayName.length > 80
+  ) {
+    res.status(400).json({ error: "displayName must be 1–80 characters" });
+    return;
+  }
+  const userId = req.session.userId!;
+  try {
+    const [updated] = await db
+      .update(usersTable)
+      .set({ displayName: displayName.trim() })
+      .where(eq(usersTable.id, userId))
+      .returning({
+        id: usersTable.id,
+        email: usersTable.email,
+        displayName: usersTable.displayName,
+        emailVerified: usersTable.emailVerified,
+        createdAt: usersTable.createdAt,
+      });
+    if (!updated) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    res.json({ user: updated });
+  } catch (err) {
+    req.log.error({ err }, "updateProfile DB error");
+    res.status(500).json({ error: "Failed to update profile" });
+  }
+});
+
 export default router;

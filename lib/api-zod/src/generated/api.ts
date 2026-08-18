@@ -40,7 +40,6 @@ export const LoginResponse = zod.object({
     id: zod.number(),
     email: zod.string().email(),
     displayName: zod.string(),
-    emailVerified: zod.boolean(),
     createdAt: zod.coerce.date(),
   }),
 });
@@ -61,7 +60,6 @@ export const GetMeResponse = zod.object({
     id: zod.number(),
     email: zod.string().email(),
     displayName: zod.string(),
-    emailVerified: zod.boolean(),
     createdAt: zod.coerce.date(),
   }),
   github: zod.union([
@@ -158,6 +156,122 @@ export const ListContributionsResponseItem = zod.object({
 export const ListContributionsResponse = zod.array(
   ListContributionsResponseItem,
 );
+
+/**
+ * Returns open capsules (GitHub Issues tagged capsule:*) for the storyworld. Requires authentication.
+
+ * @summary List concept capsules for a storyworld
+ */
+export const ListCapsulesParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListCapsulesResponseItem = zod
+  .object({
+    id: zod
+      .number()
+      .describe(
+        "GitHub Issue number — the canonical identity of this capsule.",
+      ),
+    storyworldId: zod.number(),
+    title: zod.string().describe("Capsule name as entered by the author."),
+    type: zod.enum(["character", "arc", "event"]),
+    roleTag: zod
+      .string()
+      .nullish()
+      .describe(
+        "Author-defined role label (e.g. protagonist, antagonist, mentor). null if no role has been assigned.\n",
+      ),
+    epiphanyNote: zod
+      .string()
+      .nullish()
+      .describe("Freeform depth note — the GitHub Issue body."),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+  })
+  .describe(
+    "A concept capsule — an atomic story idea (character, arc, or planned event) backed by a GitHub Issue in the storyworld's repo.\n",
+  );
+export const ListCapsulesResponse = zod.array(ListCapsulesResponseItem);
+
+/**
+ * Creates a GitHub Issue in the storyworld's repo and returns the mapped capsule. Requires authentication and steward role.
+
+ * @summary Create a concept capsule
+ */
+export const CreateCapsuleParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const CreateCapsuleBody = zod.object({
+  title: zod.string().min(1).describe("Capsule name."),
+  type: zod.enum(["character", "arc", "event"]),
+  roleTag: zod
+    .string()
+    .optional()
+    .describe(
+      "Author-defined role label (e.g. protagonist, antagonist). Stored as a `role:<value>` GitHub label.\n",
+    ),
+  epiphanyNote: zod
+    .string()
+    .optional()
+    .describe("Freeform detail — the GitHub Issue body."),
+});
+
+/**
+ * Updates the GitHub Issue backing the capsule. Requires authentication and steward role.
+
+ * @summary Update a concept capsule
+ */
+export const UpdateCapsuleParams = zod.object({
+  id: zod.coerce.number(),
+  capsuleId: zod.coerce.number().describe("GitHub Issue number"),
+});
+
+export const UpdateCapsuleBody = zod
+  .object({
+    title: zod.string().min(1).optional(),
+    roleTag: zod.string().nullish(),
+    epiphanyNote: zod.string().nullish(),
+  })
+  .describe("Partial update — only provided fields are changed.");
+
+export const UpdateCapsuleResponse = zod
+  .object({
+    id: zod
+      .number()
+      .describe(
+        "GitHub Issue number — the canonical identity of this capsule.",
+      ),
+    storyworldId: zod.number(),
+    title: zod.string().describe("Capsule name as entered by the author."),
+    type: zod.enum(["character", "arc", "event"]),
+    roleTag: zod
+      .string()
+      .nullish()
+      .describe(
+        "Author-defined role label (e.g. protagonist, antagonist, mentor). null if no role has been assigned.\n",
+      ),
+    epiphanyNote: zod
+      .string()
+      .nullish()
+      .describe("Freeform depth note — the GitHub Issue body."),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+  })
+  .describe(
+    "A concept capsule — an atomic story idea (character, arc, or planned event) backed by a GitHub Issue in the storyworld's repo.\n",
+  );
+
+/**
+ * Closes the GitHub Issue backing the capsule (soft delete — issue remains on GitHub). Requires authentication and steward role.
+
+ * @summary Archive a concept capsule
+ */
+export const DeleteCapsuleParams = zod.object({
+  id: zod.coerce.number(),
+  capsuleId: zod.coerce.number().describe("GitHub Issue number"),
+});
 
 /**
  * Returns proposals for a storyworld ordered by submission date descending. Requires authentication and steward role for the storyworld.

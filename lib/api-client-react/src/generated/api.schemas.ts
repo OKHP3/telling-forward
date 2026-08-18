@@ -103,6 +103,67 @@ export interface TranscribeResponse {
   text: string;
 }
 
+export type CapsuleType = (typeof CapsuleType)[keyof typeof CapsuleType];
+
+export const CapsuleType = {
+  character: "character",
+  arc: "arc",
+  event: "event",
+} as const;
+
+/**
+ * A concept capsule — an atomic story idea (character, arc, or planned event) backed by a GitHub Issue in the storyworld's repo.
+
+ */
+export interface Capsule {
+  /** GitHub Issue number — the canonical identity of this capsule. */
+  id: number;
+  storyworldId: number;
+  /** Capsule name as entered by the author. */
+  title: string;
+  type: CapsuleType;
+  /** Author-defined role label (e.g. protagonist, antagonist, mentor). null if no role has been assigned.
+   */
+  roleTag?: string | null;
+  /** Freeform depth note — the GitHub Issue body. */
+  epiphanyNote?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreateCapsuleBodyType =
+  (typeof CreateCapsuleBodyType)[keyof typeof CreateCapsuleBodyType];
+
+export const CreateCapsuleBodyType = {
+  character: "character",
+  arc: "arc",
+  event: "event",
+} as const;
+
+export interface CreateCapsuleBody {
+  /**
+   * Capsule name.
+   * @minLength 1
+   */
+  title: string;
+  type: CreateCapsuleBodyType;
+  /** Author-defined role label (e.g. protagonist, antagonist). Stored as a `role:<value>` GitHub label.
+   */
+  roleTag?: string;
+  /** Freeform detail — the GitHub Issue body. */
+  epiphanyNote?: string;
+}
+
+/**
+ * Partial update — only provided fields are changed.
+ */
+export interface UpdateCapsuleBody {
+  /** @minLength 1 */
+  title?: string;
+  roleTag?: string | null;
+  epiphanyNote?: string | null;
+}
+
 export interface ReturnProposalBody {
   /**
    * The question or guidance returned to the contributor. Surfaces as an editor question on the proposal view; posted as a PR review comment on GitHub.

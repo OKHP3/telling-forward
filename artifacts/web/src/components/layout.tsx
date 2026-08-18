@@ -1,7 +1,8 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Settings } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -17,6 +18,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <div className="min-h-[100dvh] flex flex-col font-sans">
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto max-w-5xl px-4 h-16 flex items-center justify-between">
+          {/* Wordmark */}
           <Link href="/" className="flex items-center gap-3 transition-colors hover:opacity-80" data-testid="link-home">
             <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-primary/10 text-primary">
               <BookOpen className="h-4 w-4" />
@@ -26,6 +28,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </span>
           </Link>
 
+          {/* Primary nav */}
           <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
             <Link
               href="/"
@@ -49,16 +52,35 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </Link>
           </nav>
 
-          <div className="flex items-center gap-4">
+          {/* Right rail: theme toggle + user/settings */}
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+
             {meData?.user ? (
-              <div className="text-sm text-muted-foreground flex items-center gap-2" data-testid="text-username">
-                <span className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center text-xs font-medium text-secondary-foreground">
-                  {meData.user.displayName.charAt(0).toUpperCase()}
-                </span>
-                <span className="hidden sm:inline-block">{meData.user.displayName}</span>
+              <div className="flex items-center gap-1.5 ml-1">
+                <div className="text-sm text-muted-foreground flex items-center gap-2" data-testid="text-username">
+                  <span className="h-7 w-7 rounded-full bg-secondary flex items-center justify-center text-xs font-semibold text-secondary-foreground shrink-0">
+                    {meData.user.displayName.charAt(0).toUpperCase()}
+                  </span>
+                  <span className="hidden sm:inline-block text-sm">{meData.user.displayName}</span>
+                </div>
+                <Link
+                  href="/settings"
+                  aria-label="Settings"
+                  title="Settings"
+                  className={cn(
+                    "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
+                    location === "/settings"
+                      ? "bg-accent/60 text-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
+                  )}
+                  data-testid="link-settings"
+                >
+                  <Settings className="h-4 w-4" />
+                </Link>
               </div>
             ) : (
-              <span className="text-sm text-muted-foreground" data-testid="text-guest">
+              <span className="text-sm text-muted-foreground ml-1" data-testid="text-guest">
                 Guest Reader
               </span>
             )}

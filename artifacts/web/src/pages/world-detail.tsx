@@ -2,7 +2,7 @@ import { useParams } from "wouter";
 import { useGetStoryworld, useListStoryPaths, getGetStoryworldQueryKey, getListStoryPathsQueryKey } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
-import { BookOpen, Map, ArrowLeft, PenTool, Globe, ChevronRight, ShieldCheck } from "lucide-react";
+import { BookOpen, Map, ArrowLeft, PenTool, Globe, ChevronRight, ShieldCheck, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function WorldDetail() {
@@ -75,8 +75,16 @@ export function WorldDetail() {
             <span className="w-1 h-1 rounded-full bg-border" />
             <span>Since {format(new Date(world.createdAt), "MMM yyyy")}</span>
           </div>
-          {/* Steward panel link — the API enforces the 403 gate; show it for any logged-in user */}
-          <div className="pt-2">
+          {/* Quick links — API enforces auth/steward gates; show for any logged-in user */}
+          <div className="pt-2 flex items-center gap-4">
+            <Link
+              href={`/worlds/${worldId}/board`}
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+              data-testid="link-concept-board"
+            >
+              <Lightbulb className="h-3.5 w-3.5" />
+              Concept Board
+            </Link>
             <Link
               href={`/worlds/${worldId}/steward`}
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"

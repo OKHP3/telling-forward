@@ -255,6 +255,150 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /storyworlds/{id}/capsules:
+    get:
+      operationId: listCapsules
+      tags: [storyworlds]
+      summary: List concept capsules for a storyworld
+      description: >
+        Returns open capsules (GitHub Issues tagged capsule:*) for the storyworld.
+        Requires authentication.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Capsule list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Capsule"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: createCapsule
+      tags: [storyworlds]
+      summary: Create a concept capsule
+      description: >
+        Creates a GitHub Issue in the storyworld's repo and returns the mapped capsule.
+        Requires authentication and steward role.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCapsuleBody"
+      responses:
+        "201":
+          description: Created capsule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Capsule"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not a steward for this storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /storyworlds/{id}/capsules/{capsuleId}:
+    patch:
+      operationId: updateCapsule
+      tags: [storyworlds]
+      summary: Update a concept capsule
+      description: >
+        Updates the GitHub Issue backing the capsule.
+        Requires authentication and steward role.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: capsuleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: GitHub Issue number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCapsuleBody"
+      responses:
+        "200":
+          description: Updated capsule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Capsule"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not a steward for this storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteCapsule
+      tags: [storyworlds]
+      summary: Archive a concept capsule
+      description: >
+        Closes the GitHub Issue backing the capsule (soft delete — issue remains on GitHub).
+        Requires authentication and steward role.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: capsuleId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: GitHub Issue number
+      responses:
+        "204":
+          description: Capsule archived
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not a steward for this storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /storyworlds/{id}/proposals:
     get:
       operationId: listStoryworldProposals
@@ -705,6 +849,83 @@ components:
           type: string
           description: Transcribed text from the audio
       required: [text]
+
+    Capsule:
+      type: object
+      description: >
+        A concept capsule — an atomic story idea (character, arc, or planned event)
+        backed by a GitHub Issue in the storyworld's repo.
+      properties:
+        id:
+          type: integer
+          description: GitHub Issue number — the canonical identity of this capsule.
+        storyworldId:
+          type: integer
+        title:
+          type: string
+          description: Capsule name as entered by the author.
+        type:
+          type: string
+          enum: [character, arc, event]
+        roleTag:
+          type: string
+          nullable: true
+          description: >
+            Author-defined role label (e.g. protagonist, antagonist, mentor).
+            null if no role has been assigned.
+        epiphanyNote:
+          type: string
+          nullable: true
+          description: Freeform depth note — the GitHub Issue body.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - storyworldId
+        - title
+        - type
+        - createdAt
+        - updatedAt
+
+    CreateCapsuleBody:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          description: Capsule name.
+        type:
+          type: string
+          enum: [character, arc, event]
+        roleTag:
+          type: string
+          description: >
+            Author-defined role label (e.g. protagonist, antagonist).
+            Stored as a `role:<value>` GitHub label.
+        epiphanyNote:
+          type: string
+          description: Freeform detail — the GitHub Issue body.
+      required:
+        - title
+        - type
+
+    UpdateCapsuleBody:
+      type: object
+      description: Partial update — only provided fields are changed.
+      properties:
+        title:
+          type: string
+          minLength: 1
+        roleTag:
+          type: string
+          nullable: true
+        epiphanyNote:
+          type: string
+          nullable: true
 
     ReturnProposalBody:
       type: object
