@@ -112,6 +112,7 @@ export function ProposalView() {
       case 'under-review': return 1;
       case 'returned-with-notes':
       case 'accepted-into-canon':
+      // published-canon is a path state, not a proposal state, but included for completeness
       case 'published-alternate': return 2;
       default: return 0;
     }
@@ -127,6 +128,7 @@ export function ProposalView() {
       case 'returned-with-notes': return { label: 'Returned with Editor Questions', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/50' };
       case 'accepted-into-canon': return { label: 'Accepted into Canon', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50' };
       case 'published-alternate': return { label: 'Published as Alternate Path', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-900/50' };
+      // published-canon is the path state set when accepted; the proposal state is accepted-into-canon
       default: return { label: state, color: 'text-foreground', bg: 'bg-secondary' };
     }
   };

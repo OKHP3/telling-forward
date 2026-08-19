@@ -13,5 +13,6 @@ export const StoryPathState = {
   personal: "personal",
   open: "open",
   proposed: "proposed",
+  "published-canon": "published-canon",
   "published-alternate": "published-alternate",
 } as const;

@@ -57,6 +57,7 @@ export function PathReader() {
       case 'personal': return 'Personal Space';
       case 'open': return 'Active Canon';
       case 'proposed': return 'Proposed Canon';
+      case 'published-canon': return 'Canon';
       case 'published-alternate': return 'Alternate Path';
       default: return 'Draft';
     }

@@ -17,9 +17,13 @@ export default function WorldLandingPage() {
   });
   const theme = resolveReaderTheme(world?.readerTheme);
 
-  const canonPaths = paths?.filter(p => p.state === StoryPathState.open) || [];
+  const canonPaths = paths?.filter(p => p.state === StoryPathState.open || p.state === StoryPathState["published-canon"]) || [];
   const alternatePaths = paths?.filter(p => p.state === StoryPathState["published-alternate"]) || [];
-  const otherPaths = paths?.filter(p => p.state !== StoryPathState.open && p.state !== StoryPathState["published-alternate"]) || [];
+  const otherPaths = paths?.filter(p =>
+    p.state !== StoryPathState.open &&
+    p.state !== StoryPathState["published-canon"] &&
+    p.state !== StoryPathState["published-alternate"]
+  ) || [];
 
   if (!hasValidWorldId || errorWorld || (!loadingWorld && !world)) {
     return (

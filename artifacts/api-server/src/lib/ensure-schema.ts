@@ -87,8 +87,13 @@ export async function ensureSchema(): Promise<void> {
     -- Telling Forward enums (must mirror lib/db/src/schema/telling-forward.ts)
     DO $$ BEGIN
       CREATE TYPE story_path_state AS ENUM
-        ('personal', 'open', 'proposed', 'published-alternate');
+        ('personal', 'open', 'proposed', 'published-canon', 'published-alternate');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    -- Add published-canon to the enum if this is an existing database that
+    -- predates this value (ALTER TYPE is idempotent via DO/EXCEPTION).
+    DO $$ BEGIN
+      ALTER TYPE story_path_state ADD VALUE IF NOT EXISTS 'published-canon';
+    EXCEPTION WHEN others THEN NULL; END $$;
 
     DO $$ BEGIN
       CREATE TYPE proposal_state AS ENUM

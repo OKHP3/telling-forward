@@ -157,7 +157,13 @@ export const ListStoryPathsResponseItem = zod.object({
   branchRef: zod.string(),
   title: zod.string(),
   originPathId: zod.number().nullish(),
-  state: zod.enum(["personal", "open", "proposed", "published-alternate"]),
+  state: zod.enum([
+    "personal",
+    "open",
+    "proposed",
+    "published-canon",
+    "published-alternate",
+  ]),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });

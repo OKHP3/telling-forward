@@ -959,7 +959,8 @@ components:
           nullable: true
         state:
           type: string
-          enum: [personal, open, proposed, published-alternate]
+          # published-canon: path accepted into canon (mutually exclusive with published-alternate)
+          enum: [personal, open, proposed, published-canon, published-alternate]
         createdAt:
           type: string
           format: date-time

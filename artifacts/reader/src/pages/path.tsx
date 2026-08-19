@@ -56,6 +56,8 @@ export default function PathReaderPage() {
   
   // Find paths that branched from this one
   const branchingPaths = paths?.filter(p => p.originPathId === pathId && p.state === StoryPathState["published-alternate"]) || [];
+  // A path is in canon if it is open (actively growing) or published-canon (accepted into canon by a steward decision).
+  const isCanonPath = currentPath?.state === StoryPathState.open || currentPath?.state === StoryPathState["published-canon"];
   const acceptedMoments = provenance?.filter(
     (record) => record.sourcePathId === pathId,
   ) ?? [];
@@ -119,7 +121,7 @@ export default function PathReaderPage() {
 
           {/* Path-type indicator */}
           <div className="flex items-center gap-3">
-            {currentPath?.state === StoryPathState.open && (
+            {isCanonPath && (
               <>
                 <span className="inline-block w-2 h-2 rotate-45" style={{ backgroundColor: "var(--reader-canon-indicator)" }} aria-hidden="true" />
                 <span className="text-xs font-bold tracking-[0.2em] uppercase" style={{ color: "var(--reader-canon-indicator)" }}>
@@ -135,7 +137,7 @@ export default function PathReaderPage() {
                 </span>
               </>
             )}
-            {currentPath && currentPath.state !== StoryPathState.open && currentPath.state !== StoryPathState["published-alternate"] && (
+            {currentPath && !isCanonPath && currentPath.state !== StoryPathState["published-alternate"] && (
               <>
                 <span className="inline-block w-2 h-2 border border-current" style={{ color: "var(--reader-draft-indicator)" }} aria-hidden="true" />
                 <span className="text-xs font-bold tracking-[0.2em] uppercase" style={{ color: "var(--reader-draft-indicator)" }}>

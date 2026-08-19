@@ -558,9 +558,13 @@ router.post(
             );
           }
 
+          // Mark the path as canon, not as an alternate. published-canon and
+          // published-alternate are mutually exclusive terminal outcomes of
+          // canon review; a path accepted into canon must never carry the
+          // published-alternate state.
           await tx
             .update(storyPathsTable)
-            .set({ state: "published-alternate", updatedAt: now })
+            .set({ state: "published-canon", updatedAt: now })
             .where(eq(storyPathsTable.id, proposal.pathId));
 
           return updatedProposal;

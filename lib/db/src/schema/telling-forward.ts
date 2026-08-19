@@ -28,6 +28,9 @@ export const storyPathStateEnum = pgEnum("story_path_state", [
   "personal",
   "open",
   "proposed",
+  // A path accepted into canon via a steward decision. Mutually exclusive with
+  // published-alternate: these are the two terminal outcomes of canon review.
+  "published-canon",
   "published-alternate",
 ]);
 

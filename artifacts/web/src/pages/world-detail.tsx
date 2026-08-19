@@ -23,6 +23,9 @@ export function WorldDetail() {
     }
   });
 
+  // Canon: open (actively growing) or published-canon (accepted into canon by steward decision).
+  // Alternate: published-alternate (visible continuity that never entered canon).
+  // Everything else (personal, proposed) falls into canon section as in-progress.
   const canonPaths = paths?.filter(p => p.state !== "published-alternate") || [];
   const alternatePaths = paths?.filter(p => p.state === "published-alternate") || [];
 
@@ -142,6 +145,7 @@ function PathCard({ worldId, path, isAlternate = false }: { worldId: number, pat
       case 'personal': return 'bg-secondary text-secondary-foreground border-secondary-border';
       case 'open': return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20';
       case 'proposed': return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20';
+      case 'published-canon': return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20';
       case 'published-alternate': return 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20';
       default: return 'bg-secondary text-secondary-foreground border-secondary-border';
     }
@@ -152,6 +156,7 @@ function PathCard({ worldId, path, isAlternate = false }: { worldId: number, pat
       case 'personal': return 'Personal Space';
       case 'open': return 'Active Canon';
       case 'proposed': return 'Proposed Canon';
+      case 'published-canon': return 'Canon';
       case 'published-alternate': return 'Alternate Path';
       default: return 'Unknown';
     }
