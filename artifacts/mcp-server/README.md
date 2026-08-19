@@ -23,14 +23,14 @@ production.
 - `get_capsule_schema` — read-only, no GitHub call. Returns the JSON
   Schema a draft capsule must match. Call this first.
 - `read_canon` — read-only. Lists existing capsules (GitHub Issues
-  labeled `capsule`) for a storyworld, so new capsules can be checked
-  against what already exists.
+  labeled `capsule:<type>`) for a storyworld, so new capsules can be
+  checked against what already exists.
 - `create_draft_capsule` — the only write action. Creates one GitHub
-  Issue labeled `capsule` and `state:draft`. Never promotes, never
-  touches a pull request or the canon branch. Your MCP host should
-  surface this call for your approval before it fires, the same way it
-  would any other write-capable tool — this server does not add its own
-  confirmation step on top of that.
+  Issue labeled `capsule:<type>` and `state:draft`. Never promotes,
+  never touches a pull request or the canon branch. Your MCP host
+  should surface this call for your approval before it fires, the same
+  way it would any other write-capable tool — this server does not add
+  its own confirmation step on top of that.
 
 ## Setup
 

@@ -113,7 +113,31 @@ const CHARACTER_CAPSULE = {
 const ARC_CAPSULE = {
   ...CHARACTER_CAPSULE,
   number: 43,
-  labels: ["capsule:arc"],
+  labels: ["capsule:arc", "state:draft"],
+};
+
+const EVENT_CAPSULE = {
+  ...CHARACTER_CAPSULE,
+  number: 44,
+  labels: ["capsule:event", "state:draft"],
+};
+
+const LEGACY_KIND_CAPSULE = {
+  ...CHARACTER_CAPSULE,
+  number: 45,
+  labels: ["capsule", "kind:character", "state:draft"],
+};
+
+const KIND_ONLY_ISSUE = {
+  ...CHARACTER_CAPSULE,
+  number: 46,
+  labels: ["kind:character"],
+};
+
+const BARE_CAPSULE_ISSUE = {
+  ...CHARACTER_CAPSULE,
+  number: 47,
+  labels: ["capsule"],
 };
 
 // ---------------------------------------------------------------------------
@@ -216,6 +240,30 @@ describe("GET /storyworlds/1/capsules — steward access control", () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
     expect(res.body[0].type).toBe("character");
+  });
+
+  it("includes API, MCP, and ingestion capsules through the shared capsule:* filter only", async () => {
+    // The API writer creates capsule:character, while both MCP and ingestion
+    // writers create the same typed contract for arc and event capsules.
+    mockGh.listIssues.mockResolvedValue([
+      CHARACTER_CAPSULE,
+      ARC_CAPSULE,
+      EVENT_CAPSULE,
+      LEGACY_KIND_CAPSULE,
+      KIND_ONLY_ISSUE,
+      BARE_CAPSULE_ISSUE,
+      NON_CAPSULE_ISSUE,
+    ]);
+
+    const res = await request(app).get("/1/capsules");
+
+    expect(res.status).toBe(200);
+    expect(res.body.map((capsule: { id: number }) => capsule.id)).toEqual([42, 43, 44]);
+    expect(res.body.map((capsule: { type: string }) => capsule.type)).toEqual([
+      "character",
+      "arc",
+      "event",
+    ]);
   });
 });
 

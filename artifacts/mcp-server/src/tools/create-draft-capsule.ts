@@ -5,9 +5,9 @@ import { getGitHubIssueClient } from "../github-client.js";
 
 /**
  * create_draft_capsule — the one write action this server exposes. Always
- * creates a GitHub Issue labeled capsule + state:draft. Never merges,
- * never promotes, never touches a pull request or canon branch. Promotion
- * is a deliberate human action taken later in the Concept Board UI.
+ * creates a GitHub Issue labeled capsule:<kind> + state:draft. Never merges,
+ * never promotes, never touches a pull request or canon branch. Promotion is
+ * a deliberate human action taken later in the Concept Board UI.
  *
  * Per docs/adr/0004-manuscript-ingestion-and-bring-your-own-ai.md: the
  * MCP host (the user's own Claude Code, Claude Desktop, or other
@@ -22,9 +22,10 @@ export function registerCreateDraftCapsule(server: McpServer): void {
     {
       title: "Create a draft capsule",
       description:
-        "Creates one new draft capsule as a GitHub Issue (labeled 'capsule', " +
-        "'state:draft') on the given storyworld repository. Call get_capsule_schema " +
-        "first and read_canon before batches, to avoid duplicating existing capsules.",
+        "Creates one new draft capsule as a GitHub Issue labeled " +
+        "'capsule:<kind>' and 'state:draft' on the given storyworld repository. " +
+        "Call get_capsule_schema first and read_canon before batches, to avoid " +
+        "duplicating existing capsules.",
       inputSchema: {
         owner: z.string().min(1).describe("GitHub org or user that owns the storyworld repo."),
         repo: z.string().min(1).describe("Storyworld repository name."),
@@ -56,7 +57,7 @@ export function registerCreateDraftCapsule(server: McpServer): void {
           repo,
           title,
           body: issueBody,
-          extraLabels: [`kind:${kind}`],
+          kind,
         });
 
         return {

@@ -4,8 +4,8 @@ file_capsules_as_issues.py
 
 Final ingestion step: take the validated capsule JSON from
 extract_capsules.py and file each one as a GitHub Issue on the target
-storyworld repo, labeled "capsule" and "state:draft" — never any other
-state. This mirrors what create_draft_capsule does in
+storyworld repo, labeled "capsule:<kind>" and "state:draft" — never any
+other state. This mirrors what create_draft_capsule does in
 artifacts/mcp-server/src/tools/create-draft-capsule.ts for the MCP tier,
 so a capsule looks the same on GitHub regardless of which ingestion tier
 produced it.
@@ -79,7 +79,7 @@ def main() -> int:
         issue = gh_repo.create_issue(
             title=capsule["title"],
             body=build_issue_body(capsule),
-            labels=["capsule", "state:draft", f"kind:{capsule['kind']}"],
+            labels=[f"capsule:{capsule['kind']}", "state:draft"],
         )
         print(f"Filed capsule #{issue.number}: {issue.html_url}")
         filed += 1

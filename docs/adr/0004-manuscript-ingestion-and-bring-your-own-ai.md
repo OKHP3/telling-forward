@@ -106,12 +106,14 @@ Model choice for Tier 1: Phi-4-mini-instruct (Microsoft, MIT license,
 (Western, strong browser tooling, but Google's custom terms rather than a
 pure permissive license). See `.github/scripts/ingestion/NOTICE-phi-4-mini.md`.
 
-Capsule state, kept separate: every capsule Tier 1 or Tier 2 creates is
-labeled `capsule` + `state:draft` and nothing else. Neither tier promotes
-a capsule to a scene or touches the proposal state machine (six-state
-model — decided 2026-08-19, see Discrepancy 1 above). Promotion
-stays the deliberate human "Promote to scene" action already established
-for Concept Board.
+Capsule state, kept separate: every capsule Tier 1 or Tier 2 creates carries
+one required `capsule:<type>` label plus `state:draft`. Optional `role:*` and
+`rung:*` labels record capsule metadata. Neither tier promotes a capsule to a
+scene or touches the proposal state machine (six-state model — decided
+2026-08-19, see Discrepancy 1 above). Promotion stays the deliberate human
+"Promote to scene" action already established for Concept Board. The complete
+contract and legacy-label handling are in
+[`docs/decisions/capsule-issue-label-contract.md`](../decisions/capsule-issue-label-contract.md).
 
 ## What's actually built (this pass)
 

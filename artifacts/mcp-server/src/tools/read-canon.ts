@@ -14,10 +14,10 @@ export function registerReadCanon(server: McpServer): void {
     {
       title: "Read existing capsules for a storyworld",
       description:
-        "Lists existing capsules (labeled 'capsule' on GitHub Issues) for the given " +
-        "storyworld repository, so new capsules can be checked against what already " +
-        "exists before creation. Call this before create_draft_capsule when ingesting " +
-        "more than a trivial amount of material.",
+        "Lists existing capsules with canonical 'capsule:<type>' GitHub Issue labels " +
+        "for the given storyworld repository, so new capsules can be checked against " +
+        "what already exists before creation. Call this before create_draft_capsule " +
+        "when ingesting more than a trivial amount of material.",
       inputSchema: {
         owner: z.string().min(1).describe("GitHub org or user that owns the storyworld repo."),
         repo: z.string().min(1).describe("Storyworld repository name."),

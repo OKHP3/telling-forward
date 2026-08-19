@@ -34,6 +34,7 @@ export const CapsuleKindSchema = z.enum([
   "planned-event",
   "motif",
 ]);
+export type CapsuleKind = z.infer<typeof CapsuleKindSchema>;
 
 export const CharacterRoleSchema = z.enum([
   "protagonist",

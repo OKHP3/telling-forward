@@ -16,6 +16,7 @@
  */
 
 import { Octokit } from "@octokit/rest";
+import type { CapsuleKind } from "./capsule-schema.js";
 
 export interface DraftCapsuleIssue {
   number: number;
@@ -23,26 +24,26 @@ export interface DraftCapsuleIssue {
 }
 
 export interface GitHubIssueClient {
-  /** List open issues labeled "capsule" so a host can build canon context
-   * before drafting new capsules (avoid proposing a character that
-   * already exists, etc.). */
+  /** List issues carrying a canonical `capsule:<type>` label so a host can
+   * build canon context before drafting new capsules (avoid proposing a
+   * character that already exists, etc.). */
   listCapsuleIssues(owner: string, repo: string): Promise<
     Array<{ number: number; title: string; body: string; labels: string[] }>
   >;
-  /** Create a new draft capsule as a GitHub Issue. Always labeled
-   * "capsule" plus "state:draft" — this client never creates an issue in
-   * any other state. Promotion out of draft is a human action taken in
-   * the Concept Board UI, not something this MCP server does. */
+  /** Create a new draft capsule as a GitHub Issue. Always labeled with the
+   * canonical `capsule:<type>` label plus `state:draft` — this client never
+   * creates an issue in any other state. Promotion out of draft is a human
+   * action taken in the Concept Board UI, not something this MCP server does. */
   createDraftCapsule(params: {
     owner: string;
     repo: string;
     title: string;
     body: string;
-    extraLabels?: string[];
+    kind: CapsuleKind;
   }): Promise<DraftCapsuleIssue>;
 }
 
-const CAPSULE_LABEL = "capsule";
+const CAPSULE_LABEL_PREFIX = "capsule:";
 const DRAFT_STATE_LABEL = "state:draft";
 
 class OctokitIssueClient implements GitHubIssueClient {
@@ -56,17 +57,26 @@ class OctokitIssueClient implements GitHubIssueClient {
     const results: Array<{ number: number; title: string; body: string; labels: string[] }> = [];
     for await (const page of this.octokit.paginate.iterator(
       this.octokit.rest.issues.listForRepo,
-      { owner, repo, labels: CAPSULE_LABEL, state: "all", per_page: 100 },
+      { owner, repo, state: "all", per_page: 100 },
     )) {
       for (const issue of page.data) {
         // The Issues API also returns PRs (they share the same underlying
         // object in GitHub's model) — exclude those explicitly.
         if ("pull_request" in issue) continue;
+        // GitHub only accepts exact label filters, so enforce the canonical
+        // capsule:* contract locally rather than querying the obsolete bare
+        // "capsule" label.
+        const labels = issue.labels.map((label) =>
+          typeof label === "string" ? label : (label.name ?? ""),
+        );
+        if (!labels.some((label) => label.startsWith(CAPSULE_LABEL_PREFIX))) {
+          continue;
+        }
         results.push({
           number: issue.number,
           title: issue.title,
           body: issue.body ?? "",
-          labels: issue.labels.map((l) => (typeof l === "string" ? l : (l.name ?? ""))),
+          labels,
         });
       }
     }
@@ -78,15 +88,15 @@ class OctokitIssueClient implements GitHubIssueClient {
     repo: string;
     title: string;
     body: string;
-    extraLabels?: string[];
+    kind: CapsuleKind;
   }): Promise<DraftCapsuleIssue> {
-    const { owner, repo, title, body, extraLabels = [] } = params;
+    const { owner, repo, title, body, kind } = params;
     const { data } = await this.octokit.rest.issues.create({
       owner,
       repo,
       title,
       body,
-      labels: [CAPSULE_LABEL, DRAFT_STATE_LABEL, ...extraLabels],
+      labels: [`${CAPSULE_LABEL_PREFIX}${kind}`, DRAFT_STATE_LABEL],
     });
     return { number: data.number, url: data.html_url };
   }
