@@ -6,7 +6,7 @@
 
 ## Numbering note
 
-Originally drafted and written to disk as `0007-scene-purpose-framing-from-synopsis-discipline.md`. At draft time, `docs/adr/` briefly held three different files numbered 0007 from concurrent Cowork sessions each independently scavenging different imported threads about the same sibling property. Renumbered to 0012 after the project owner cleared the concurrent-session lock and the directory settled at 0001–0011 with no free slot below 0012. The file this ADR was colliding with, `0007-reader-accessibility-register-and-clarity-pass-from-bac-thread.md`, is a different session's work on a different source thread and is untouched by this renumbering — only this file moved.
+Originally drafted and written to disk as `0007-scene-purpose-framing-from-synopsis-discipline.md`. At draft time, `docs/adr/` briefly held three different files numbered 0007 from concurrent Cowork sessions each independently scavenging different imported threads about the same sibling property. Renumbered to 0012 after the project owner cleared the concurrent-session lock and the directory settled at 0001–0011 with no free slot below 0012. The file this ADR was colliding with, `0007-reader-accessibility-and-clarity.md`, is a different session's work on a different source thread and is untouched by this renumbering — only this file moved.
 
 ## Context
 

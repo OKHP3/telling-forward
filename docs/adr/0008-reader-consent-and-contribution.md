@@ -4,7 +4,7 @@
 
 **Open.** This ADR proposes seven independent, separately-decidable items, not one accept/reject decision. See "Recommendation" for the per-item call and "Next action" for what closes it. Revised three times on 2026-08-19: first to extend from 3 to 7 items at the project owner's request, second to tighten scope discipline — this repository is dedicated to Telling Forward (TF), not to the sibling property the source thread was about — and third to correct a stale cross-reference in item 6 and update the numbering situation below once the underlying cause (concurrent git contention) was identified and cleared.
 
-> **Numbering note, updated:** the project owner manually cleared a recurring `.git/index.lock` contention caused by more than one process running git operations against this working directory at the same time, and a batch commit from another process (`a485309`) has since pushed most of the day's ADR reconciliation to `origin/main`. As of this revision, only one collision remains unresolved in `docs/adr/` — two files still share number 0007 — and this ADR's own number, 0008, has stayed unique and untouched throughout. Filename unchanged from the original version to avoid orphaning the cross-references already recorded in `docs/decisions/open-questions.md` (15.14, 15.15) — the working title of item 4 below changed in an earlier revision, but the file itself has not been renamed.
+> **Numbering note:** this ADR's number remained unique through the 2026-08-19 reconciliation. The separate 0007 collision was resolved by retaining the reader-accessibility ADR at 0007 and placing the scene-purpose ADR at 0012. On 2026-08-19, this file's descriptive path was shortened; its ADR number and content remain unchanged. See [the ADR index](README.md) for the filename transition.
 
 ## Context
 
@@ -131,4 +131,4 @@ The project owner should give a per-item call — accept, reject, or defer — f
 
 ## Housekeeping note (unrelated to this thread's content)
 
-`docs/adr/` went through a live, multi-session numbering race during 2026-08-19. A later cleanup retained `0007-reader-accessibility-register-and-clarity-pass-from-bac-thread.md` at 0007 and renumbered the separate scene-purpose ADR to `0012-scene-purpose-framing-from-synopsis-discipline.md`. This ADR was never renumbered and stayed at 0008 throughout.
+`docs/adr/` went through a live, multi-session numbering race during 2026-08-19. A later cleanup retained `0007-reader-accessibility-and-clarity.md` at 0007 and renumbered the separate scene-purpose ADR to `0012-scene-purpose-framing-from-synopsis-discipline.md`. This ADR was never renumbered and stayed at 0008 throughout.
