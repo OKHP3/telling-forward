@@ -290,7 +290,7 @@ Directly answering the "Vite, Tailwind, TypeScript, Playwright" question: here's
 | Database | PostgreSQL | — | Confirmed |
 | Build/bundle (server) | esbuild | 0.27.3 (pinned) | Confirmed |
 | Runtime | Node.js | 24 | Confirmed |
-| Mobile (planned) | Expo / React Native | — | **Inferred**, not yet scaffolded — the React version pin exists specifically for Expo compatibility per an inline comment in `pnpm-workspace.yaml`; no `artifacts/mobile` package exists yet |
+| Mobile | Expo / React Native | n/a | **Confirmed scaffold; product scope open.** `artifacts/mobile` is an Expo workspace package, but no product scope or delivery timeline is established. |
 | E2E testing | **Not present** | — | **Gap.** No Playwright, no Cypress, nothing in any `package.json` |
 | Unit/integration testing | **Not present** | — | **Gap.** No Vitest, no Jest configured |
 | API mocking for tests | Mock Service Worker (`msw`) | listed in `pnpm-workspace.yaml`'s `onlyBuiltDependencies` | **Reserved but unused** — the dependency is pre-approved for pnpm's build-script allowlist, but nothing consumes it yet |
@@ -299,7 +299,7 @@ Directly answering the "Vite, Tailwind, TypeScript, Playwright" question: here's
 
 **Recommendation on Playwright specifically**, since it was named directly: adopt it for end-to-end coverage of the contribution → review → canon-acceptance flow once that flow exists. This product's core risk isn't a broken button, it's a broken editorial state machine (a proposal stuck between "submitted" and "accepted," a canon merge that doesn't produce a provenance record). That's exactly the class of bug Playwright's real-browser, multi-step flow testing catches and unit tests don't. Pair it with Vitest for the component and API-handler layer, and MSW (already reserved) to mock the GitHub API boundary in tests so test runs don't depend on live GitHub calls or rate limits.
 
-`artifacts/mockup-sandbox` is a Replit design-mockup sandbox, not the production app shell. **Open question:** does the production web client get built as a new `artifacts/web` package reusing the same Vite/Tailwind/shadcn setup, or does `mockup-sandbox` itself get promoted? Recommended: new package. Keep the mockup sandbox as a disposable design-iteration space; promoting it directly tends to drag Replit-mockup-specific plumbing (`mockupPreviewPlugin.ts`, `.generated/mockup-components.ts`) into production code that doesn't need it.
+`artifacts/mockup-sandbox` is a Replit design-mockup sandbox, not the production app shell. `artifacts/web` already exists as a React/Vite workspace package. **Open question:** should `artifacts/web` be designated as the production web client while `mockup-sandbox` remains a disposable design-iteration space? Recommended: keep that separation; promoting the mockup sandbox directly tends to drag Replit-mockup-specific plumbing (`mockupPreviewPlugin.ts`, `.generated/mockup-components.ts`) into production code that does not need it.
 
 ---
 
@@ -339,11 +339,11 @@ Carried forward from `AGENTS.md` plus what this document surfaced:
 
 1. **One repo per storyworld, or one repo with multiple storyworlds?** Section 6.1. Blocks the sync job's repository-discovery design.
 2. **Contributor identity model.** Section 7.2. Blocks the `contributors` table design and the commit-authoring flow.
-3. **Production web app package location** (`artifacts/web` vs. promoting `mockup-sandbox`). Section 11.
+3. **Production web app designation.** Should `artifacts/web` be the production web client while `mockup-sandbox` remains a design sandbox? Section 11.
 4. **No code license file confirmed at the repository root** — only content/story licensing is documented. Confirm with the project owner before any code-reuse or open-source-adjacent decision.
-5. **`attached_assets/` content boundary** — contains creative source material whose public/private status relative to the platform isn't documented yet.
+5. **Creative-source content boundary.** No `attached_assets/` directory exists in the current checkout. Decide the approved location and rights boundary before adding creative source material.
 6. **GitHub App vs. continued PAT usage** for the platform's own read/write integration. Section 6.1 recommends a GitHub App; needs a decision before Octokit wiring starts.
-7. **Mobile scope and timing.** The Expo-compatible React version pin signals intent; there's no scaffolded mobile package and no stated timeline.
+7. **Mobile scope and timing.** `artifacts/mobile` provides an Expo scaffold, but no product scope or delivery timeline is established.
 
 Don't convert any of these into an assumption in code. Record the decision here once the project owner makes it.
 

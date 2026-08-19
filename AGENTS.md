@@ -44,9 +44,9 @@ Out of scope for the current repository:
 - `docs/platform-requirements.md`: platform requirements baseline (GitHub-backed community storytelling interface); the authoritative design intent for the platform build.
 - `docs/decisions/open-questions.md`: open decisions log tracking the unresolved questions from the requirements doc, Section 15, with status and owner decisions.
 - `docs/adr/`: Architecture Decision Records capturing naming, contributor vocabulary, the notification model, and open architecture questions. Read before making naming, vocabulary, notification, or backend-architecture changes.
-- `lib/`: shared workspace packages — `api-client-react`, `api-spec`, `api-zod`, `db`.
-- `artifacts/`: deployable/buildable packages — `api-server`, `mockup-sandbox`.
-- `attached_assets/`: uploaded creative source material (e.g. Magnus Saga documents). Confirm the intended public/private content boundary before publication work touches this directory.
+- `lib/`: shared workspace packages, including `api-client-react`, `api-spec`, `api-zod`, `db`, and OpenAI integration packages.
+- `artifacts/`: deployable/buildable packages: `api-server`, `archive`, `broadsheet`, `mcp-server`, `mobile`, `mockup-sandbox`, `reader`, `scriptorium`, `signal-noise`, and `web`.
+- No `attached_assets/` directory exists in the current checkout. Confirm the intended public/private content boundary and location before adding creative source material.
 - `scripts/`: Replit tooling — `git-askpass.sh` (GitHub auto-push auth helper), `post-merge.sh`, plus its own `package.json`/`tsconfig.json`/`src`.
 - `.agents/`: repository-local Agent Skills and prompts used to support project work.
 - `.agents/skills/`: repository-local agent skills and their supporting references. These have their own skill-specific instructions.
@@ -118,7 +118,7 @@ Do not claim a command was executed unless it was actually run in a suitable env
 - **Open (see `docs/adr/0003-github-native-fast-path-vs-custom-backend.md`):** the original concept scoped a GitHub-native fast path (GitHub Pages SPA, PRs and Actions as the backend). The repository instead contains a custom Express/Postgres API on Replit. This is not a security problem, and the reasoning is now recorded in `docs/platform-requirements.md`, but the project owner has not yet signed off on it: see `docs/decisions/open-questions.md` items 15.1, 15.2, and 15.6. Do not assume either architecture is "correct," and do not treat platform-requirements.md's direction as decided, until those items move from Open to Decided.
 - The product model, contribution rules, agent skills, and content governance described in `README.md` and `CONTRIBUTING.md` are explicitly still evolving, not finalized features.
 - No code license file is confirmed at the repository root; only content/story licensing is documented (`CONTENT-LICENSE.md`). Confirm the intended code license with the project owner if this matters for a task.
-- `attached_assets/` contains creative source material whose relationship to the platform's public/private content boundary is not yet documented; confirm before treating it as either product fixture or protected fiction.
+- No `attached_assets/` directory exists in the current checkout. Confirm the intended public/private content boundary and location before adding creative source material or treating it as a product fixture.
 - Ownership and maintenance responsibilities beyond the `OKHP3` GitHub org are not documented in the repository.
 
 Do not turn these gaps into assumptions. Record verified decisions here when the project owner establishes them.
