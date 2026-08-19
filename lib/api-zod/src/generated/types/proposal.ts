@@ -15,4 +15,5 @@ export interface Proposal {
   state: ProposalState;
   submittedAt: Date;
   decidedAt?: Date | null;
+  decisionReason?: string | null;
 }

@@ -466,28 +466,33 @@ async function handlePullRequest(payload: PullRequestPayload): Promise<void> {
       ? new Date((pr.merged_at ?? pr.closed_at)!)
       : null;
 
-  // Terminal events (closed/merged) always apply GitHub's authoritative outcome.
-  // Non-terminal events (synchronize, opened, reopened) must NOT overwrite:
+  // GitHub terminal events apply the repository outcome unless a product-level
+  // terminal decision has already been recorded. All non-terminal events must
+  // NOT overwrite:
   //   - editorial states a steward has set ("under-review", "returned-with-notes")
   //   - a terminal outcome that a prior event already established ("accepted-into-canon")
-  // For terminal events, decidedAt always updates. For non-terminal events,
-  // preserve decidedAt alongside any preserved state.
-  const stateSet = isTerminalEvent
-    ? drizzleSql`excluded.state`
-    : drizzleSql`
-        CASE
-          WHEN ${proposalsTable.state} IN ('under-review', 'returned-with-notes', 'accepted-into-canon')
-          THEN ${proposalsTable.state}
-          ELSE excluded.state
-        END`;
-  const decidedAtSet = isTerminalEvent
-    ? decidedAt
-    : drizzleSql`
-        CASE
-          WHEN ${proposalsTable.state} IN ('under-review', 'returned-with-notes', 'accepted-into-canon')
-          THEN ${proposalsTable.decidedAt}
-          ELSE excluded.decided_at
-        END`;
+  // Preserve decidedAt alongside every preserved state; otherwise use the
+  // repository event timestamp.
+  const protectedTerminalStates =
+    "'accepted-into-canon', 'restricted', 'withdrawn', 'archived'";
+  const protectedNonTerminalStates =
+    "'under-review', 'returned-with-notes', 'accepted-into-canon', " +
+    "'restricted', 'withdrawn', 'archived'";
+  const preservedStates = isTerminalEvent
+    ? protectedTerminalStates
+    : protectedNonTerminalStates;
+  const stateSet = drizzleSql`
+    CASE
+      WHEN ${proposalsTable.state} IN (${drizzleSql.raw(preservedStates)})
+      THEN ${proposalsTable.state}
+      ELSE excluded.state
+    END`;
+  const decidedAtSet = drizzleSql`
+    CASE
+      WHEN ${proposalsTable.state} IN (${drizzleSql.raw(preservedStates)})
+      THEN ${proposalsTable.decidedAt}
+      ELSE excluded.decided_at
+    END`;
 
   const [proposal] = await db
     .insert(proposalsTable)

@@ -34,6 +34,7 @@ import type {
   NotFoundResponse,
   Proposal,
   RegisterRequest,
+  RestrictProposalBody,
   ReturnProposalBody,
   StoryPath,
   StoryProvenance,
@@ -2317,4 +2318,275 @@ export const useReturnProposal = <
   TContext
 > => {
   return useMutation(getReturnProposalMutationOptions(options));
+};
+
+/**
+ * Transitions an active proposal to "restricted". A steward may include an optional reason for the contributor. Requires authentication and steward role for the proposal's storyworld.
+
+ * @summary Restrict a submission from further editorial review
+ */
+export const getRestrictProposalUrl = (id: number) => {
+  return `/api/proposals/${id}/restrict`;
+};
+
+export const restrictProposal = async (
+  id: number,
+  restrictProposalBody: RestrictProposalBody,
+  options?: RequestInit,
+): Promise<Proposal> => {
+  return customFetch<Proposal>(getRestrictProposalUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(restrictProposalBody),
+  });
+};
+
+export const getRestrictProposalMutationOptions = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof restrictProposal>>,
+    TError,
+    { id: number; data: BodyType<RestrictProposalBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof restrictProposal>>,
+  TError,
+  { id: number; data: BodyType<RestrictProposalBody> },
+  TContext
+> => {
+  const mutationKey = ["restrictProposal"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof restrictProposal>>,
+    { id: number; data: BodyType<RestrictProposalBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return restrictProposal(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RestrictProposalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof restrictProposal>>
+>;
+export type RestrictProposalMutationBody = BodyType<RestrictProposalBody>;
+export type RestrictProposalMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Restrict a submission from further editorial review
+ */
+export const useRestrictProposal = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof restrictProposal>>,
+    TError,
+    { id: number; data: BodyType<RestrictProposalBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof restrictProposal>>,
+  TError,
+  { id: number; data: BodyType<RestrictProposalBody> },
+  TContext
+> => {
+  return useMutation(getRestrictProposalMutationOptions(options));
+};
+
+/**
+ * Transitions an active proposal to "withdrawn". The server verifies that the signed-in user's linked GitHub identity is the author of the backing pull request before allowing withdrawal.
+
+ * @summary Withdraw your own submission
+ */
+export const getWithdrawProposalUrl = (id: number) => {
+  return `/api/proposals/${id}/withdraw`;
+};
+
+export const withdrawProposal = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Proposal> => {
+  return customFetch<Proposal>(getWithdrawProposalUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getWithdrawProposalMutationOptions = <
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof withdrawProposal>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof withdrawProposal>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["withdrawProposal"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof withdrawProposal>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return withdrawProposal(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type WithdrawProposalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof withdrawProposal>>
+>;
+
+export type WithdrawProposalMutationError = ErrorType<
+  UnauthorizedResponse | ErrorResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Withdraw your own submission
+ */
+export const useWithdrawProposal = <
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof withdrawProposal>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof withdrawProposal>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getWithdrawProposalMutationOptions(options));
+};
+
+/**
+ * Transitions an already terminal proposal to "archived". Requires authentication and steward role for the proposal's storyworld.
+
+ * @summary Archive a terminal submission
+ */
+export const getArchiveProposalUrl = (id: number) => {
+  return `/api/proposals/${id}/archive`;
+};
+
+export const archiveProposal = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Proposal> => {
+  return customFetch<Proposal>(getArchiveProposalUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getArchiveProposalMutationOptions = <
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof archiveProposal>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof archiveProposal>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["archiveProposal"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof archiveProposal>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return archiveProposal(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ArchiveProposalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof archiveProposal>>
+>;
+
+export type ArchiveProposalMutationError = ErrorType<
+  UnauthorizedResponse | ErrorResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Archive a terminal submission
+ */
+export const useArchiveProposal = <
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof archiveProposal>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof archiveProposal>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getArchiveProposalMutationOptions(options));
 };

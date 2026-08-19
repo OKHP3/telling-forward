@@ -289,24 +289,29 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
           ? new Date((pr.mergedAt ?? pr.closedAt)!)
           : null;
 
-      const proposalStateSet = isTerminalEvent
-        ? drizzleSql`excluded.state`
-        : drizzleSql`
-            CASE
-              WHEN ${proposalsTable.state} IN ('under-review', 'returned-with-notes', 'accepted-into-canon')
-              THEN ${proposalsTable.state}
-              ELSE excluded.state
-            END`;
-      const decidedAtSet = isTerminalEvent
-        ? decidedAt
-        : drizzleSql`
-            CASE
-              WHEN ${proposalsTable.state} IN ('under-review', 'returned-with-notes', 'accepted-into-canon')
-              THEN ${proposalsTable.decidedAt}
-              ELSE excluded.decided_at
-            END`;
+      const protectedTerminalStates =
+        "'accepted-into-canon', 'restricted', 'withdrawn', 'archived'";
+      const protectedNonTerminalStates =
+        "'under-review', 'returned-with-notes', 'accepted-into-canon', " +
+        "'restricted', 'withdrawn', 'archived'";
+      const preservedStates = isTerminalEvent
+        ? protectedTerminalStates
+        : protectedNonTerminalStates;
+      const proposalStateSet = drizzleSql`
+        CASE
+          WHEN ${proposalsTable.state} IN (${drizzleSql.raw(preservedStates)})
+          THEN ${proposalsTable.state}
+          ELSE excluded.state
+        END`;
+      const decidedAtSet = drizzleSql`
+        CASE
+          WHEN ${proposalsTable.state} IN (${drizzleSql.raw(preservedStates)})
+          THEN ${proposalsTable.decidedAt}
+          ELSE excluded.decided_at
+        END`;
 
-      // Upsert proposal; only overwrite state when GitHub's outcome is terminal.
+      // Upsert proposal while preserving product-level terminal decisions and
+      // active editorial review states during non-terminal synchronization.
       const [proposal] = await db
         .insert(proposalsTable)
         .values({

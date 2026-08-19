@@ -469,9 +469,13 @@ export const ListStoryworldProposalsResponseItem = zod.object({
     "returned-with-notes",
     "accepted-into-canon",
     "published-alternate",
+    "restricted",
+    "withdrawn",
+    "archived",
   ]),
   submittedAt: zod.coerce.date(),
   decidedAt: zod.coerce.date().nullish(),
+  decisionReason: zod.string().nullish(),
 });
 export const ListStoryworldProposalsResponse = zod.array(
   ListStoryworldProposalsResponseItem,
@@ -492,9 +496,13 @@ export const ListProposalsResponseItem = zod.object({
     "returned-with-notes",
     "accepted-into-canon",
     "published-alternate",
+    "restricted",
+    "withdrawn",
+    "archived",
   ]),
   submittedAt: zod.coerce.date(),
   decidedAt: zod.coerce.date().nullish(),
+  decisionReason: zod.string().nullish(),
 });
 export const ListProposalsResponse = zod.array(ListProposalsResponseItem);
 
@@ -533,9 +541,13 @@ export const GetProposalResponse = zod.object({
     "returned-with-notes",
     "accepted-into-canon",
     "published-alternate",
+    "restricted",
+    "withdrawn",
+    "archived",
   ]),
   submittedAt: zod.coerce.date(),
   decidedAt: zod.coerce.date().nullish(),
+  decisionReason: zod.string().nullish(),
 });
 
 /**
@@ -559,9 +571,13 @@ export const MarkProposalUnderReviewResponse = zod.object({
     "returned-with-notes",
     "accepted-into-canon",
     "published-alternate",
+    "restricted",
+    "withdrawn",
+    "archived",
   ]),
   submittedAt: zod.coerce.date(),
   decidedAt: zod.coerce.date().nullish(),
+  decisionReason: zod.string().nullish(),
 });
 
 /**
@@ -586,9 +602,13 @@ export const AcceptProposalResponse = zod.object({
       "returned-with-notes",
       "accepted-into-canon",
       "published-alternate",
+      "restricted",
+      "withdrawn",
+      "archived",
     ]),
     submittedAt: zod.coerce.date(),
     decidedAt: zod.coerce.date().nullish(),
+    decisionReason: zod.string().nullish(),
   }),
   provenanceRecordId: zod
     .number()
@@ -625,7 +645,107 @@ export const ReturnProposalResponse = zod.object({
     "returned-with-notes",
     "accepted-into-canon",
     "published-alternate",
+    "restricted",
+    "withdrawn",
+    "archived",
   ]),
   submittedAt: zod.coerce.date(),
   decidedAt: zod.coerce.date().nullish(),
+  decisionReason: zod.string().nullish(),
+});
+
+/**
+ * Transitions an active proposal to "restricted". A steward may include an optional reason for the contributor. Requires authentication and steward role for the proposal's storyworld.
+
+ * @summary Restrict a submission from further editorial review
+ */
+export const RestrictProposalParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const restrictProposalBodyReasonMax = 2000;
+
+export const RestrictProposalBody = zod.object({
+  reason: zod.string().max(restrictProposalBodyReasonMax).optional(),
+});
+
+export const RestrictProposalResponse = zod.object({
+  id: zod.number(),
+  storyworldId: zod.number(),
+  pathId: zod.number(),
+  prNumber: zod.number(),
+  state: zod.enum([
+    "draft",
+    "submitted",
+    "under-review",
+    "returned-with-notes",
+    "accepted-into-canon",
+    "published-alternate",
+    "restricted",
+    "withdrawn",
+    "archived",
+  ]),
+  submittedAt: zod.coerce.date(),
+  decidedAt: zod.coerce.date().nullish(),
+  decisionReason: zod.string().nullish(),
+});
+
+/**
+ * Transitions an active proposal to "withdrawn". The server verifies that the signed-in user's linked GitHub identity is the author of the backing pull request before allowing withdrawal.
+
+ * @summary Withdraw your own submission
+ */
+export const WithdrawProposalParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const WithdrawProposalResponse = zod.object({
+  id: zod.number(),
+  storyworldId: zod.number(),
+  pathId: zod.number(),
+  prNumber: zod.number(),
+  state: zod.enum([
+    "draft",
+    "submitted",
+    "under-review",
+    "returned-with-notes",
+    "accepted-into-canon",
+    "published-alternate",
+    "restricted",
+    "withdrawn",
+    "archived",
+  ]),
+  submittedAt: zod.coerce.date(),
+  decidedAt: zod.coerce.date().nullish(),
+  decisionReason: zod.string().nullish(),
+});
+
+/**
+ * Transitions an already terminal proposal to "archived". Requires authentication and steward role for the proposal's storyworld.
+
+ * @summary Archive a terminal submission
+ */
+export const ArchiveProposalParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ArchiveProposalResponse = zod.object({
+  id: zod.number(),
+  storyworldId: zod.number(),
+  pathId: zod.number(),
+  prNumber: zod.number(),
+  state: zod.enum([
+    "draft",
+    "submitted",
+    "under-review",
+    "returned-with-notes",
+    "accepted-into-canon",
+    "published-alternate",
+    "restricted",
+    "withdrawn",
+    "archived",
+  ]),
+  submittedAt: zod.coerce.date(),
+  decidedAt: zod.coerce.date().nullish(),
+  decisionReason: zod.string().nullish(),
 });

@@ -15,4 +15,7 @@ export const ProposalState = {
   "returned-with-notes": "returned-with-notes",
   "accepted-into-canon": "accepted-into-canon",
   "published-alternate": "published-alternate",
+  restricted: "restricted",
+  withdrawn: "withdrawn",
+  archived: "archived",
 } as const;

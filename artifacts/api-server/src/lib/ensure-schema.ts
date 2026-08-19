@@ -98,8 +98,15 @@ export async function ensureSchema(): Promise<void> {
     DO $$ BEGIN
       CREATE TYPE proposal_state AS ENUM
         ('draft', 'submitted', 'under-review', 'returned-with-notes',
-         'accepted-into-canon', 'published-alternate');
+         'accepted-into-canon', 'published-alternate', 'restricted',
+         'withdrawn', 'archived');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    -- Add lifecycle outcomes for databases created before the expanded model.
+    DO $$ BEGIN
+      ALTER TYPE proposal_state ADD VALUE IF NOT EXISTS 'restricted';
+      ALTER TYPE proposal_state ADD VALUE IF NOT EXISTS 'withdrawn';
+      ALTER TYPE proposal_state ADD VALUE IF NOT EXISTS 'archived';
+    EXCEPTION WHEN others THEN NULL; END $$;
 
     -- Telling Forward core tables (Section 8 of platform requirements)
     CREATE TABLE IF NOT EXISTS storyworlds (
@@ -170,8 +177,11 @@ export async function ensureSchema(): Promise<void> {
       state         proposal_state NOT NULL,
       submitted_at  TIMESTAMPTZ    NOT NULL,
       decided_at    TIMESTAMPTZ,
+      decision_reason TEXT,
       CONSTRAINT proposals_pr_unique UNIQUE (storyworld_id, pr_number)
     );
+
+    ALTER TABLE proposals ADD COLUMN IF NOT EXISTS decision_reason TEXT;
 
     CREATE TABLE IF NOT EXISTS editor_questions (
       id                SERIAL      PRIMARY KEY,

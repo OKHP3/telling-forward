@@ -44,6 +44,9 @@ export const proposalStateEnum = pgEnum("proposal_state", [
   "returned-with-notes",
   "accepted-into-canon",
   "published-alternate",
+  "restricted",
+  "withdrawn",
+  "archived",
 ]);
 
 // One row per GitHub repository acting as a storyworld
@@ -164,6 +167,9 @@ export const proposalsTable = pgTable("proposals", {
   state: proposalStateEnum("state").notNull(),
   submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull(),
   decidedAt: timestamp("decided_at", { withTimezone: true }),
+  // A steward may record why a submission was restricted. It is deliberately
+  // separate from editor questions, which invite revision rather than end it.
+  decisionReason: text("decision_reason"),
 },
 (t) => [
   unique("proposals_pr_unique").on(t.storyworldId, t.prNumber),

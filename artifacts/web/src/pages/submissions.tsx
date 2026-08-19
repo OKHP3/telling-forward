@@ -10,7 +10,10 @@ type ProposalState =
   | "under-review"
   | "returned-with-notes"
   | "accepted-into-canon"
-  | "published-alternate";
+  | "published-alternate"
+  | "restricted"
+  | "withdrawn"
+  | "archived";
 
 function getStateDisplay(state: ProposalState) {
   switch (state) {
@@ -26,6 +29,12 @@ function getStateDisplay(state: ProposalState) {
       return { label: "Accepted into Canon", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50" };
     case "published-alternate":
       return { label: "Published as Alternate Path", color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-900/50" };
+    case "restricted":
+      return { label: "Submission Restricted", color: "text-red-700 dark:text-red-300", bg: "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50" };
+    case "withdrawn":
+      return { label: "Submission Withdrawn", color: "text-slate-700 dark:text-slate-300", bg: "bg-slate-100 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800" };
+    case "archived":
+      return { label: "Submission Archived", color: "text-muted-foreground", bg: "bg-secondary border-border/50" };
     default:
       return { label: state, color: "text-foreground", bg: "bg-secondary border-transparent" };
   }

@@ -787,6 +787,136 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /proposals/{id}/restrict:
+    post:
+      operationId: restrictProposal
+      tags: [proposals]
+      summary: Restrict a submission from further editorial review
+      description: >
+        Transitions an active proposal to "restricted". A steward may include an
+        optional reason for the contributor. Requires authentication and steward
+        role for the proposal's storyworld.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestrictProposalBody"
+      responses:
+        "200":
+          description: Restricted proposal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proposal"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not a steward for this storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Proposal cannot be restricted in its current state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /proposals/{id}/withdraw:
+    post:
+      operationId: withdrawProposal
+      tags: [proposals]
+      summary: Withdraw your own submission
+      description: >
+        Transitions an active proposal to "withdrawn". The server verifies that
+        the signed-in user's linked GitHub identity is the author of the backing
+        pull request before allowing withdrawal.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Withdrawn proposal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proposal"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Signed-in user is not the proposal author
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Proposal cannot be withdrawn in its current state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Pull request author could not be verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /proposals/{id}/archive:
+    post:
+      operationId: archiveProposal
+      tags: [proposals]
+      summary: Archive a terminal submission
+      description: >
+        Transitions an already terminal proposal to "archived". Requires
+        authentication and steward role for the proposal's storyworld.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Archived proposal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proposal"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not a steward for this storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Proposal cannot be archived in its current state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -1241,12 +1371,18 @@ components:
             - returned-with-notes
             - accepted-into-canon
             - published-alternate
+            - restricted
+            - withdrawn
+            - archived
         submittedAt:
           type: string
           format: date-time
         decidedAt:
           type: string
           format: date-time
+          nullable: true
+        decisionReason:
+          type: string
           nullable: true
       required:
         - id
@@ -1255,6 +1391,13 @@ components:
         - prNumber
         - state
         - submittedAt
+
+    RestrictProposalBody:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 2000
 
   responses:
     NotFound:

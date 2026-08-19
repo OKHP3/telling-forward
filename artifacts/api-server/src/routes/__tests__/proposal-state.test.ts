@@ -1,11 +1,14 @@
 /**
  * Proposal state machine tests
  *
- * Covers the six-state proposal model (Section 7.3, decision 15.11):
+ * Covers the proposal lifecycle model:
  *   submitted → under-review         (POST /:id/review)
  *   returned-with-notes → under-review  (POST /:id/review)
  *   under-review → returned-with-notes  (POST /:id/return)
  *   under-review → accepted-into-canon  (POST /:id/accept — terminal)
+ *   active → restricted                 (POST /:id/restrict — steward only)
+ *   active → withdrawn                  (POST /:id/withdraw — author only)
+ *   terminal → archived                 (POST /:id/archive — steward only)
  *
  * Key regression: when a proposal is accepted into canon the associated story
  * path state must be set to "published-canon", never "published-alternate".
@@ -35,9 +38,12 @@ const capture = vi.hoisted(() => ({
   pathState: null as string | null,
   /** State value written to the proposal row (review handler update) */
   proposalState: null as string | null,
+  /** Restriction reason written with a steward restriction */
+  decisionReason: null as string | null,
   reset() {
     this.pathState = null;
     this.proposalState = null;
+    this.decisionReason = null;
   },
 }));
 
@@ -84,6 +90,9 @@ vi.mock("@workspace/db", () => {
       set: (val: Record<string, unknown>) => {
         if (tag === "proposal" && val["state"]) {
           capture.proposalState = val["state"] as string;
+        }
+        if (tag === "proposal" && "decisionReason" in val) {
+          capture.decisionReason = (val["decisionReason"] as string | null) ?? null;
         }
         if (tag === "path" && val["state"]) {
           capture.pathState = val["state"] as string;
@@ -238,6 +247,18 @@ vi.mock("@workspace/api-zod", () => {
       }),
     },
     ReturnProposalResponse: { parse: through },
+    RestrictProposalParams: pass,
+    RestrictProposalBody: {
+      safeParse: (v: any) => ({
+        success: true,
+        data: { reason: v?.reason },
+      }),
+    },
+    RestrictProposalResponse: { parse: through },
+    WithdrawProposalParams: pass,
+    WithdrawProposalResponse: { parse: through },
+    ArchiveProposalParams: pass,
+    ArchiveProposalResponse: { parse: through },
   };
 });
 
@@ -608,6 +629,136 @@ describe("POST /:id/accept — published-canon regression", () => {
     const res = await request(app).post("/100/accept");
 
     expect(res.status).toBe(503);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: active → restricted
+// ---------------------------------------------------------------------------
+
+describe("POST /:id/restrict — steward restriction", () => {
+  let app: Express;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capture.reset();
+    mockDb.__reset();
+    app = buildApp();
+  });
+
+  it("restricts an active proposal and records the optional reason", async () => {
+    mockDb.__pushSelectRows([makeProposal("under-review")]);
+    mockDb.__pushUpdate("proposal", [
+      makeProposal("restricted", { decisionReason: "Does not meet the world safety rules." }),
+    ]);
+
+    const res = await request(app)
+      .post("/100/restrict")
+      .send({ reason: "Does not meet the world safety rules." });
+
+    expect(res.status).toBe(200);
+    expect(res.body.state).toBe("restricted");
+    expect(capture.proposalState).toBe("restricted");
+    expect(capture.decisionReason).toBe("Does not meet the world safety rules.");
+  });
+
+  it("rejects restriction after acceptance into canon", async () => {
+    mockDb.__pushSelectRows([makeProposal("accepted-into-canon")]);
+
+    const res = await request(app).post("/100/restrict").send({});
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/cannot restrict/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: active → withdrawn
+// ---------------------------------------------------------------------------
+
+describe("POST /:id/withdraw — verified proposal author", () => {
+  let app: Express;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capture.reset();
+    mockDb.__reset();
+    mockGh.getPullRequest.mockResolvedValue({
+      number: 42,
+      author: { login: "alice", displayName: "Alice" },
+    });
+    app = buildApp();
+  });
+
+  it("lets the linked GitHub author withdraw an active proposal", async () => {
+    mockDb.__pushSelectRows([makeProposal("submitted")]);
+    mockDb.__pushSelectRows([WORLD_ROW]);
+    mockDb.__pushSelectRows([{ githubUsername: "Alice" }]);
+    mockDb.__pushUpdate("proposal", [makeProposal("withdrawn")]);
+
+    const res = await request(app).post("/100/withdraw");
+
+    expect(res.status).toBe(200);
+    expect(res.body.state).toBe("withdrawn");
+    expect(capture.proposalState).toBe("withdrawn");
+  });
+
+  it("rejects a withdrawal by someone other than the pull request author", async () => {
+    mockDb.__pushSelectRows([makeProposal("under-review")]);
+    mockDb.__pushSelectRows([WORLD_ROW]);
+    mockDb.__pushSelectRows([{ githubUsername: "mallory" }]);
+
+    const res = await request(app).post("/100/withdraw");
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/only the contributor/i);
+    expect(capture.proposalState).toBeNull();
+  });
+
+  it("rejects withdrawal after acceptance into canon before checking GitHub", async () => {
+    mockDb.__pushSelectRows([makeProposal("accepted-into-canon")]);
+
+    const res = await request(app).post("/100/withdraw");
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/cannot withdraw/i);
+    expect(mockGh.getPullRequest).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: terminal → archived
+// ---------------------------------------------------------------------------
+
+describe("POST /:id/archive — steward archives terminal outcomes", () => {
+  let app: Express;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capture.reset();
+    mockDb.__reset();
+    app = buildApp();
+  });
+
+  it("archives a withdrawn proposal without changing its original decision time", async () => {
+    const decidedAt = new Date("2026-08-19T18:00:00.000Z");
+    mockDb.__pushSelectRows([makeProposal("withdrawn", { decidedAt })]);
+    mockDb.__pushUpdate("proposal", [makeProposal("archived", { decidedAt })]);
+
+    const res = await request(app).post("/100/archive");
+
+    expect(res.status).toBe(200);
+    expect(res.body.state).toBe("archived");
+    expect(capture.proposalState).toBe("archived");
+  });
+
+  it("rejects archiving an active submission", async () => {
+    mockDb.__pushSelectRows([makeProposal("submitted")]);
+
+    const res = await request(app).post("/100/archive");
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/cannot archive/i);
   });
 });
 

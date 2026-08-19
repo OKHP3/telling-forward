@@ -5,6 +5,9 @@
  *   submitted → under-review → returned-with-notes → under-review (cycle)
  *   under-review → accepted-into-canon  (terminal, merge PR + provenance record)
  *   under-review → published-alternate  (terminal, close PR without merge — future)
+ *   active → restricted                 (terminal steward decision)
+ *   active → withdrawn                  (terminal, proposal author only)
+ *   terminal → archived                 (terminal steward housekeeping)
  *
  * Steward actions (POST) require requireAuth + requireStewardForProposal.
  * Read actions (GET) are public.
@@ -32,6 +35,13 @@ import {
   ReturnProposalParams,
   ReturnProposalBody,
   ReturnProposalResponse,
+  RestrictProposalParams,
+  RestrictProposalBody,
+  RestrictProposalResponse,
+  WithdrawProposalParams,
+  WithdrawProposalResponse,
+  ArchiveProposalParams,
+  ArchiveProposalResponse,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
 import { requireStewardForProposal } from "../middlewares/steward";
@@ -77,6 +87,30 @@ class ConcurrentModificationError extends Error {
 const REVIEW_FROM: ReadonlySet<string> = new Set(["submitted", "returned-with-notes"]);
 const ACCEPT_FROM: ReadonlySet<string> = new Set(["submitted", "under-review"]);
 const RETURN_FROM: ReadonlySet<string> = new Set(["submitted", "under-review"]);
+// Restriction is an editorial decision for a proposal that is still active.
+// It intentionally excludes drafts: a steward can only restrict a submission
+// that has entered the review loop.
+const RESTRICT_FROM: ReadonlySet<string> = new Set([
+  "submitted",
+  "under-review",
+  "returned-with-notes",
+]);
+// A contributor can retract an active proposal, including a draft that has
+// already acquired a backing PR. No terminal decision may be withdrawn.
+const WITHDRAW_FROM: ReadonlySet<string> = new Set([
+  "draft",
+  "submitted",
+  "under-review",
+  "returned-with-notes",
+]);
+// Archiving preserves the result of a prior terminal decision while removing
+// it from active editorial work. It is not a substitute for acceptance.
+const ARCHIVE_FROM: ReadonlySet<string> = new Set([
+  "accepted-into-canon",
+  "published-alternate",
+  "restricted",
+  "withdrawn",
+]);
 
 // ---------------------------------------------------------------------------
 // GET /api/proposals — public listing (all storyworlds)
@@ -770,6 +804,264 @@ router.post(
     } catch (err) {
       req.log.error({ err }, "returnProposal error");
       res.status(500).json({ error: "Failed to return proposal" });
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// POST /api/proposals/:id/restrict — steward ends active editorial review
+// ---------------------------------------------------------------------------
+
+router.post(
+  "/:id/restrict",
+  requireAuth,
+  requireStewardForProposal,
+  async (req, res) => {
+    const params = RestrictProposalParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid proposal id" });
+      return;
+    }
+    const body = RestrictProposalBody.safeParse(req.body ?? {});
+    if (!body.success) {
+      res.status(400).json({ error: "Restriction reason must be 2,000 characters or fewer" });
+      return;
+    }
+
+    try {
+      const rows = await db
+        .select()
+        .from(proposalsTable)
+        .where(eq(proposalsTable.id, params.data.id))
+        .limit(1);
+      const proposal = rows[0];
+      if (!proposal) {
+        res.status(404).json({ error: "Proposal not found" });
+        return;
+      }
+      if (!RESTRICT_FROM.has(proposal.state)) {
+        res.status(409).json({
+          error: `Cannot restrict proposal from state "${proposal.state}"`,
+        });
+        return;
+      }
+
+      const [updated] = await db
+        .update(proposalsTable)
+        .set({
+          state: "restricted",
+          decidedAt: new Date(),
+          decisionReason: body.data.reason?.trim() || null,
+        })
+        .where(
+          and(
+            eq(proposalsTable.id, proposal.id),
+            inArray(
+              proposalsTable.state,
+              ["submitted", "under-review", "returned-with-notes"] as const,
+            ),
+          ),
+        )
+        .returning();
+
+      if (!updated) {
+        res.status(409).json({
+          error: "Proposal state changed concurrently — reload and try again",
+        });
+        return;
+      }
+
+      logger.info({ proposalId: proposal.id }, "Proposal restricted by steward");
+      res.json(RestrictProposalResponse.parse(updated));
+    } catch (err) {
+      req.log.error({ err }, "restrictProposal error");
+      res.status(500).json({ error: "Failed to restrict proposal" });
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// POST /api/proposals/:id/withdraw — proposal author retracts an active submission
+// ---------------------------------------------------------------------------
+
+router.post("/:id/withdraw", requireAuth, async (req, res) => {
+  const params = WithdrawProposalParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid proposal id" });
+    return;
+  }
+
+  try {
+    const proposalRows = await db
+      .select()
+      .from(proposalsTable)
+      .where(eq(proposalsTable.id, params.data.id))
+      .limit(1);
+    const proposal = proposalRows[0];
+    if (!proposal) {
+      res.status(404).json({ error: "Proposal not found" });
+      return;
+    }
+    if (!WITHDRAW_FROM.has(proposal.state)) {
+      res.status(409).json({
+        error: `Cannot withdraw proposal from state "${proposal.state}"`,
+      });
+      return;
+    }
+
+    // A proposal is a durable GitHub pull request record, so the PR author is
+    // the source of truth for ownership. Never trust a caller-provided author
+    // or branch name; compare the live PR author to the signed-in user's linked
+    // GitHub identity server-side.
+    const [worldRows, githubLinkRows] = await Promise.all([
+      db
+        .select()
+        .from(storyworldsTable)
+        .where(eq(storyworldsTable.id, proposal.storyworldId))
+        .limit(1),
+      db
+        .select({ githubUsername: userGithubLinksTable.githubUsername })
+        .from(userGithubLinksTable)
+        .where(eq(userGithubLinksTable.userId, req.session.userId as number))
+        .limit(1),
+    ]);
+    const world = worldRows[0];
+    const githubLink = githubLinkRows[0];
+    if (!world) {
+      res.status(404).json({ error: "Storyworld not found" });
+      return;
+    }
+    if (!githubLink) {
+      res.status(403).json({
+        error: "Link your GitHub account before withdrawing a submission so ownership can be verified.",
+      });
+      return;
+    }
+
+    let pullRequest: GitHubPullRequest | null;
+    try {
+      pullRequest = await getGitHubClient().getPullRequest(
+        world.repoOwner,
+        world.repoName,
+        proposal.prNumber,
+      );
+    } catch (err) {
+      logger.error({ err, prNumber: proposal.prNumber }, "GitHub author lookup failed");
+      res.status(502).json({ error: "Could not verify the submission author on GitHub" });
+      return;
+    }
+
+    if (
+      !pullRequest?.author ||
+      pullRequest.author.login.toLowerCase() !== githubLink.githubUsername.toLowerCase()
+    ) {
+      res.status(403).json({
+        error: "Only the contributor who opened this submission can withdraw it.",
+      });
+      return;
+    }
+
+    const [updated] = await db
+      .update(proposalsTable)
+      .set({ state: "withdrawn", decidedAt: new Date() })
+      .where(
+        and(
+          eq(proposalsTable.id, proposal.id),
+          inArray(
+            proposalsTable.state,
+            ["draft", "submitted", "under-review", "returned-with-notes"] as const,
+          ),
+        ),
+      )
+      .returning();
+
+    if (!updated) {
+      res.status(409).json({
+        error: "Proposal state changed concurrently — reload and try again",
+      });
+      return;
+    }
+
+    logger.info(
+      { proposalId: proposal.id, githubUsername: githubLink.githubUsername },
+      "Proposal withdrawn by contributor",
+    );
+    res.json(WithdrawProposalResponse.parse(updated));
+  } catch (err) {
+    req.log.error({ err }, "withdrawProposal error");
+    res.status(500).json({ error: "Failed to withdraw proposal" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/proposals/:id/archive — steward archives a terminal proposal
+// ---------------------------------------------------------------------------
+
+router.post(
+  "/:id/archive",
+  requireAuth,
+  requireStewardForProposal,
+  async (req, res) => {
+    const params = ArchiveProposalParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid proposal id" });
+      return;
+    }
+
+    try {
+      const rows = await db
+        .select()
+        .from(proposalsTable)
+        .where(eq(proposalsTable.id, params.data.id))
+        .limit(1);
+      const proposal = rows[0];
+      if (!proposal) {
+        res.status(404).json({ error: "Proposal not found" });
+        return;
+      }
+      if (!ARCHIVE_FROM.has(proposal.state)) {
+        res.status(409).json({
+          error: `Cannot archive proposal from state "${proposal.state}"`,
+        });
+        return;
+      }
+
+      const [updated] = await db
+        .update(proposalsTable)
+        .set({
+          state: "archived",
+          // Keep the original terminal-decision time when it exists. Archive is
+          // filing, not a replacement editorial decision.
+          decidedAt: proposal.decidedAt ?? new Date(),
+        })
+        .where(
+          and(
+            eq(proposalsTable.id, proposal.id),
+            inArray(
+              proposalsTable.state,
+              [
+                "accepted-into-canon",
+                "published-alternate",
+                "restricted",
+                "withdrawn",
+              ] as const,
+            ),
+          ),
+        )
+        .returning();
+
+      if (!updated) {
+        res.status(409).json({
+          error: "Proposal state changed concurrently — reload and try again",
+        });
+        return;
+      }
+
+      logger.info({ proposalId: proposal.id }, "Proposal archived by steward");
+      res.json(ArchiveProposalResponse.parse(updated));
+    } catch (err) {
+      req.log.error({ err }, "archiveProposal error");
+      res.status(500).json({ error: "Failed to archive proposal" });
     }
   },
 );

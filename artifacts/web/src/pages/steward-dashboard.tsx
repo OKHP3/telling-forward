@@ -16,6 +16,8 @@ import {
   useMarkProposalUnderReview,
   useAcceptProposal,
   useReturnProposal,
+  useRestrictProposal,
+  useArchiveProposal,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -38,7 +40,10 @@ type ProposalState =
   | "under-review"
   | "returned-with-notes"
   | "accepted-into-canon"
-  | "published-alternate";
+  | "published-alternate"
+  | "restricted"
+  | "withdrawn"
+  | "archived";
 
 interface Proposal {
   id: number;
@@ -62,6 +67,12 @@ function getStateBadge(state: ProposalState) {
       return { label: "Accepted", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50" };
     case "published-alternate":
       return { label: "Alternate Path", color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-900/50" };
+    case "restricted":
+      return { label: "Submission Restricted", color: "text-red-700 dark:text-red-300", bg: "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50" };
+    case "withdrawn":
+      return { label: "Submission Withdrawn", color: "text-slate-700 dark:text-slate-300", bg: "bg-slate-100 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800" };
+    case "archived":
+      return { label: "Submission Archived", color: "text-muted-foreground", bg: "bg-secondary border-border/50" };
     default:
       return { label: state, color: "text-muted-foreground", bg: "bg-secondary border-transparent" };
   }
@@ -131,11 +142,15 @@ function ProposalCard({
   onActionComplete: () => void;
 }) {
   const [showReturn, setShowReturn] = useState(false);
+  const [showRestrict, setShowRestrict] = useState(false);
+  const [restrictionReason, setRestrictionReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
 
   const markReview = useMarkProposalUnderReview();
   const accept = useAcceptProposal();
   const returnProp = useReturnProposal();
+  const restrict = useRestrictProposal();
+  const archive = useArchiveProposal();
 
   const badge = getStateBadge(proposal.state);
   const canAct = isActionable(proposal.state);
@@ -143,7 +158,11 @@ function ProposalCard({
     proposal.state === "submitted" || proposal.state === "under-review";
 
   const isBusy =
-    markReview.isPending || accept.isPending || returnProp.isPending;
+    markReview.isPending ||
+    accept.isPending ||
+    returnProp.isPending ||
+    restrict.isPending ||
+    archive.isPending;
 
   async function handleMarkReview() {
     setActionError(null);
@@ -178,6 +197,38 @@ function ProposalCard({
       setActionError("Couldn't send the editor question. Please try again.");
     }
   }
+
+  async function handleRestrict() {
+    setActionError(null);
+    try {
+      await restrict.mutateAsync({
+        id: proposal.id,
+        data: { reason: restrictionReason.trim() || undefined },
+      });
+      setShowRestrict(false);
+      setRestrictionReason("");
+      onActionComplete();
+    } catch {
+      setActionError("Couldn't restrict this submission. Please try again.");
+    }
+  }
+
+  async function handleArchive() {
+    setActionError(null);
+    try {
+      await archive.mutateAsync({ id: proposal.id });
+      onActionComplete();
+    } catch {
+      setActionError("Couldn't archive this submission. Please try again.");
+    }
+  }
+
+  const canRestrict = isActionable(proposal.state);
+  const canArchive =
+    proposal.state === "accepted-into-canon" ||
+    proposal.state === "published-alternate" ||
+    proposal.state === "restricted" ||
+    proposal.state === "withdrawn";
 
   return (
     <div
@@ -222,7 +273,7 @@ function ProposalCard({
         </div>
 
         {/* Steward action buttons — only for actionable states */}
-        {canAct && (
+        {(canAct || canArchive) && (
           <div className="pt-2 flex flex-wrap gap-2">
             {proposal.state === "submitted" && (
               <button
@@ -265,6 +316,26 @@ function ProposalCard({
                 Return with question
               </button>
             )}
+            {!showRestrict && canRestrict && (
+              <button
+                onClick={() => setShowRestrict(true)}
+                disabled={isBusy}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300 disabled:opacity-50 transition-colors"
+                data-testid={`btn-restrict-${proposal.id}`}
+              >
+                Restrict submission
+              </button>
+            )}
+            {canArchive && (
+              <button
+                onClick={handleArchive}
+                disabled={isBusy}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-border bg-secondary/50 text-foreground hover:bg-secondary disabled:opacity-50 transition-colors"
+                data-testid={`btn-archive-${proposal.id}`}
+              >
+                Archive submission
+              </button>
+            )}
           </div>
         )}
 
@@ -280,6 +351,38 @@ function ProposalCard({
             onReturn={handleReturn}
             onCancel={() => setShowReturn(false)}
           />
+        )}
+
+        {showRestrict && (
+          <div className="mt-4 space-y-3 p-4 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/10">
+            <p className="text-sm font-medium text-red-700 dark:text-red-300">
+              Reason for restriction <span className="font-normal text-muted-foreground">(optional)</span>
+            </p>
+            <textarea
+              className="w-full min-h-[80px] text-sm rounded-md border border-red-300 dark:border-red-800 bg-background px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-red-400/50"
+              value={restrictionReason}
+              maxLength={2000}
+              onChange={(event) => setRestrictionReason(event.target.value)}
+              placeholder="Share a clear, contributor-facing reason if appropriate..."
+              data-testid={`input-restriction-reason-${proposal.id}`}
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => { setShowRestrict(false); setRestrictionReason(""); }}
+                className="px-3 py-1.5 text-sm rounded-md border border-border hover:bg-accent transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRestrict}
+                disabled={isBusy}
+                className="px-3 py-1.5 text-sm rounded-md bg-red-700 text-white hover:bg-red-800 disabled:opacity-50 transition-colors"
+                data-testid={`btn-confirm-restrict-${proposal.id}`}
+              >
+                Restrict submission
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -349,7 +452,11 @@ export function StewardDashboard() {
     p.state === "submitted" || p.state === "under-review" || p.state === "returned-with-notes"
   ) ?? [];
   const closedProposals = proposals?.filter(p =>
-    p.state === "accepted-into-canon" || p.state === "published-alternate"
+    p.state === "accepted-into-canon" ||
+    p.state === "published-alternate" ||
+    p.state === "restricted" ||
+    p.state === "withdrawn" ||
+    p.state === "archived"
   ) ?? [];
 
   return (

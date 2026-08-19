@@ -268,6 +268,9 @@ export const ProposalState = {
   "returned-with-notes": "returned-with-notes",
   "accepted-into-canon": "accepted-into-canon",
   "published-alternate": "published-alternate",
+  restricted: "restricted",
+  withdrawn: "withdrawn",
+  archived: "archived",
 } as const;
 
 export interface Proposal {
@@ -278,12 +281,18 @@ export interface Proposal {
   state: ProposalState;
   submittedAt: string;
   decidedAt?: string | null;
+  decisionReason?: string | null;
 }
 
 export interface AcceptProposalResponse {
   proposal: Proposal;
   /** ID of the provenance_records row created on acceptance. */
   provenanceRecordId: number;
+}
+
+export interface RestrictProposalBody {
+  /** @maxLength 2000 */
+  reason?: string;
 }
 
 /**
