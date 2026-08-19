@@ -336,13 +336,22 @@ function prToProposalState(
 
 // ---------------------------------------------------------------------------
 // Story path state from PR outcome
+//
+// merged=true  → published-canon     (steward accepted into canon; PR was merged)
+// merged=false, closed=true → published-alternate  (closed without merge)
+// open → proposed
+//
+// These two terminal states are mutually exclusive: a merged PR must never
+// produce published-alternate, and a closed-without-merge PR must never
+// produce published-canon.
 // ---------------------------------------------------------------------------
 
 function prToPathState(
   merged: boolean,
   closed: boolean,
-): "proposed" | "published-alternate" {
-  if (merged || closed) return "published-alternate";
+): "proposed" | "published-canon" | "published-alternate" {
+  if (merged) return "published-canon";
+  if (closed) return "published-alternate";
   return "proposed";
 }
 
@@ -422,13 +431,14 @@ async function handlePullRequest(payload: PullRequestPayload): Promise<void> {
   const isTerminalEvent = action === "closed";
 
   // Upsert the story path; drive its state from the PR lifecycle.
-  // Non-terminal events must not overwrite "published-alternate" in case a
-  // prior closed/merged delivery already set the terminal outcome.
+  // Non-terminal events must not overwrite either terminal state
+  // (published-canon or published-alternate) in case a prior closed/merged
+  // delivery already established the authoritative outcome.
   const pathStateSet = isTerminalEvent
     ? drizzleSql`excluded.state`
     : drizzleSql`
         CASE
-          WHEN ${storyPathsTable.state} IN ('published-alternate')
+          WHEN ${storyPathsTable.state} IN ('published-canon', 'published-alternate')
           THEN ${storyPathsTable.state}
           ELSE excluded.state
         END`;

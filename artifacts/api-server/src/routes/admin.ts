@@ -89,13 +89,22 @@ function prToProposalState(
 
 // ---------------------------------------------------------------------------
 // Story path state from PR outcome
+//
+// merged=true  → published-canon     (steward accepted into canon; PR was merged)
+// merged=false, closed=true → published-alternate  (closed without merge)
+// open → proposed
+//
+// These two terminal states are mutually exclusive: a merged PR must never
+// produce published-alternate, and a closed-without-merge PR must never
+// produce published-canon.
 // ---------------------------------------------------------------------------
 
 function prToPathState(
   merged: boolean,
   closed: boolean,
-): "proposed" | "published-alternate" {
-  if (merged || closed) return "published-alternate";
+): "proposed" | "published-canon" | "published-alternate" {
+  if (merged) return "published-canon";
+  if (closed) return "published-alternate";
   return "proposed";
 }
 
@@ -226,15 +235,16 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
       // Terminal events (closed/merged) always apply GitHub's authoritative
       // outcome. Non-terminal events (open PRs) must NOT overwrite editorial
       // states a steward has already set ("under-review", "returned-with-notes")
-      // or a terminal outcome ("accepted-into-canon") that was established by a
-      // prior webhook delivery. This mirrors the guard in routes/webhooks.ts.
+      // or either terminal path outcome ("published-canon", "published-alternate")
+      // that was established by a prior webhook delivery or acceptance.
+      // This mirrors the guard in routes/webhooks.ts.
       const isTerminalEvent = isClosed;
 
       const pathStateSet = isTerminalEvent
         ? drizzleSql`excluded.state`
         : drizzleSql`
             CASE
-              WHEN ${storyPathsTable.state} IN ('published-alternate')
+              WHEN ${storyPathsTable.state} IN ('published-canon', 'published-alternate')
               THEN ${storyPathsTable.state}
               ELSE excluded.state
             END`;
