@@ -10,36 +10,49 @@ import {
   StoryPathState,
 } from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
-import { ReaderLayout } from "@/components/layout";
+import { ReaderLayout, resolveReaderTheme } from "@/components/layout";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Sparkles, Network } from "lucide-react";
 
 export default function PathReaderPage() {
   const params = useParams();
   const worldId = Number(params.worldId);
   const pathId = Number(params.pathId);
+  const hasValidIds =
+    Number.isSafeInteger(worldId) &&
+    worldId > 0 &&
+    Number.isSafeInteger(pathId) &&
+    pathId > 0;
 
-  const { data: world } = useGetStoryworld(worldId, {
-    query: { enabled: !!worldId, queryKey: getGetStoryworldQueryKey(worldId) }
+  const { data: world, isLoading: loadingWorld, error: errorWorld } = useGetStoryworld(worldId, {
+    query: { enabled: hasValidIds, queryKey: getGetStoryworldQueryKey(worldId) }
   });
   
-  const { data: paths } = useListStoryPaths(worldId, {
-    query: { enabled: !!worldId, queryKey: getListStoryPathsQueryKey(worldId) }
+  const { data: paths, isLoading: loadingPaths, error: errorPaths } = useListStoryPaths(worldId, {
+    query: { enabled: hasValidIds, queryKey: getListStoryPathsQueryKey(worldId) }
   });
 
-  const { data: contributions, isLoading: loadingContributions } = useListContributions(worldId, pathId, {
-    query: { enabled: !!(worldId && pathId), queryKey: getListContributionsQueryKey(worldId, pathId) }
+  const { data: contributions, isLoading: loadingContributions, error: errorContributions } = useListContributions(worldId, pathId, {
+    query: { enabled: hasValidIds, queryKey: getListContributionsQueryKey(worldId, pathId) }
   });
 
-  const { data: provenance } = useListStoryworldProvenance(worldId, {
+  const {
+    data: provenance,
+    isLoading: loadingProvenance,
+    error: errorProvenance,
+  } = useListStoryworldProvenance(worldId, {
     query: {
-      enabled: !!worldId,
+      enabled: hasValidIds,
       queryKey: getListStoryworldProvenanceQueryKey(worldId),
     },
   });
 
   const currentPath = paths?.find(p => p.id === pathId);
+  const originPath = currentPath?.originPathId
+    ? paths?.find((path) => path.id === currentPath.originPathId)
+    : undefined;
+  const theme = resolveReaderTheme(world?.readerTheme);
   
   // Find paths that branched from this one
   const branchingPaths = paths?.filter(p => p.originPathId === pathId && p.state === StoryPathState["published-alternate"]) || [];
@@ -47,92 +60,159 @@ export default function PathReaderPage() {
     (record) => record.sourcePathId === pathId,
   ) ?? [];
 
+  if (
+    !hasValidIds ||
+    errorWorld ||
+    errorPaths ||
+    (!loadingWorld && !world) ||
+    (paths && !currentPath)
+  ) {
+    return (
+      <ReaderLayout theme={theme}>
+        <div className="w-full max-w-[var(--reader-line-length)] mt-20 text-center animate-reveal" data-testid="status-path-not-found">
+          <h1 className="text-2xl font-light mb-4" style={{ fontFamily: "var(--reader-font-body)" }}>Path Not Found</h1>
+          <p className="text-muted-foreground text-lg" style={{ fontFamily: "var(--reader-font-body)" }}>
+            This story path could not be located. You can return to the world and choose another path.
+          </p>
+          <div className="mt-8">
+            <Link href={hasValidIds ? `/worlds/${worldId}` : "/"} data-testid="link-recover-world" className="inline-flex items-center text-sm font-semibold tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              {hasValidIds ? "Return to World" : "Return to Discovery"}
+            </Link>
+          </div>
+        </div>
+      </ReaderLayout>
+    );
+  }
+
+  if (loadingWorld || loadingPaths) {
+    return (
+      <ReaderLayout theme={theme}>
+        <div className="w-full max-w-[var(--reader-line-length)] space-y-16 animate-pulse" aria-live="polite" data-testid="status-path-loading">
+          <div className="h-5 w-32 bg-muted/40 rounded-sm" />
+          <div className="h-20 w-3/4 bg-muted/40 rounded-sm" />
+          <div className="space-y-4 pt-16">
+            <div className="h-4 w-full bg-muted/20 rounded-sm" />
+            <div className="h-4 w-11/12 bg-muted/20 rounded-sm" />
+            <div className="h-4 w-4/5 bg-muted/20 rounded-sm" />
+          </div>
+        </div>
+      </ReaderLayout>
+    );
+  }
+
   return (
-    <ReaderLayout>
+    <ReaderLayout theme={theme}>
       <div className="w-full max-w-[var(--reader-line-length)]">
-        <div className="mb-12 md:mb-20">
-          <Link href={`/worlds/${worldId}`} className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-6">
+        <div className="mb-20 md:mb-32 animate-reveal">
+          <Link href={`/worlds/${worldId}`} data-testid="link-back-to-world" className="inline-flex items-center text-xs font-semibold tracking-[0.15em] uppercase text-muted-foreground hover:text-foreground transition-colors mb-12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background rounded-sm">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to {world?.title || "World"}
+            {world?.title || "World"}
           </Link>
           
           <h1
-            className="text-4xl md:text-5xl lg:text-6xl tracking-tight"
+            className="text-4xl md:text-5xl lg:text-7xl tracking-tight leading-tight mb-8 font-light"
             style={{ fontFamily: "var(--reader-font-body)" }}
           >
             {currentPath?.title}
           </h1>
-          {/* Path-type indicator — always present, non-colour marker (shape + label) required by theme contract */}
-          {currentPath?.state === StoryPathState.open && (
-            <div className="mt-4 flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-none rotate-45" style={{ backgroundColor: "var(--reader-canon-indicator)" }} />
-              <span className="text-xs font-semibold tracking-widest uppercase" style={{ color: "var(--reader-canon-indicator)" }}>
-                Canon
-              </span>
-            </div>
-          )}
-          {currentPath?.state === StoryPathState["published-alternate"] && (
-            <div className="mt-4 flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: "var(--reader-alternate-indicator)" }} />
-              <span className="text-xs font-semibold tracking-widest uppercase" style={{ color: "var(--reader-alternate-indicator)" }}>
-                Alternate Path
-              </span>
-            </div>
-          )}
-          {currentPath && currentPath.state !== StoryPathState.open && currentPath.state !== StoryPathState["published-alternate"] && (
-            <div className="mt-4 flex items-center gap-2">
-              <span className="inline-block w-2 h-2 border border-current" style={{ color: "var(--reader-draft-indicator)" }} />
-              <span className="text-xs font-semibold tracking-widest uppercase" style={{ color: "var(--reader-draft-indicator)" }}>
-                Draft
-              </span>
-            </div>
+
+          {/* Path-type indicator */}
+          <div className="flex items-center gap-3">
+            {currentPath?.state === StoryPathState.open && (
+              <>
+                <span className="inline-block w-2 h-2 rotate-45" style={{ backgroundColor: "var(--reader-canon-indicator)" }} aria-hidden="true" />
+                <span className="text-xs font-bold tracking-[0.2em] uppercase" style={{ color: "var(--reader-canon-indicator)" }}>
+                  Canon
+                </span>
+              </>
+            )}
+            {currentPath?.state === StoryPathState["published-alternate"] && (
+              <>
+                <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: "var(--reader-alternate-indicator)" }} aria-hidden="true" />
+                <span className="text-xs font-bold tracking-[0.2em] uppercase" style={{ color: "var(--reader-alternate-indicator)" }}>
+                  Alternate Path
+                </span>
+              </>
+            )}
+            {currentPath && currentPath.state !== StoryPathState.open && currentPath.state !== StoryPathState["published-alternate"] && (
+              <>
+                <span className="inline-block w-2 h-2 border border-current" style={{ color: "var(--reader-draft-indicator)" }} aria-hidden="true" />
+                <span className="text-xs font-bold tracking-[0.2em] uppercase" style={{ color: "var(--reader-draft-indicator)" }}>
+                  Draft
+                </span>
+              </>
+            )}
+          </div>
+
+          {originPath && (
+            <p className="mt-6 text-sm leading-relaxed text-muted-foreground" data-testid="text-path-origin">
+              This path branches from{" "}
+              <Link
+                href={`/worlds/${worldId}/paths/${originPath.id}`}
+                data-testid={`link-origin-path-${originPath.id}`}
+                className="underline underline-offset-4 decoration-current hover:text-foreground"
+                style={{ color: "var(--reader-alternate-indicator)" }}
+              >
+                {originPath.title}
+              </Link>
+              .
+            </p>
           )}
         </div>
 
         {loadingContributions ? (
-          <div className="space-y-24 animate-pulse">
+          <div className="space-y-32 animate-pulse" aria-live="polite" data-testid="status-contributions-loading">
             {[1, 2].map(i => (
-              <div key={i} className="space-y-4">
-                <div className="h-8 bg-muted/40 w-1/3 rounded" />
-                <div className="h-4 bg-muted/20 w-full rounded" />
-                <div className="h-4 bg-muted/20 w-full rounded" />
-                <div className="h-4 bg-muted/20 w-3/4 rounded" />
+              <div key={i} className="space-y-6">
+                <div className="h-10 bg-muted/40 w-1/3 rounded-sm mx-auto" />
+                <div className="h-4 bg-muted/20 w-full rounded-sm mt-12" />
+                <div className="h-4 bg-muted/20 w-full rounded-sm" />
+                <div className="h-4 bg-muted/20 w-5/6 rounded-sm" />
+                <div className="h-4 bg-muted/20 w-full rounded-sm mt-8" />
+                <div className="h-4 bg-muted/20 w-3/4 rounded-sm" />
               </div>
             ))}
           </div>
+        ) : errorContributions ? (
+          <div className="border-y border-destructive/20 py-10 text-center text-destructive" role="alert" data-testid="status-contributions-error">
+            The saved moments for this path could not be loaded. Please try again later.
+          </div>
         ) : (
-          <div className="space-y-24 md:space-y-32">
-            {contributions?.map((scene) => (
-              <article key={scene.id} className="relative">
-                {/* Scene Header */}
-                <header className="mb-8 text-center">
+          <div className="space-y-32 md:space-y-48">
+            {contributions?.map((scene, idx) => (
+              <article key={scene.id} className="relative animate-reveal" data-testid={`story-moment-${scene.id}`} style={{ animationDelay: `${(idx % 5) * 0.1}s` }}>
+                <header className="mb-12 text-center">
+                  <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Saved moment {String(idx + 1).padStart(2, "0")}
+                  </p>
                   <h2 
-                    className="text-2xl md:text-3xl"
+                    className="text-2xl md:text-4xl font-normal tracking-tight"
                     style={{ fontFamily: "var(--reader-font-body)" }}
                   >
                     {scene.title}
                   </h2>
                 </header>
 
-                {/* Prose */}
-                <div 
-                  className="prose prose-lg prose-p:leading-[var(--reader-leading)] prose-headings:font-normal max-w-none text-[length:var(--reader-body-size)]"
+                <div
+                  data-testid={`text-story-moment-${scene.id}`}
+                  className="prose prose-lg md:prose-xl prose-p:leading-[var(--reader-leading)] prose-headings:font-normal max-w-none text-[length:var(--reader-body-size)] prose-p:text-foreground/90 prose-a:text-foreground prose-strong:text-foreground prose-strong:font-semibold"
                   style={{ 
                     fontFamily: "var(--reader-font-body)",
-                    color: "var(--reader-text)"
                   }}
                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(scene.summary || '', { async: false }) as string) }}
                 />
 
-                {/* Attribution Row */}
-                <footer className="mt-12 flex items-center justify-center gap-3 text-sm text-muted-foreground border-t border-border/30 pt-6">
-                  <span className="italic">
-                    by {scene.contributorDisplayName ?? (scene.contributorId ? `Contributor #${scene.contributorId}` : "Anonymous")}
+                <footer className="mt-16 flex flex-col md:flex-row items-center justify-center gap-4 text-sm text-muted-foreground pt-8 relative">
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-px bg-border/40" />
+                  <span className="italic" style={{ fontFamily: "var(--reader-font-body)" }}>
+                    by {scene.contributorDisplayName ?? "Anonymous"}
                   </span>
                   {scene.agentAssisted && (
                     <>
-                      <span className="w-1 h-1 rounded-full bg-border" />
-                      <span className="px-2 py-0.5 rounded-sm border border-border/50 text-[10px] uppercase tracking-widest bg-muted/10">
+                      <span className="hidden md:block w-1 h-1 rounded-full bg-border/50" />
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-border/40 text-[10px] font-semibold uppercase tracking-widest bg-muted/10 text-muted-foreground" data-testid={`status-agent-assisted-${scene.id}`}>
+                        <Sparkles className="w-3 h-3" />
                         Agent-assisted
                       </span>
                     </>
@@ -142,27 +222,51 @@ export default function PathReaderPage() {
             ))}
 
             {contributions?.length === 0 && (
-              <div className="text-center py-20 italic text-muted-foreground" style={{ fontFamily: "var(--reader-font-body)" }}>
+              <div className="text-center py-20 text-muted-foreground text-xl italic animate-reveal" data-testid="status-contributions-empty" style={{ fontFamily: "var(--reader-font-body)" }}>
                 This path is currently empty.
               </div>
             )}
           </div>
         )}
 
-        {acceptedMoments.length > 0 && (
+        {loadingProvenance && (
           <section
-            className="mt-20 pt-10"
-            style={{ borderTop: "1px solid var(--reader-canon-indicator)" }}
-            aria-labelledby="lineage-heading"
+            className="mt-32 border-t border-border/40 pt-16 text-center text-muted-foreground animate-pulse"
+            aria-live="polite"
+            data-testid="status-lineage-loading"
           >
+            Gathering this path’s lineage…
+          </section>
+        )}
+
+        {errorProvenance && (
+          <section
+            className="mt-32 border-y border-destructive/20 py-10 text-center text-destructive"
+            role="alert"
+            data-testid="status-lineage-error"
+          >
+            The lineage record is temporarily unavailable. The story remains readable; please try again later for its full history.
+          </section>
+        )}
+
+        {/* Story Lineage / Provenance */}
+        {!loadingProvenance && !errorProvenance && acceptedMoments.length > 0 && (
+          <section
+            className="mt-32 pt-16 animate-reveal relative"
+            aria-labelledby="lineage-heading"
+            data-testid="section-path-lineage"
+          >
+            <div className="absolute top-0 left-0 right-0 h-px" style={{ backgroundColor: "var(--reader-canon-indicator)", opacity: 0.3 }} />
+
             <h3
               id="lineage-heading"
-              className="text-xs font-semibold tracking-widest uppercase mb-5"
+              className="text-xs font-bold tracking-[0.2em] uppercase mb-8 flex items-center gap-3"
               style={{ color: "var(--reader-canon-indicator)" }}
             >
-              This path in the canon
+              <span className="inline-block w-2 h-2 rotate-45 shrink-0 bg-current" aria-hidden="true" />
+              Path Lineage
             </h3>
-            <div className="space-y-5">
+            <div className="space-y-6 pl-5 border-l" style={{ borderColor: "color-mix(in_srgb, var(--reader-canon-indicator) 20%, transparent)" }}>
               {acceptedMoments.map((record) => {
                 const contributors = [
                   ...record.contributorNames,
@@ -171,23 +275,26 @@ export default function PathReaderPage() {
                 return (
                   <div
                     key={record.id}
-                    className="rounded-sm border border-border/40 bg-muted/10 p-5 text-sm leading-relaxed"
+                    className="relative text-sm md:text-base leading-relaxed text-muted-foreground"
+                    style={{ fontFamily: "var(--reader-font-body)" }}
                   >
-                    <p className="font-medium">
-                      {record.decision} on{" "}
-                      {new Intl.DateTimeFormat(undefined, {
+                    <div className="absolute -left-[25px] top-2.5 w-2 h-2 rotate-45 bg-background border" style={{ borderColor: "var(--reader-canon-indicator)" }} aria-hidden="true" />
+
+                    <p className="text-foreground">
+                      <strong className="font-semibold text-foreground/80">{record.decision}</strong> on{" "}
+                      {new Intl.DateTimeFormat('en-US', {
                         year: "numeric",
                         month: "long",
                         day: "numeric",
                       }).format(new Date(record.acceptedAt))}
                     </p>
                     {contributors.length > 0 && (
-                      <p className="mt-2 text-muted-foreground">
+                      <p className="mt-1">
                         Brought forward by {contributors.join(", ")}.
                       </p>
                     )}
                     {record.stewardName && (
-                      <p className="mt-1 text-muted-foreground">
+                      <p className="mt-1">
                         Welcomed by {record.stewardName}.
                       </p>
                     )}
@@ -198,34 +305,43 @@ export default function PathReaderPage() {
           </section>
         )}
 
-        {/* Branch-point Callouts — alternate-indicator styling, circle marker + label per theme contract */}
+        {/* Branch-point Callouts */}
         {branchingPaths.length > 0 && (
-          <div className="mt-32 pt-12" style={{ borderTop: "1px solid var(--reader-alternate-indicator)" }}>
-            <div className="flex items-center gap-2 mb-6">
-              {/* Circle marker — same shape used for alternate paths throughout the app */}
-              <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: "var(--reader-alternate-indicator)" }} aria-hidden="true" />
-              <h3 className="text-xs font-semibold tracking-widest uppercase" style={{ color: "var(--reader-alternate-indicator)" }}>
-                Alternate Paths
-              </h3>
-            </div>
-            <ul className="space-y-4">
+          <section className="mt-32 pt-16 animate-reveal relative">
+            <div className="absolute top-0 left-0 right-0 h-px" style={{ backgroundColor: "var(--reader-alternate-indicator)", opacity: 0.3 }} />
+
+            <h3 className="text-xs font-bold tracking-[0.2em] uppercase mb-8 flex items-center gap-3" style={{ color: "var(--reader-alternate-indicator)" }}>
+              <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-current" aria-hidden="true" />
+              Divergence Points
+            </h3>
+
+            <div className="grid gap-6 sm:grid-cols-2">
               {branchingPaths.map(alt => (
-                <li key={alt.id} className="flex items-start gap-3 text-sm md:text-base">
-                  <span className="mt-1.5 inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: "var(--reader-alternate-indicator)" }} aria-hidden="true" />
-                  <span>
-                    <span className="text-muted-foreground mr-2">This story also branches:</span>
-                    <Link
-                      href={`/worlds/${worldId}/paths/${alt.id}`}
-                      className="underline underline-offset-4 transition-colors"
-                      style={{ fontFamily: "var(--reader-font-body)", color: "var(--reader-alternate-indicator)", textDecorationColor: "var(--reader-alternate-indicator)" }}
-                    >
-                      {alt.title}
-                    </Link>
-                  </span>
-                </li>
+                <Link
+                  key={alt.id}
+                  href={`/worlds/${worldId}/paths/${alt.id}`}
+                  data-testid={`link-branch-path-${alt.id}`}
+                  className="group block p-6 md:p-8 rounded-lg border transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+                  style={{
+                    borderColor: "color-mix(in_srgb, var(--reader-alternate-indicator) 20%, transparent)",
+                    backgroundColor: "color-mix(in_srgb, var(--reader-alternate-indicator) 3%, transparent)"
+                  }}
+                >
+                  <div className="flex items-start gap-3 mb-4">
+                    <Network className="w-5 h-5 shrink-0 mt-0.5" style={{ color: "var(--reader-alternate-indicator)" }} aria-hidden="true" />
+                    <div>
+                      <h4 className="text-xl md:text-2xl font-normal transition-colors group-hover:opacity-80" style={{ fontFamily: "var(--reader-font-body)", color: "var(--reader-alternate-indicator)" }}>
+                        {alt.title}
+                      </h4>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground pl-8">
+                    An alternate path branching from this story.
+                  </p>
+                </Link>
               ))}
-            </ul>
-          </div>
+            </div>
+          </section>
         )}
       </div>
     </ReaderLayout>

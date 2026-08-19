@@ -108,7 +108,7 @@
   --secondary-foreground: 0 0% 15%;
 
   --muted: 40 15% 92%;
-  --muted-foreground: 0 0% 40%;
+  --muted-foreground: 40 10% 45%;
 
   --accent: 40 20% 90%;
   --accent-foreground: 0 0% 15%;
@@ -187,7 +187,7 @@
   --secondary-foreground: 40 20% 85%;
 
   --muted: 0 0% 18%;
-  --muted-foreground: 0 0% 60%;
+  --muted-foreground: 40 10% 60%;
 
   --accent: 0 0% 20%;
   --accent-foreground: 40 20% 85%;
@@ -219,9 +219,9 @@
     --reader-text: hsl(var(--foreground));
     --reader-text-muted: hsl(var(--muted-foreground));
     --reader-accent: hsl(var(--primary));
-    --reader-canon-indicator: hsl(140 33% 27%);
-    --reader-alternate-indicator: hsl(217 41% 39%);
-    --reader-draft-indicator: hsl(33 28% 34%);   /* dark warm sienna — AA-compliant on parchment bg */
+    --reader-canon-indicator: hsl(140 33% 30%);
+    --reader-alternate-indicator: hsl(217 41% 40%);
+    --reader-draft-indicator: hsl(33 30% 36%);
     --reader-font-body: var(--app-font-serif);
     --reader-font-ui: var(--app-font-sans);
     --reader-font-mono: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
@@ -231,10 +231,95 @@
   }
 
   .dark {
-    /* Dark-mode indicator values — lightened to ~L 62-68% for 4.5:1+ against hsl(0 0% 12%) bg */
+    /* Dark-mode indicator values — lightened for 4.5:1+ against hsl(0 0% 12%) bg */
     --reader-canon-indicator:     hsl(140 55% 62%);
     --reader-alternate-indicator: hsl(217 65% 68%);
     --reader-draft-indicator:     hsl(33  50% 62%);
+  }
+
+  /*
+   * Reader themes are intentionally a closed catalog. A world can select one
+   * through the ReaderLayout `theme` prop; all preserve the same readable
+   * type scale and the shape-plus-label canon/alternate/draft system.
+   */
+  [data-reader-theme="editorial"] {
+    --reader-bg: hsl(40 33% 96%);
+    --reader-text: hsl(0 0% 10%);
+    --reader-text-muted: hsl(40 10% 38%);
+    --reader-accent: hsl(0 41% 39%);
+    --reader-canon-indicator: hsl(140 33% 30%);
+    --reader-alternate-indicator: hsl(217 41% 40%);
+    --reader-draft-indicator: hsl(33 30% 36%);
+  }
+
+  [data-reader-theme="terminal"] {
+    --background: 142 27% 9%;
+    --foreground: 104 42% 89%;
+    --border: 143 19% 25%;
+    --muted: 143 20% 15%;
+    --muted-foreground: 104 20% 69%;
+    --primary: 104 55% 68%;
+    --ring: 104 55% 68%;
+    --reader-bg: hsl(142 27% 9%);
+    --reader-text: hsl(104 42% 89%);
+    --reader-text-muted: hsl(104 20% 69%);
+    --reader-accent: hsl(104 55% 68%);
+    --reader-canon-indicator: hsl(104 55% 68%);
+    --reader-alternate-indicator: hsl(193 72% 70%);
+    --reader-draft-indicator: hsl(38 75% 70%);
+    --reader-font-body: var(--reader-font-mono);
+    --reader-font-ui: var(--reader-font-mono);
+  }
+
+  [data-reader-theme="archive"] {
+    --background: 39 43% 91%;
+    --foreground: 25 34% 18%;
+    --border: 35 26% 71%;
+    --muted: 39 30% 85%;
+    --muted-foreground: 28 20% 39%;
+    --primary: 11 49% 35%;
+    --ring: 11 49% 35%;
+    --reader-bg: hsl(39 43% 91%);
+    --reader-text: hsl(25 34% 18%);
+    --reader-text-muted: hsl(28 20% 39%);
+    --reader-accent: hsl(11 49% 35%);
+    --reader-canon-indicator: hsl(142 36% 27%);
+    --reader-alternate-indicator: hsl(221 43% 37%);
+    --reader-draft-indicator: hsl(21 43% 35%);
+  }
+
+  [data-reader-theme="dispatch"] {
+    --background: 35 20% 95%;
+    --foreground: 0 0% 12%;
+    --border: 0 0% 64%;
+    --muted: 35 10% 89%;
+    --muted-foreground: 0 0% 35%;
+    --primary: 0 58% 34%;
+    --ring: 0 58% 34%;
+    --reader-bg: hsl(35 20% 95%);
+    --reader-text: hsl(0 0% 12%);
+    --reader-text-muted: hsl(0 0% 35%);
+    --reader-accent: hsl(0 58% 34%);
+    --reader-canon-indicator: hsl(150 43% 25%);
+    --reader-alternate-indicator: hsl(217 55% 34%);
+    --reader-draft-indicator: hsl(29 52% 31%);
+  }
+
+  [data-reader-theme="signal"] {
+    --background: 218 33% 12%;
+    --foreground: 194 30% 92%;
+    --border: 213 27% 29%;
+    --muted: 214 27% 18%;
+    --muted-foreground: 200 16% 69%;
+    --primary: 189 68% 68%;
+    --ring: 189 68% 68%;
+    --reader-bg: hsl(218 33% 12%);
+    --reader-text: hsl(194 30% 92%);
+    --reader-text-muted: hsl(200 16% 69%);
+    --reader-accent: hsl(189 68% 68%);
+    --reader-canon-indicator: hsl(120 48% 67%);
+    --reader-alternate-indicator: hsl(189 68% 68%);
+    --reader-draft-indicator: hsl(38 80% 70%);
   }
 
   * {
@@ -243,14 +328,20 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    overflow-y: scroll;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    * {
+    *, ::before, ::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
+    }
+    .animate-reveal {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
     }
   }
 }
@@ -265,3 +356,17 @@
     pointer-events: none;
   }
 }
+
+@keyframes reveal {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.animate-reveal {
+  opacity: 0;
+  animation: reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-reveal-delay-1 { animation-delay: 0.1s; }
+.animate-reveal-delay-2 { animation-delay: 0.2s; }
+.animate-reveal-delay-3 { animation-delay: 0.3s; }

@@ -104,9 +104,12 @@ export async function ensureSchema(): Promise<void> {
       title            TEXT        NOT NULL,
       steward_id       INTEGER,
       canon_branch_ref TEXT        NOT NULL,
+      reader_theme     TEXT        NOT NULL DEFAULT 'editorial',
       created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      CONSTRAINT storyworlds_repo_unique UNIQUE (repo_owner, repo_name)
+      CONSTRAINT storyworlds_repo_unique UNIQUE (repo_owner, repo_name),
+      CONSTRAINT storyworlds_reader_theme_check
+        CHECK (reader_theme IN ('editorial', 'terminal', 'archive', 'dispatch', 'signal'))
     );
 
     CREATE TABLE IF NOT EXISTS story_paths (
@@ -221,6 +224,22 @@ export async function ensureSchema(): Promise<void> {
           AND column_name = 'seed'
       ) THEN
         ALTER TABLE storyworlds ADD COLUMN seed TEXT;
+      END IF;
+    END $$;
+
+    -- Migration: add the finite Reader theme catalog to existing worlds.
+    ALTER TABLE storyworlds
+      ADD COLUMN IF NOT EXISTS reader_theme TEXT NOT NULL DEFAULT 'editorial';
+
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'storyworlds_reader_theme_check'
+          AND conrelid = 'storyworlds'::regclass
+      ) THEN
+        ALTER TABLE storyworlds
+          ADD CONSTRAINT storyworlds_reader_theme_check
+          CHECK (reader_theme IN ('editorial', 'terminal', 'archive', 'dispatch', 'signal'));
       END IF;
     END $$;
 

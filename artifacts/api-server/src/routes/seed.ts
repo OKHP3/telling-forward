@@ -30,18 +30,21 @@ router.post("/seed", async (req, res) => {
           repoName: "magnus-progenitor-saga",
           title: "The Magnus Progenitor Saga",
           canonBranchRef: "main",
+          readerTheme: "terminal",
         },
         {
           repoOwner: "telling-forward",
           repoName: "echoes-of-the-drift",
           title: "Echoes of the Drift",
           canonBranchRef: "main",
+          readerTheme: "signal",
         },
         {
           repoOwner: "telling-forward",
           repoName: "the-cartographers-oath",
           title: "The Cartographer's Oath",
           canonBranchRef: "main",
+          readerTheme: "archive",
         },
       ])
       .onConflictDoNothing()

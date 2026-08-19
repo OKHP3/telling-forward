@@ -48,6 +48,20 @@ export interface MeResponse {
   github: GithubLinkInfo | null;
 }
 
+/**
+ * A finite, per-storyworld Reader theme. Every theme preserves the canonical path markers, attribution, provenance, readable type scale, and reduced-motion behavior.
+
+ */
+export type ReaderTheme = (typeof ReaderTheme)[keyof typeof ReaderTheme];
+
+export const ReaderTheme = {
+  editorial: "editorial",
+  terminal: "terminal",
+  archive: "archive",
+  dispatch: "dispatch",
+  signal: "signal",
+} as const;
+
 export interface Storyworld {
   id: number;
   repoOwner: string;
@@ -58,6 +72,7 @@ export interface Storyworld {
   /** A short seed sentence surfaced on the Reader discovery page. Null when the world creator has not set one yet.
    */
   seed?: string | null;
+  readerTheme: ReaderTheme;
   createdAt: string;
   updatedAt: string;
 }

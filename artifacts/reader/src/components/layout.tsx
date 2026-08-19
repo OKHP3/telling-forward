@@ -2,31 +2,65 @@ import { type ReactNode } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 
-export function ReaderLayout({ children }: { children: ReactNode }) {
+export const readerThemes = [
+  "editorial",
+  "terminal",
+  "archive",
+  "dispatch",
+  "signal",
+] as const;
+
+export type ReaderTheme = (typeof readerThemes)[number];
+
+export function resolveReaderTheme(theme?: string | null): ReaderTheme {
+  return readerThemes.includes(theme as ReaderTheme)
+    ? (theme as ReaderTheme)
+    : "editorial";
+}
+
+export function ReaderLayout({
+  children,
+  theme = "editorial",
+}: {
+  children: ReactNode;
+  theme?: ReaderTheme;
+}) {
   const { user, logout } = useAuth();
 
   return (
     <div
-      className="min-h-[100dvh] w-full flex flex-col items-center selection:bg-primary/20"
+      className="min-h-[100dvh] w-full flex flex-col items-center selection:bg-primary/20 transition-colors duration-500"
+      data-reader-theme={theme}
+      data-testid="reader-layout"
       style={{
         fontFamily: "var(--reader-font-ui)",
         backgroundColor: "var(--reader-bg)",
         color: "var(--reader-text)",
       }}
     >
-      <header className="w-full border-b border-border/40 mb-8 md:mb-16">
-        <div className="mx-auto max-w-[var(--reader-line-length)] px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="text-sm font-medium tracking-wide uppercase text-muted-foreground hover:text-primary transition-colors">
+      <header className="w-full border-b border-border/40 mb-12 md:mb-20 shrink-0">
+        <div className="mx-auto max-w-[var(--reader-line-length)] px-6 h-20 flex items-center justify-between">
+          <Link
+            href="/"
+            data-testid="link-discovery-home"
+            className="text-xs font-semibold tracking-[0.15em] uppercase hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background rounded-sm"
+          >
             Telling Forward
           </Link>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             {user ? (
               <>
-                <span className="text-sm text-muted-foreground hidden sm:block">{user.displayName}</span>
+                <span
+                  className="text-xs font-medium text-muted-foreground hidden sm:block tracking-wide"
+                  data-testid="text-signed-in-user"
+                >
+                  {user.displayName}
+                </span>
                 <button
                   onClick={() => logout()}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors uppercase tracking-wide"
+                  data-testid="button-sign-out"
+                  className="text-xs font-semibold tracking-[0.1em] uppercase text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background rounded-sm"
                 >
                   Sign out
                 </button>
@@ -34,7 +68,8 @@ export function ReaderLayout({ children }: { children: ReactNode }) {
             ) : (
               <Link
                 href="/sign-in"
-                className="text-sm font-medium tracking-wide uppercase text-muted-foreground hover:text-primary transition-colors"
+                data-testid="link-sign-in"
+                className="text-xs font-semibold tracking-[0.1em] uppercase text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background rounded-sm"
               >
                 Sign in
               </Link>
@@ -43,9 +78,15 @@ export function ReaderLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="w-full flex-1 flex flex-col items-center px-4 pb-24">
+      <main className="w-full flex-1 flex flex-col items-center px-6 pb-32">
         {children}
       </main>
+
+      <footer className="w-full border-t border-border/20 py-12 shrink-0 text-center mt-auto">
+        <p className="text-xs font-medium tracking-[0.1em] text-muted-foreground uppercase">
+          Telling Forward Archive
+        </p>
+      </footer>
     </div>
   );
 }

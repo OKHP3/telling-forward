@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ReaderTheme } from "./readerTheme";
 
 export interface Storyworld {
   id: number;
@@ -16,6 +17,7 @@ export interface Storyworld {
   /** A short seed sentence surfaced on the Reader discovery page. Null when the world creator has not set one yet.
    */
   seed?: string | null;
+  readerTheme: ReaderTheme;
   createdAt: Date;
   updatedAt: Date;
 }

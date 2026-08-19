@@ -1,23 +1,31 @@
-import { Card, CardContent } from '@/components/ui/card';
-import { AlertCircle } from 'lucide-react';
+import { ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
+import { ReaderLayout } from "@/components/layout";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md mx-4">
-        <CardContent className="pt-6">
-          <div className="flex mb-4 gap-2">
-            <AlertCircle className="h-8 w-8 text-red-500" />
-            <h1 className="text-2xl font-bold text-gray-900">
-              404 Page Not Found
-            </h1>
-          </div>
-
-          <p className="mt-4 text-sm text-gray-600">
-            Did you forget to add the page to the router?
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    <ReaderLayout>
+      <div
+        className="w-full max-w-[var(--reader-line-length)] mt-20 text-center animate-reveal"
+        data-testid="status-reader-route-not-found"
+      >
+        <h1 className="text-2xl font-light mb-4" style={{ fontFamily: "var(--reader-font-body)" }}>
+          A Lost Record
+        </h1>
+        <p className="text-muted-foreground text-lg" style={{ fontFamily: "var(--reader-font-body)" }}>
+          This page is not part of the Reader archive. Return to discovery to find an available storyworld.
+        </p>
+        <div className="mt-8">
+          <Link
+            href="/"
+            data-testid="link-recover-unknown-route"
+            className="inline-flex items-center text-sm font-semibold tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Return to Discovery
+          </Link>
+        </div>
+      </div>
+    </ReaderLayout>
   );
 }

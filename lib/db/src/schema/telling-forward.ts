@@ -9,7 +9,9 @@ import {
   unique,
   index,
   pgEnum,
+  check,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -52,6 +54,9 @@ export const storyworldsTable = pgTable("storyworlds", {
   // A short seed sentence surfaced on the Reader discovery page.
   // Not required — worlds without a seed fall back to the repo name.
   seed: text("seed"),
+  // A named member of the finite Reader theme catalog. The Reader falls back
+  // to Editorial if an older record has no usable value.
+  readerTheme: text("reader_theme").notNull().default("editorial"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -59,7 +64,13 @@ export const storyworldsTable = pgTable("storyworlds", {
     .notNull()
     .defaultNow(),
 },
-(t) => [unique("storyworlds_repo_unique").on(t.repoOwner, t.repoName)]);
+(t) => [
+  unique("storyworlds_repo_unique").on(t.repoOwner, t.repoName),
+  check(
+    "storyworlds_reader_theme_check",
+    sql`${t.readerTheme} IN ('editorial', 'terminal', 'archive', 'dispatch', 'signal')`,
+  ),
+]);
 
 // Maps to a GitHub branch
 export const storyPathsTable = pgTable("story_paths", {

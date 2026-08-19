@@ -911,6 +911,8 @@ components:
           description: >
             A short seed sentence surfaced on the Reader discovery page.
             Null when the world creator has not set one yet.
+        readerTheme:
+          $ref: "#/components/schemas/ReaderTheme"
         createdAt:
           type: string
           format: date-time
@@ -923,8 +925,23 @@ components:
         - repoName
         - title
         - canonBranchRef
+        - readerTheme
         - createdAt
         - updatedAt
+
+    ReaderTheme:
+      type: string
+      enum:
+        - editorial
+        - terminal
+        - archive
+        - dispatch
+        - signal
+      default: editorial
+      description: >
+        A finite, per-storyworld Reader theme. Every theme preserves the
+        canonical path markers, attribution, provenance, readable type scale,
+        and reduced-motion behavior.
 
     StoryPath:
       type: object

@@ -86,6 +86,8 @@ export const GithubCallbackQueryParams = zod.object({
 /**
  * @summary List all storyworlds
  */
+export const listStoryworldsResponseReaderThemeDefault = `editorial`;
+
 export const ListStoryworldsResponseItem = zod.object({
   id: zod.number(),
   repoOwner: zod.string(),
@@ -99,6 +101,12 @@ export const ListStoryworldsResponseItem = zod.object({
     .describe(
       "A short seed sentence surfaced on the Reader discovery page. Null when the world creator has not set one yet.\n",
     ),
+  readerTheme: zod
+    .enum(["editorial", "terminal", "archive", "dispatch", "signal"])
+    .default(listStoryworldsResponseReaderThemeDefault)
+    .describe(
+      "A finite, per-storyworld Reader theme. Every theme preserves the canonical path markers, attribution, provenance, readable type scale, and reduced-motion behavior.\n",
+    ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -110,6 +118,8 @@ export const ListStoryworldsResponse = zod.array(ListStoryworldsResponseItem);
 export const GetStoryworldParams = zod.object({
   id: zod.coerce.number(),
 });
+
+export const getStoryworldResponseReaderThemeDefault = `editorial`;
 
 export const GetStoryworldResponse = zod.object({
   id: zod.number(),
@@ -123,6 +133,12 @@ export const GetStoryworldResponse = zod.object({
     .nullish()
     .describe(
       "A short seed sentence surfaced on the Reader discovery page. Null when the world creator has not set one yet.\n",
+    ),
+  readerTheme: zod
+    .enum(["editorial", "terminal", "archive", "dispatch", "signal"])
+    .default(getStoryworldResponseReaderThemeDefault)
+    .describe(
+      "A finite, per-storyworld Reader theme. Every theme preserves the canonical path markers, attribution, provenance, readable type scale, and reduced-motion behavior.\n",
     ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
