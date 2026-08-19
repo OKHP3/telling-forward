@@ -1,0 +1,154 @@
+# MPS/BAC Content-Ops Schema Signals for Telling Forward
+
+## Metadata
+
+- **source_platform:** ChatGPT (custom GPT project: "Magnus Progenitor Saga")
+- **capture_mode:** full-paste
+- **completeness:** partial — the paste opens mid-conversation ("Given that ChatGPT has far more context, I will request...") with earlier setup not shown, and closes at a live domain-strategy question with no visible resolution.
+- **source_locator:** `https://chatgpt.com/g/g-p-6830ef6c19ac8191ab723c383a411f64-magnus-progenitor-saga/c/69f22bb5-25f8-83ea-8a6d-5d16f46bf118` (retained; safe, owner's own thread)
+- **source_title:** "Magnus Progenitor Saga — AI-Assisted Novel Creation"
+- **source_date:** not supplied (one in-thread date marker: "Wed, Apr 29 at 3:01 PM," year unstated)
+- **extraction_depth:** balanced (default; not requested at a different depth)
+- **retention_decision:** public-safe — no secrets, no third-party private data. Deliberately excludes the source thread's own tool-subscription costs, hardware assignments, and brand/domain/trademark strategy as out-of-scope for a Telling Forward (TF) repository, per the scope-discipline correction already recorded for this project (see `[[telling_forward_gemini_thread_context]]` / `[[telling_forward_bac_manuscript_adr]]` in project memory).
+
+## Introduction
+
+This is the third piece of source material from the same external property (the Magnus Progenitor Saga / Biases as Constants, "MPS/BAC") scavenged for Telling Forward under the same rule established twice before in this repository: extract only the architecture and process signals that transfer, skip the property's own lore, characters, branding, and business decisions entirely. The pasted thread covers three things: a plan for book-by-book synopsis recovery (skipped — pure MPS/BAC content), a full "AI Council" tool-role-assignment strategy with a proposed Notion + GitHub content-operations architecture for migrating that project's canon (partially useful — concrete database/schema patterns, though its Notion-centric premise is the opposite of TF's confirmed direction), and a domain-name/release-title strategy for that property's own brand (skipped — no TF relevance). The material worth keeping is schema-level: a frontmatter standard, a term/glossary ledger schema, a revision/maturity-run ledger schema, and an AI-output provenance ledger schema — all of which give concrete field lists for two items TF already has open and undesigned (ADR-0005 item 2's provenance layer, ADR-0006 item 2's term/motif ledger).
+
+## Extraction profile
+
+- Depth: **balanced**, applied uniformly across the full paste.
+- Focus: architecture/process/schema signals only, per this repository's standing scope rule. MPS/BAC narrative content, the book-synopsis planning turn, and the domain/title/brand/hardware/subscription-cost material were assessed and deliberately excluded as `omit-with-reason: out of scope for a Telling-Forward-only repository`.
+
+## Coverage accounting
+
+| Segment | Disposition |
+|---|---|
+| Turn 1 — book-by-book synopsis recovery plan (8-part working order, Books 1–8) | Assessed, omitted. Pure MPS/BAC content; no TF signal. |
+| Turn 2 — "Understood... I'll treat the next turns as a book-by-book recovery pass" + synopsis-format guidance | Assessed, omitted. Same reason. |
+| Turn 3 — "Yes... the AI Council" tool-role-assignment strategy (10 tools, hardware, workflow diagrams, spend analysis) | Assessed, **partially retained**. Tool-role specialization pattern noted as corroboration only (see Decisions §1); Notion-centric premise noted and rejected (see Decisions §2); hardware/subscription-cost content omitted as out of scope. |
+| Turn 4 — Notion/GitHub migration architecture (9 Notion databases, repo structure, frontmatter YAML, migration phases) | Assessed, **retained selectively**. Database field lists extracted as schema signals (see Value inventory and Reusable assets). Repo-splitting rationale, migration-phase choreography, and all MPS/BAC-specific content (book titles, character names, canon terminology) omitted. |
+| Turn 5 — domain registration and release-title strategy | Assessed, omitted. No TF relevance — this is the source property's own brand/trademark/domain decision, not a platform architecture question. |
+| Two attached PDFs (`vault-codices-biases-as-constants-v10.1.0.pdf`, `The Magnus Progenitor Saga_v10.0.1.pdf`) | Not supplied to this session — see Content element ledger. Not assessed. |
+| Three in-thread file references ("Pasted markdown.md", "(2).md", "(3).md") | Not supplied to this session — see Content element ledger. Not assessed. |
+
+## Source-independence test
+
+**Pass.** This artifact is readable and actionable without access to the original ChatGPT thread, project, or either PDF. All retained signal is restated as TF-specific proposals with concrete field lists, not as pointers back to the source.
+
+## Source synopsis
+
+The user pasted a multi-turn ChatGPT conversation from a custom GPT project dedicated to their "Magnus Progenitor Saga" (MPS) property and its meta-narrative companion "Biases as Constants" (BAC). The conversation covers three distinct asks. First, a plan to recover book-by-book ~500-word synopses (goal-oriented, not plot summaries) for MPS's seven novel volumes plus the BAC companion codex, in a fixed working order. Second, in response to "am I over-tooled," a full inventory-and-role-assignment strategy across ten tools (ChatGPT, Claude, Notion, GitHub, Replit, GitHub Copilot, Mermaid.ai, Perplexity, Microsoft 365, Gemini) plus four hardware devices, built around the idea that "every tool gets a job, no tool gets the whole kingdom." That turn recommends a Notion-centric content-operations model: one Notion HQ with nine core databases (Works, Chapters/Sections, Sources/Imports, Canon Entities, Canon Terms/Glossary, Motifs/Themes, Timeline Events, Revision Runs/Maturity, AI Council Outputs) feeding a single private GitHub repo (`magnus-progenitor-system`) as the canonical archive, with a documented Markdown frontmatter standard bridging the two and a phased migration sequence. Third, a domain-name and release-title strategy question — whether the title "The Magnus Progenitor Saga" is strong enough to commit to, and whether to register defensive Dynadot domains now versus building a standalone site.
+
+## Turn ledger
+
+| # | Role | Content | Fidelity |
+|---|---|---|---|
+| 1 | assistant | Book-by-book synopsis recovery plan, 8-item working order | text-extracted (omitted from retained value) |
+| 2 | user | Confirms request; supplies "synopses" correction and links three "Pasted markdown" files plus prior long-form summaries | text-extracted; referenced files not supplied |
+| 3 | assistant | Synopsis-format guidance (500–1000 words, structured template, industry citations) | text-extracted (omitted) |
+| 4 | user | "Am I over-tooled" — asks for AI Council role assignment | text-extracted |
+| 5 | assistant | Full 10-tool + 4-device role-assignment table, workflow diagrams, redundancy analysis | text-extracted; schema-relevant portions retained below |
+| 6 | user | Asks how to migrate two ChatGPT projects + Word docs into Notion→GitHub; how many repos; how many Notion databases | text-extracted |
+| 7 | assistant | Repo strategy (1 canonical repo), Notion HQ structure, 9 database schemas, frontmatter YAML standard, migration phases | text-extracted; database schemas retained below |
+| 8 | user | Asks whether the MPS title is strong enough to commit to domain registrations | text-extracted |
+| 9 | assistant | Title/brand/domain recommendation (defensive Dynadot registrations, USPTO clearance note, brand-ladder naming) | text-extracted (omitted — no TF relevance) |
+
+## Content element ledger
+
+| Element | Type | Owning turn | Fidelity | Disposition |
+|---|---|---|---|---|
+| `vault-codices-biases-as-constants-v10.1.0.pdf` | PDF, attached to the current message | orphaned (not part of the pasted thread) | unavailable — not found in this session's filesystem | Not assessed; noted as a gap |
+| `The Magnus Progenitor Saga_v10.0.1.pdf` | PDF, attached to the current message | orphaned | unavailable | Not assessed; noted as a gap |
+| "Pasted markdown.md" | file reference inside the pasted transcript | turn 2 | description-only (only the user's framing sentence is visible, not file content) | Not assessed |
+| "Pasted markdown (2).md" | file reference inside the pasted transcript | turn 2 | description-only | Not assessed |
+| "Pasted markdown (3).md" | file reference inside the pasted transcript | turn 2 | description-only | Not assessed |
+| ChatGPT source URL | source locator | n/a | metadata-only | Retained as provenance |
+
+## Normalization exceptions
+
+None. Every supplied block was assignable to a turn; the two PDFs and three file references are explicitly recorded as unavailable/description-only rather than silently dropped.
+
+## Value inventory
+
+| Area | Capture |
+|---|---|
+| Purpose | The source thread's purpose (recovering MPS/BAC canon into a durable, non-ChatGPT-dependent system) is a real precedent for a general problem — content scattered across ephemeral AI-chat state needs a durable, schema-backed home — but the specific solution proposed (Notion HQ) is not TF's solution. |
+| Context | The thread explicitly frames Biases as Constants as a *governance/traceability layer*, not just a second manuscript — "Canon as Code," a Traceability Matrix, a Terminology Incursion Ledger. TF already has independent, confirmed lineage from this same BAC system (PME/PIE/CME/CIE), so this thread's schema proposals are downstream elaborations of a system TF has already partially adopted, not a new source. |
+| Reasoning | The thread's core operating rule — "assign each tool a job, don't let every tool try to be every other tool" — is the same underlying instinct behind TF's own three-tier ingestion split (Tier 0 rules / Tier 1 Actions+Phi-4-mini / Tier 2 bring-your-own-AI). No new decision follows from this; it's corroboration. |
+| Value | Three Notion database schemas (Canon Terms/Glossary, Revision Runs/Maturity, AI Council Outputs) plus a Markdown frontmatter standard give concrete field-level shapes for two TF concepts that are currently open proposals with no field list: ADR-0005 item 2 (provenance layer) and ADR-0006 item 2 (term/motif ledger). See Reusable assets. |
+| Outcomes | No TF decision changes as a result of this thread. It supplies design detail for two already-open items and reaffirms one already-settled item (GitHub over Notion). |
+| Limits | The two attached PDFs (the actual BAC Codex and MPS manuscript) were not accessible in this session — any signal beyond what ChatGPT itself summarized in the pasted turns is unavailable. The thread's own claims about what the Codex "says" are assistant assertions (`stated`, not independently verified against the PDFs). |
+
+## Decisions and rationale
+
+### 1. Tool-role specialization — corroboration only, no new decision
+
+The thread's "AI Council" model (each AI/tool gets one job) is the same instinct behind TF's confirmed three-tier ingestion architecture and the PME/PIE/CME/CIE engine-family split. This is `stated` corroborating evidence from an independent context, not new design input. No action item.
+
+### 2. Notion-centric content-ops architecture — reaffirmed against, not reopened
+
+The thread's central recommendation is a Notion HQ (9 databases) as the primary "living workspace," with GitHub as a secondary durable archive fed *from* Notion. Project memory records at least three other MPS/BAC-sourced threads independently proposing a Notion-centered architecture before this one (`[[telling_forward_gemini_thread_context]]`, the BAC manuscript pass in `[[telling_forward_bac_manuscript_adr]]`, and the clarity-pass thread behind ADR-0007's "Notion canon-hub additions"), making this at least the fourth. TF's 2026-08-17 confirmed decision — GitHub-only, no Notion dependency, capsules as GitHub Issues — stands. Nothing here reopens it; it's one more data point that TF's call diverges from this property's own operating pattern, not evidence against TF's choice.
+
+### 3. Frontmatter YAML standard — reusable pattern, informs capsule/scene markdown design
+
+The thread's proposed frontmatter for exported chapters (`id`, `work_id`, `section_type`, `order`, `canon_layer`, `status`, `version`, `source_document`, `characters`, `motifs`, `canon_terms`, `github_path`) is a concrete, directly transferable pattern for TF's own markdown-native scene/capsule files (confirmed format per `[[telling_forward_ui_vision]]`). This is a `proposal`-tier signal — no TF file currently defines a frontmatter schema for scene markdown.
+
+### 4. Canon Terms/Glossary database — concretizes ADR-0006 item 2
+
+The thread's "Canon Terms" schema (Term, Definition, Tier: Plain/Symbolic/Mythic/System/Forbidden-Deprecated, Casing Rule, Canon Status, First Appearance, Drift Risk, Related Entities, Related Motifs) is a field-level precedent for ADR-0006 item 2's "steward-facing term/motif ledger," which is currently an unspecified proposal blocked on the `capsules` table. This gives that proposal a starting field list rather than a blank page.
+
+### 5. Revision Runs/Maturity + AI Council Outputs databases — concretize ADR-0005 item 2
+
+The thread's "Revision Runs" schema (Run Type, Maturity Before/After using an R0–R10 rung scale, Issue Type: Drift/Tone/Continuity/Glossary/Prose/Canon/Structure, AI Tool Used, Accepted?, GitHub Commit) and "AI Council Outputs" schema (Tool, Output Type, Quality Rating, Use Decision: Accepted/Partial/Rejected/Reference) are field-level precedents for ADR-0005 item 2's "side-car provenance layer" — which is currently defined only as "which tier or engine produced or matured it." The R0–R10 rung scale in the thread's schema is the same PME maturity ladder TF has already confirmed as inherited lineage, used here as an actual database column rather than a described concept — direct evidence the rung value belongs in a provenance record as structured data, not prose.
+
+### 6. "Canon as Code" — an unnamed principle TF already practices (added on extension pass)
+
+The thread's own framing of Biases as Constants — canon as "executable," memory as "compression protocol," structure over recall — is the same underlying justification TF already acted on when it chose GitHub Issues over prose files for capsules (per `[[telling_forward_ui_vision]]`'s "why capsules are GitHub Issues, not prose files" note), but no TF document states the principle itself, only its one applied instance. Naming it gives future schema calls (including items 4 and 5 above) a citable rationale instead of re-deriving it each time.
+
+### 7. Immutable raw-source rule for manuscript ingestion (added on extension pass)
+
+The thread's migration plan opens with "freeze the source" — raw imports archived, nothing in that archive ever edited, treated as evidence. ADR-0004's ingestion pipeline transforms an uploaded manuscript through three tiers but never states whether the original upload is preserved unmodified once ingestion starts. This is a gap, not a new idea; principle #4 ("keep provenance visible") already implies it.
+
+### 8. Repo-splitting heuristic for platform code (added on extension pass)
+
+The thread's own repo-consolidation reasoning — split a repo only when a component's lifecycle genuinely diverges, not by content category — is a reusable decision test independent of its Notion-centric context. TF has already settled content-repo topology (one repo per storyworld); this heuristic is for a different, still-open question: how the Author App, Reader App, ingestion scripts, and MCP server split (or don't) across repos.
+
+## Actionable handoff
+
+| Item | Status | Depends on |
+|---|---|---|
+| Frontmatter schema proposal for scene/capsule markdown | New — not previously logged anywhere in this repo | Nothing; can be drafted now |
+| Field-level schema addendum to ADR-0005 item 2 (provenance) | Extends an existing open item | The `capsules` table (does not exist yet, per ADR-0004) |
+| Field-level schema addendum to ADR-0006 item 2 (term/motif ledger) | Extends an existing open item | Same — the `capsules` table |
+| GitHub-over-Notion reaffirmation | No action; fourth corroborating data point logged | n/a |
+| "Canon as Code" named as an explicit principle | New | Nothing; can be drafted now |
+| Immutable raw-source rule for ingestion | New; extends ADR-0004 | Nothing; can be drafted now |
+| Repo-splitting heuristic for platform code | New; logged as guidance only | No current repo-topology question depends on it |
+
+A companion ADR (`docs/adr/0010-content-ops-schema-and-governance-signals-from-mps-council-thread.md`) drafts all five concrete proposals above (items 4, 5, 6, 7, 8) and supersedes an earlier narrower draft of the same ADR (originally written as 0009, renumbered to avoid colliding with another session's concurrently-written ADR-0009).
+
+## Reusable assets
+
+- Frontmatter field list (id, work_id, section_type, order, canon_layer, status, version, source_document, characters, motifs, canon_terms, github_path) — candidate baseline for TF scene/capsule markdown frontmatter.
+- Term-ledger field list (term, definition, tier, casing rule, canon status, first appearance, drift risk, related entities, related motifs) — candidate baseline for ADR-0006 item 2's ledger.
+- Provenance/revision field list (run type, maturity before/after [rung], issue type, tool used, accepted?, source commit/reference, source manuscript reference) — candidate baseline for ADR-0005 item 2's side-car provenance record.
+- "Canon as Code" principle statement — candidate one-sentence addition to `docs/MISSION.md` or ADR-0001.
+- Immutable raw-source rule statement — candidate addition to ADR-0004.
+- Repo-splitting heuristic statement — candidate guidance note for whenever platform-code repo topology becomes a live question.
+
+## Open questions
+
+- Whether TF's `capsules` table design (still not started, per ADR-0004) should adopt any of the three field lists above wholesale, adapt them, or treat them only as loose inspiration — owner call, not decided by this extract.
+- Whether a frontmatter standard belongs in this ADR track at all, or is better handled as a plain engineering spec once the capsule schema exists — flagged, not resolved here.
+- The two attached PDFs were never actually read (not present in this session). If the owner wants deeper mining of the actual BAC Codex traceability-matrix mechanics beyond what ChatGPT summarized, that requires re-supplying the PDFs directly to a session with file access.
+
+## Rehydration test
+
+A future reader with no access to the original ChatGPT thread, the two PDFs, or this project's prior memory can still act on this document: the Value inventory, Decisions, and Reusable assets sections state each retained field list and its rationale in full, without depending on the source being re-fetched.
+
+## Provenance
+
+- Extracted: 2026-08-19, in a Cowork session, at the owner's direct request via the `okhp3-thread-context-extraction-chatgpt` skill.
+- This skill's `scripts/create_thread_extract.py` and `assets/thread-extract-template.md` were not present in this session's synced skill cache (only `SKILL.md` was available) — this artifact was hand-built to match the contract's required structure rather than generated by the script. A future session with the full skill package available should be able to validate this file's shape against the real template.
+- Scope discipline applied per `[[telling_forward_gemini_thread_context]]` and `[[telling_forward_bac_manuscript_adr]]` — this is the third MPS/BAC-sourced document scavenged for this repository; the source property's own narrative, branding, and business content is excluded by design, not oversight.

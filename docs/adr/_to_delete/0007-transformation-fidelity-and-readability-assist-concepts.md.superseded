@@ -1,0 +1,54 @@
+# ADR-0007: Transformation Fidelity and Contributor Readability-Assist Concepts from a Vault Codices Thread
+
+## Status
+
+**Open.** This ADR proposes two independent, separately-decidable items, not one accept/reject decision. See "Recommendation" for the per-item call and "Next action" for what closes it.
+
+## Context
+
+On 2026-08-19 the project owner pasted a ChatGPT thread into a Cowork session and asked for it to be considered against Telling Forward. That source thread is about a different property (Vault Codices: Biases as Constants, the meta-narrative companion volume to the Magnus Progenitor Saga) and is **not** archived here, consistent with how ADR-0005 and ADR-0006 treat their own imported-thread sources. This ADR is the scavenged result: only concepts judged useful to Telling Forward's own architecture, restated as Telling-Forward-specific proposals and checked against `docs/MISSION.md`'s working principles.
+
+The source thread's core subject is orthogonal to Telling Forward's model. It is about a single author using AI to translate their own dense authorial voice into audience-appropriate prose for a specific book, built around a companion-volume audience-tiering ladder, a named "Interpretive Translation Layer," a "Lexical Translation Engine," and a validation entity called SH'ELAH. None of that naming, tiering scheme, or property-specific architecture is adopted here. Two narrower patterns are.
+
+## Concepts extended into concrete proposals
+
+### 1. Transformation fidelity report
+
+The source thread's practical guardrail against "simplification becoming scope creep" is a two-pass workflow: extract the claims and meaning first, then rewrite, then report what changed versus what was intentionally preserved (a "fidelity report": what changed, what was preserved, what ambiguity was flagged rather than silently resolved).
+
+Telling Forward already has multiple points where an agent transforms contributor text without a full rewrite from scratch: ADR-0004's Tier 1 (Actions plus Phi-4-mini) and Tier 2 (bring-your-own-AI) ingestion, and the Concept Board's Disrupt and Invert actions. Mission principle #2 ("Assist without taking authorship") and principle #4 ("Keep provenance visible") already imply a contributor should be able to see what an agent changed before approving it, but no TF document currently specifies how that visibility gets delivered.
+
+**Proposal:** any agent transformation of contributor text (ingestion Tier 1/2 rewrite, Disrupt, Invert) should emit a structured fidelity note alongside its output, naming what changed, what was intentionally preserved, and any ambiguity the agent flagged. This is an output-contract pattern, not a new pipeline stage. It does not require the source thread's separate "meaning extractor" agent role, only a change to what the existing transformation step returns.
+
+**Status of this item:** proposed pattern, no schema or UI design yet.
+
+### 2. Optional contributor-facing readability and register assist
+
+Separately from item 1, the source thread's actual use case, stripped of its book-specific tiering, is generic: a contributor wants AI help making their prose land with an intended readership without losing their voice or altering their facts and claims. Telling Forward's Mission already promises agent help with "revision" as part of reducing the mechanical burden of authorship, but no document names what revision assistance actually consists of beyond ingestion and ordering.
+
+**Proposal:** an optional, contributor-initiated pass, not a Reader App feature, not a new content type, not a platform surface, that adjusts lexical and syntactic complexity in a contributor's own draft while holding claims, named entities, and voice markers fixed. Pair it with item 1's fidelity report so the contributor sees exactly what shifted before accepting it. This stays bounded to the Author App and Concept Board side, is opt-in per use, and never touches canon status or reader-facing presentation.
+
+**Status of this item:** proposed concept; needs owner review on whether this belongs inside TF's "revision" scope at all before any design work starts.
+
+## Non-goals of this ADR
+
+- Does not adopt the source thread's own tiering ladder (T0 through T4), "Interpretive Translation Layer," "Lexical Translation Engine," SH'ELAH validation entity, or "editorial spirit avatar" tone-selection concept. Those belong to the source property's own architecture, not Telling Forward's.
+- Does not reopen withdrawn open questions 15.8 (third platform surface) or 15.9 (in-world companion/codex content type). Item 2 above is a contributor-side editing assist, not a reader-facing surface or content type, and is a different proposal from both withdrawn items.
+- Does not authorize building anything. Both items are proposals pending owner review.
+- Does not describe, evaluate, or archive the source thread's own property (plot, characters, branding, or the companion volume's content). That material was scavenged for pattern ideas only.
+
+## Recommendation
+
+| Item | Recommendation |
+|---|---|
+| 1. Transformation fidelity report | Log as proposed; low-cost output-contract change to fold in once any transformation step (ADR-0004 Tier 1/2, or Disrupt/Invert) gets designed |
+| 2. Contributor-facing readability/register assist | Log as proposed; needs an explicit owner scope decision, is this inside TF's "revision" promise, before any design work |
+
+## Consequences
+
+- If item 1 is accepted, ADR-0004's Tier 1/2 ingestion design and any future Disrupt/Invert implementation should include a fidelity-report output field from the start rather than retrofitting it later.
+- Item 2 has no consequence until the owner scopes it. It does not block or depend on item 1's acceptance, though it would consume item 1's fidelity-report pattern if both are accepted.
+
+## Next action
+
+The project owner should give a per-item call, accept, reject, or defer, for items 1 and 2. Update this ADR's Status once that call is made.
