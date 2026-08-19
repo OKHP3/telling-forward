@@ -1,1 +1,2 @@
 - [Auto-push hook auth](auto-push-hook.md) — post-commit push must export GIT_ASKPASS to scripts/git-askpass.sh; a plain git push hook fails auth even with a valid GITHUB_PAT.
+- [Workspace build environment](workspace-build-environment.md) — root validation must provide non-production runtime configuration without weakening artifact safeguards.
