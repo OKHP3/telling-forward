@@ -26,6 +26,8 @@ Use a two-tier notification model.
 
 Agents may triage the maintainer-facing stream and prepare recommendations (routing routine issues, flagging duplicates, drafting a suggested response). Agents do not make the final call on authorship, canon inclusion, or difficult creative feedback; that stays with a human steward. This is the same boundary already stated more generally in `docs/MISSION.md` working principles 3 ("Make the hidden machinery humane") and 9 ("Treat agents as instruments"). This ADR is the operational detail behind those two principles.
 
+`docs/platform-requirements.md` Section 7.3 has since defined the authoritative contributor submission state machine and explicitly maps each of the five states above onto it (Submitted, Under review, Returned with notes, Accepted into canon, Published as an alternate path). That mapping is consistent with this ADR, not a change to it; Section 7.3 governs submission state, this ADR governs what the contributor is told about it.
+
 ## Consequences
 
 - Any future notification, email, or in-app messaging feature should be built against the five contributor-facing states above, not by exposing raw GitHub webhook payloads or Action run results to contributors.

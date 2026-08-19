@@ -59,3 +59,7 @@ The platform code and documentation are separate from any protected fiction, dra
 - [Contribution guide](CONTRIBUTING.md)
 - [Content and story rights](CONTENT-LICENSE.md)
 - [Decision record (naming, vocabulary, notifications, architecture)](docs/adr/)
+- [Platform requirements (design baseline)](docs/platform-requirements.md)
+- [Dream platform specification](docs/product/dream-platform-specification.md)
+- [Attainable delivery roadmap](docs/product/attainable-delivery-roadmap.md)
+- [Open questions log](docs/decisions/open-questions.md)
