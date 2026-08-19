@@ -27,7 +27,13 @@ export interface GitHubCommit {
   message: string;
   authorName: string | null;
   authorEmail: string | null;
+  authorLogin: string | null;
   timestamp: string;
+}
+
+export interface GitHubActor {
+  login: string;
+  displayName: string | null;
 }
 
 export interface GitHubPullRequest {
@@ -39,15 +45,26 @@ export interface GitHubPullRequest {
   title: string;
   headRef: string;
   baseRef: string;
+  headSha: string;
+  baseSha: string;
   createdAt: string;
   closedAt: string | null;
   mergedAt: string | null;
+  author: GitHubActor | null;
+  mergedBy: GitHubActor | null;
 }
 
 export interface GitHubPullRequestReview {
   id: number;
   state: string; // e.g. "COMMENTED", "REQUEST_CHANGES", "APPROVED"
   body: string;
+  submittedAt: string | null;
+}
+
+export interface GitHubPullRequestComment {
+  id: number;
+  body: string;
+  createdAt: string;
 }
 
 export interface CreateBranchParams {
@@ -72,6 +89,8 @@ export interface MergePullRequestParams {
   owner: string;
   repo: string;
   prNumber: number;
+  /** GitHub rejects the merge if the submitted head changed since review. */
+  expectedHeadSha?: string;
   /** Commit title written to GitHub — must use platform vocabulary, not Git jargon */
   commitTitle: string;
 }
@@ -146,6 +165,17 @@ export interface GitHubClientInterface {
     branch: string,
     maxPages?: number,
   ): Promise<GitHubCommit[]>;
+  listCommitsBetween(
+    owner: string,
+    repo: string,
+    base: string,
+    head: string,
+  ): Promise<GitHubCommit[]>;
+  listPullRequestCommits(
+    owner: string,
+    repo: string,
+    prNumber: number,
+  ): Promise<GitHubCommit[]>;
   listOpenPullRequests(
     owner: string,
     repo: string,
@@ -155,6 +185,16 @@ export interface GitHubClientInterface {
     repo: string,
     prNumber: number,
   ): Promise<GitHubPullRequest | null>;
+  getMergeCommitRange(
+    owner: string,
+    repo: string,
+    mergeCommitSha: string,
+  ): Promise<{ baseSha: string; headSha: string } | null>;
+  getCommitMessage(
+    owner: string,
+    repo: string,
+    commitSha: string,
+  ): Promise<string>;
   /**
    * Return all reviews for a pull request (most recent first).
    * Used to detect whether a review was already posted before retrying.
@@ -164,6 +204,17 @@ export interface GitHubClientInterface {
     repo: string,
     prNumber: number,
   ): Promise<GitHubPullRequestReview[]>;
+  listPullRequestComments(
+    owner: string,
+    repo: string,
+    prNumber: number,
+  ): Promise<GitHubPullRequestComment[]>;
+  createPullRequestComment(input: {
+    owner: string;
+    repo: string;
+    prNumber: number;
+    body: string;
+  }): Promise<void>;
   createBranch(params: CreateBranchParams): Promise<void>;
   createCommit(params: CreateCommitParams): Promise<string>;
   /**
@@ -224,11 +275,11 @@ class OctokitGitHubClient implements GitHubClientInterface {
     owner: string,
     repo: string,
     branch: string,
-    maxPages = 10,
+    maxPages?: number,
   ): Promise<GitHubCommit[]> {
     const results: GitHubCommit[] = [];
     let page = 1;
-    while (page <= maxPages) {
+    while (maxPages === undefined || page <= maxPages) {
       const { data } = await this.octokit.rest.repos.listCommits({
         owner,
         repo,
@@ -242,11 +293,116 @@ class OctokitGitHubClient implements GitHubClientInterface {
           message: c.commit.message,
           authorName: c.commit.author?.name ?? null,
           authorEmail: c.commit.author?.email ?? null,
+          authorLogin: c.author?.login ?? null,
           timestamp: c.commit.author?.date ?? new Date().toISOString(),
         });
       }
       if (data.length < 100) break;
       page++;
+    }
+    return results;
+  }
+
+  async listPullRequestCommits(
+    owner: string,
+    repo: string,
+    prNumber: number,
+  ): Promise<GitHubCommit[]> {
+    const results: GitHubCommit[] = [];
+    for await (const page of this.octokit.paginate.iterator(
+      this.octokit.rest.pulls.listCommits,
+      { owner, repo, pull_number: prNumber, per_page: 100 },
+    )) {
+      for (const commit of page.data) {
+        results.push({
+          sha: commit.sha,
+          message: commit.commit.message,
+          authorName: commit.commit.author?.name ?? null,
+          authorEmail: commit.commit.author?.email ?? null,
+          authorLogin: commit.author?.login ?? null,
+          timestamp: commit.commit.author?.date ?? new Date().toISOString(),
+        });
+      }
+    }
+    return results;
+  }
+
+  async listCommitsBetween(
+    owner: string,
+    repo: string,
+    base: string,
+    head: string,
+  ): Promise<GitHubCommit[]> {
+    const results: GitHubCommit[] = [];
+    let page = 1;
+    let totalCommits = 0;
+    while (true) {
+      const { data } = await this.octokit.rest.repos.compareCommits({
+        owner,
+        repo,
+        base,
+        head,
+        per_page: 100,
+        page,
+      });
+      totalCommits = data.total_commits;
+      for (const commit of data.commits) {
+        results.push({
+          sha: commit.sha,
+          message: commit.commit.message,
+          authorName: commit.commit.author?.name ?? null,
+          authorEmail: commit.commit.author?.email ?? null,
+          authorLogin: commit.author?.login ?? null,
+          timestamp: commit.commit.author?.date ?? new Date().toISOString(),
+        });
+      }
+      if (data.commits.length < 100) break;
+      page++;
+    }
+    // GitHub returns no more than 250 commits from compare. When the range is
+    // larger, walk the graph so callers can safely replace a complete path
+    // membership set rather than deleting valid older saved moments.
+    if (totalCommits > results.length) {
+      return this.listCommitGraphSince(owner, repo, base, head);
+    }
+    return results;
+  }
+
+  private async listCommitGraphSince(
+    owner: string,
+    repo: string,
+    base: string,
+    head: string,
+  ): Promise<GitHubCommit[]> {
+    const { data: baseCommit } = await this.octokit.rest.repos.getCommit({
+      owner,
+      repo,
+      ref: base,
+    });
+    const baseSha = baseCommit.sha;
+    const pending = [head];
+    const visited = new Set<string>();
+    const results: GitHubCommit[] = [];
+
+    while (pending.length) {
+      const ref = pending.pop();
+      if (!ref || visited.has(ref) || ref === baseSha) continue;
+      visited.add(ref);
+      const { data: commit } = await this.octokit.rest.repos.getCommit({
+        owner,
+        repo,
+        ref,
+      });
+      if (commit.sha === baseSha) continue;
+      results.push({
+        sha: commit.sha,
+        message: commit.commit.message,
+        authorName: commit.commit.author?.name ?? null,
+        authorEmail: commit.commit.author?.email ?? null,
+        authorLogin: commit.author?.login ?? null,
+        timestamp: commit.commit.author?.date ?? new Date().toISOString(),
+      });
+      pending.push(...commit.parents.map((parent) => parent.sha));
     }
     return results;
   }
@@ -269,9 +425,15 @@ class OctokitGitHubClient implements GitHubClientInterface {
           title: pr.title,
           headRef: pr.head.ref,
           baseRef: pr.base.ref,
+          headSha: pr.head.sha,
+          baseSha: pr.base.sha,
           createdAt: pr.created_at,
           closedAt: pr.closed_at ?? null,
           mergedAt: pr.merged_at ?? null,
+          author: pr.user
+            ? { login: pr.user.login, displayName: pr.user.name ?? null }
+            : null,
+          mergedBy: null,
         });
       }
     }
@@ -297,13 +459,53 @@ class OctokitGitHubClient implements GitHubClientInterface {
         title: pr.title,
         headRef: pr.head.ref,
         baseRef: pr.base.ref,
+        headSha: pr.head.sha,
+        baseSha: pr.base.sha,
         createdAt: pr.created_at,
         closedAt: pr.closed_at ?? null,
         mergedAt: pr.merged_at ?? null,
+        author: pr.user
+          ? { login: pr.user.login, displayName: pr.user.name ?? null }
+          : null,
+        mergedBy: pr.merged_by
+          ? { login: pr.merged_by.login, displayName: pr.merged_by.name ?? null }
+          : null,
       };
     } catch {
       return null;
     }
+  }
+
+  async getMergeCommitRange(
+    owner: string,
+    repo: string,
+    mergeCommitSha: string,
+  ): Promise<{ baseSha: string; headSha: string } | null> {
+    const { data } = await this.octokit.rest.repos.getCommit({
+      owner,
+      repo,
+      ref: mergeCommitSha,
+    });
+    // Platform acceptance explicitly requests a merge commit. Its first
+    // parent is canon before acceptance; its second is the submitted head.
+    if (data.parents.length !== 2) return null;
+    return {
+      baseSha: data.parents[0].sha,
+      headSha: data.parents[1].sha,
+    };
+  }
+
+  async getCommitMessage(
+    owner: string,
+    repo: string,
+    commitSha: string,
+  ): Promise<string> {
+    const { data } = await this.octokit.rest.repos.getCommit({
+      owner,
+      repo,
+      ref: commitSha,
+    });
+    return data.commit.message;
   }
 
   async listPullRequestReviews(
@@ -317,11 +519,51 @@ class OctokitGitHubClient implements GitHubClientInterface {
       { owner, repo, pull_number: prNumber, per_page: 100 },
     )) {
       for (const r of page.data) {
-        results.push({ id: r.id, state: r.state, body: r.body });
+        results.push({
+          id: r.id,
+          state: r.state,
+          body: r.body,
+          submittedAt: r.submitted_at ?? null,
+        });
       }
     }
     // Return most-recent first so callers find the latest matching review
     return results.reverse();
+  }
+
+  async listPullRequestComments(
+    owner: string,
+    repo: string,
+    prNumber: number,
+  ): Promise<GitHubPullRequestComment[]> {
+    const results: GitHubPullRequestComment[] = [];
+    for await (const page of this.octokit.paginate.iterator(
+      this.octokit.rest.issues.listComments,
+      { owner, repo, issue_number: prNumber, per_page: 100 },
+    )) {
+      for (const comment of page.data) {
+        results.push({
+          id: comment.id,
+          body: comment.body ?? "",
+          createdAt: comment.created_at,
+        });
+      }
+    }
+    return results;
+  }
+
+  async createPullRequestComment(input: {
+    owner: string;
+    repo: string;
+    prNumber: number;
+    body: string;
+  }): Promise<void> {
+    await this.octokit.rest.issues.createComment({
+      owner: input.owner,
+      repo: input.repo,
+      issue_number: input.prNumber,
+      body: input.body,
+    });
   }
 
   /**
@@ -354,13 +596,14 @@ class OctokitGitHubClient implements GitHubClientInterface {
   }
 
   async mergePullRequest(params: MergePullRequestParams): Promise<string> {
-    const { owner, repo, prNumber, commitTitle } = params;
+    const { owner, repo, prNumber, commitTitle, expectedHeadSha } = params;
     const { data } = await this.octokit.rest.pulls.merge({
       owner,
       repo,
       pull_number: prNumber,
       commit_title: commitTitle,
       merge_method: "merge",
+      ...(expectedHeadSha ? { sha: expectedHeadSha } : {}),
     });
     if (!data.merged) {
       throw new Error(`GitHub merge was not completed: ${data.message}`);

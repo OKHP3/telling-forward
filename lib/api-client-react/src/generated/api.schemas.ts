@@ -100,6 +100,21 @@ export interface Contribution {
   createdAt: string;
 }
 
+/**
+ * Reader-facing record of an accepted contribution.
+ */
+export interface StoryProvenance {
+  id: number;
+  storyworldId: number;
+  sourcePathId?: number | null;
+  sourcePathTitle: string;
+  contributorNames: string[];
+  contributorIdentityFallbacks: string[];
+  stewardName?: string | null;
+  decision: string;
+  acceptedAt: string;
+}
+
 export interface TranscribeRequest {
   /** Base64-encoded audio data */
   audioBase64: string;

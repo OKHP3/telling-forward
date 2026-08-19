@@ -10,6 +10,7 @@
  * Read actions (GET) are public.
  */
 
+import { randomUUID } from "node:crypto";
 import { Router, type IRouter } from "express";
 import { eq, and, inArray, desc } from "drizzle-orm";
 import {
@@ -18,8 +19,8 @@ import {
   storyworldsTable,
   storyPathsTable,
   editorQuestionsTable,
-  provenanceRecordsTable,
   stewardsTable,
+  userGithubLinksTable,
 } from "@workspace/db";
 import {
   GetProposalParams,
@@ -34,8 +35,26 @@ import {
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
 import { requireStewardForProposal } from "../middlewares/steward";
-import { getGitHubClient } from "../lib/github";
+import {
+  getGitHubClient,
+  type GitHubCommit,
+  type GitHubPullRequest,
+} from "../lib/github";
 import { logger } from "../lib/logger";
+import {
+  buildAcceptanceDecisionNote,
+  buildAcceptanceIntentNote,
+  acceptanceIntentForOperation,
+  acceptanceOperationIdFromCommitMessage,
+  contributorAttributionsForPath,
+  indexSavedMoment,
+  replacePathMomentMemberships,
+  resolveContributor,
+  resolveContributorIdentity,
+  stewardAttribution,
+  verifyAcceptanceDecisionNote,
+  writeAcceptedProvenance,
+} from "../lib/provenance";
 
 const router: IRouter = Router();
 
@@ -226,6 +245,13 @@ router.post(
         res.status(404).json({ error: "Storyworld not found" });
         return;
       }
+      const provenanceSigningSecret = process.env["GITHUB_WEBHOOK_SECRET"];
+      if (!provenanceSigningSecret) {
+        res.status(503).json({
+          error: "Story acceptance is temporarily unavailable because its durable decision record cannot be secured.",
+        });
+        return;
+      }
 
       // Load path for branch ref (used in commit title)
       const pathRows = await db
@@ -235,6 +261,33 @@ router.post(
         .limit(1);
 
       const path = pathRows[0];
+      // The API service account performs the GitHub merge, so it cannot stand
+      // in for the human who made the editorial decision. Require the acting
+      // steward's linked identity before any irreversible merge is attempted.
+      const actingStewardRows = await db
+        .select({
+          id: stewardsTable.id,
+          githubUsername: userGithubLinksTable.githubUsername,
+        })
+        .from(stewardsTable)
+        .innerJoin(
+          userGithubLinksTable,
+          eq(stewardsTable.userId, userGithubLinksTable.userId),
+        )
+        .where(
+          and(
+            eq(stewardsTable.storyworldId, proposal.storyworldId),
+            eq(stewardsTable.userId, req.session.userId as number),
+          ),
+        )
+        .limit(1);
+      const actingSteward = actingStewardRows[0];
+      if (!actingSteward) {
+        res.status(422).json({
+          error: "Link your GitHub account before accepting a path into canon so your editorial decision can be credited.",
+        });
+        return;
+      }
 
       // Get the merge SHA from GitHub. For the recovery path the PR is already
       // merged so we skip the merge call. For normal acceptance we merge first,
@@ -243,6 +296,9 @@ router.post(
       // DB transaction failed — the retry reuses the existing SHA without
       // attempting a second merge.
       let mergeCommitSha: string;
+      let mergedPullRequest: GitHubPullRequest | null = null;
+      let pullRequestCommits: GitHubCommit[] = [];
+      let acceptedRange: { baseSha: string; headSha: string } | null = null;
       try {
         const prStatus = await gh.getPullRequest(
           world.repoOwner,
@@ -257,6 +313,12 @@ router.post(
             "PR already merged — reusing merge SHA",
           );
           mergeCommitSha = prStatus.mergeCommitSha;
+          mergedPullRequest = prStatus;
+          acceptedRange = await gh.getMergeCommitRange(
+            world.repoOwner,
+            world.repoName,
+            mergeCommitSha,
+          );
         } else if (isRecoveryAccept) {
           // Should not happen: proposal says accepted but PR isn't merged.
           // Treat as a transient GitHub inconsistency and let the caller retry.
@@ -265,13 +327,80 @@ router.post(
           });
           return;
         } else {
+          if (!prStatus) {
+            throw new Error("Pull request details are unavailable");
+          }
+          // Establish a recoverable, steward-bound intent while the PR is
+          // still open. If the post-merge final comment is interrupted, this
+          // record lets webhook replay and reconciliation repair attribution.
+          const intentCommits = await gh.listCommitsBetween(
+            world.repoOwner,
+            world.repoName,
+            prStatus.baseSha,
+            prStatus.headSha,
+          );
+          const intentContributors = await Promise.all(
+            intentCommits.map((commit) =>
+              resolveContributor({
+                login: commit.authorLogin,
+                name: commit.authorName,
+                email: commit.authorEmail,
+              }),
+            ),
+          );
+          const intentSourceContributor = prStatus.author
+            ? await resolveContributor(prStatus.author)
+            : null;
+          const operationId = randomUUID();
+          const intent = buildAcceptanceIntentNote({
+            operationId,
+            sourceHeadSha: prStatus.headSha,
+            stewardGithubIdentity: `github:${actingSteward.githubUsername.toLowerCase()}`,
+            contributors: [
+              ...intentContributors.filter(
+                (value): value is Exclude<typeof value, null> => value !== null,
+              ),
+              ...(intentSourceContributor ? [intentSourceContributor] : []),
+            ].map((contributor) => ({
+              identity: contributor.identity,
+              displayName: contributor.displayName,
+            })),
+            intendedAt: new Date(),
+          }, provenanceSigningSecret);
+          await gh.createPullRequestComment({
+            owner: world.repoOwner,
+            repo: world.repoName,
+            prNumber: proposal.prNumber,
+            body: intent,
+          });
           mergeCommitSha = await gh.mergePullRequest({
             owner: world.repoOwner,
             repo: world.repoName,
             prNumber: proposal.prNumber,
-            commitTitle: `Accept "${path?.title ?? `path #${proposal.pathId}`}" into canon`,
+            commitTitle: `Accept "${path?.title ?? `path #${proposal.pathId}`}" into canon [telling-forward-acceptance:${operationId}]`,
+            expectedHeadSha: prStatus.headSha,
           });
+          mergedPullRequest = await gh.getPullRequest(
+            world.repoOwner,
+            world.repoName,
+            proposal.prNumber,
+          );
+          acceptedRange = await gh.getMergeCommitRange(
+            world.repoOwner,
+            world.repoName,
+            mergeCommitSha,
+          );
         }
+
+        if (!mergedPullRequest || !acceptedRange) {
+          throw new Error("Merged pull request details are unavailable");
+        }
+        pullRequestCommits = await gh.listCommitsBetween(
+          world.repoOwner,
+          world.repoName,
+          acceptedRange.baseSha,
+          acceptedRange.headSha,
+        );
       } catch (ghErr) {
         logger.error(
           { err: ghErr, prNumber: proposal.prNumber },
@@ -283,24 +412,126 @@ router.post(
 
       const now = new Date();
 
-      // Look up the steward record for this storyworld + acting user
-      const stewardRows = await db
-        .select()
-        .from(stewardsTable)
-        .where(
-          and(
-            eq(stewardsTable.storyworldId, proposal.storyworldId),
-            eq(stewardsTable.userId, req.session.userId as number),
-          ),
-        )
-        .limit(1);
-      const stewardId = stewardRows[0]?.id ?? null;
+      // First index every saved moment GitHub associates with this proposal.
+      // This works even if the source branch has been deleted after merge.
+      const commitContributors = await Promise.all(
+        pullRequestCommits.map((commit) =>
+          indexSavedMoment(proposal.storyworldId, proposal.pathId, commit),
+        ),
+      );
+      await replacePathMomentMemberships(
+        proposal.storyworldId,
+        proposal.pathId,
+        pullRequestCommits.map((commit) => commit.sha),
+      );
+      const sourceContributor = mergedPullRequest?.author
+        ? await resolveContributor(mergedPullRequest.author)
+        : null;
+      const savedMomentContributors = await contributorAttributionsForPath(
+        proposal.pathId,
+      );
+      let steward = await stewardAttribution(
+        proposal.storyworldId,
+        { login: actingSteward.githubUsername, displayName: null },
+        actingSteward.id,
+      );
+      let provenanceContributors = [
+        ...savedMomentContributors,
+        ...commitContributors.filter(
+          (value): value is Exclude<typeof value, null> => value !== null,
+        ),
+        ...(sourceContributor ? [sourceContributor] : []),
+      ];
 
-      // Transition proposal state + write provenance record atomically.
-      // The provenance insert checks for an existing record first so that a
-      // retry after a partial failure (or a recovery after the webhook ran
-      // first) never creates duplicate ledger entries.
-      const { updatedProposal, provenanceRecord } = await db.transaction(
+      // The server may merge with its service identity. Preserve the steward's
+      // real linked identity and all contributors in the PR itself so a clean
+      // reconciliation can recover this decision without a prior DB snapshot.
+      try {
+        // Issue/PR conversation comments remain writable after a PR is merged;
+        // reviews do not. This is the durable home for the acceptance record.
+        const comments = await gh.listPullRequestComments(
+          world.repoOwner,
+          world.repoName,
+          proposal.prNumber,
+        );
+        const recoveryOperationId = isRecoveryAccept
+          ? acceptanceOperationIdFromCommitMessage(
+              await gh.getCommitMessage(
+                world.repoOwner,
+                world.repoName,
+                mergeCommitSha,
+              ),
+            )
+          : null;
+        const recoveryIntent = recoveryOperationId
+          ? acceptanceIntentForOperation(
+              comments,
+              provenanceSigningSecret,
+              recoveryOperationId,
+              acceptedRange.headSha,
+            )
+          : null;
+        if (recoveryIntent) {
+          steward = await stewardAttribution(proposal.storyworldId, {
+            login: recoveryIntent.stewardGithubIdentity.replace(/^github:/, ""),
+            displayName: null,
+          });
+          provenanceContributors = (
+            await Promise.all(
+              recoveryIntent.contributors.map((contributor) =>
+                resolveContributorIdentity(
+                  contributor.identity,
+                  contributor.displayName,
+                ),
+              ),
+            )
+          ).filter(
+            (value): value is Exclude<typeof value, null> => value !== null,
+          );
+        }
+        const note = buildAcceptanceDecisionNote({
+          canonCommitSha: mergeCommitSha,
+          baseCommitSha: acceptedRange.baseSha,
+          sourceHeadSha: acceptedRange.headSha,
+          stewardGithubIdentity: steward.githubIdentity,
+          contributors: provenanceContributors.map((contributor) => ({
+            identity: contributor.identity,
+            displayName: contributor.displayName,
+          })),
+          decidedAt: mergedPullRequest?.mergedAt
+            ? new Date(mergedPullRequest.mergedAt)
+            : now,
+        }, provenanceSigningSecret);
+        const hasSignedDecisionRecord = comments.some(
+          (comment) =>
+            verifyAcceptanceDecisionNote(
+              comment.body,
+              provenanceSigningSecret,
+            )?.canonCommitSha === mergeCommitSha,
+        );
+        if (!hasSignedDecisionRecord) {
+          await gh.createPullRequestComment({
+            owner: world.repoOwner,
+            repo: world.repoName,
+            prNumber: proposal.prNumber,
+            body: note,
+          });
+        }
+      } catch (ghErr) {
+        logger.error(
+          { err: ghErr, prNumber: proposal.prNumber },
+          "GitHub acceptance decision record failed",
+        );
+        res.status(502).json({
+          error: "The story was accepted, but its attribution record could not be saved. Retry to finish recording the decision.",
+        });
+        return;
+      }
+
+      // Transition proposal state atomically. The provenance index is then
+      // upserted by its GitHub merge SHA, so retries and the concurrent webhook
+      // write converge on one complete ledger record.
+      const updatedProposal = await db.transaction(
         async (tx) => {
           // State-conditional update: valid from ACCEPT_FROM states plus
           // "accepted-into-canon" (recovery path — webhook ran first).
@@ -327,54 +558,39 @@ router.post(
             );
           }
 
-          // Insert the provenance record with a DB-level idempotency guard.
-          // The unique constraint on (storyworldId, canonCommitSha) is the
-          // authoritative key. On retry, the same merge SHA produces a conflict
-          // and we get the existing record back via RETURNING — no select-then-
-          // insert race and no duplicate ledger entries.
-          const [provenanceRecord] = await tx
-            .insert(provenanceRecordsTable)
-            .values({
-              storyworldId: proposal.storyworldId,
-              canonCommitSha: mergeCommitSha,
-              sourcePathId: proposal.pathId,
-              contributorIds: [], // populated by contributor identity task
-              stewardId,
-              decidedAt: now,
-            })
-            .onConflictDoUpdate({
-              target: [
-                provenanceRecordsTable.storyworldId,
-                provenanceRecordsTable.canonCommitSha,
-              ],
-              // No-op update on retry — all fields stay as originally written.
-              // We still get the existing row back via RETURNING.
-              set: { decidedAt: provenanceRecordsTable.decidedAt },
-            })
-            .returning();
-
           await tx
             .update(storyPathsTable)
             .set({ state: "published-alternate", updatedAt: now })
             .where(eq(storyPathsTable.id, proposal.pathId));
 
-          return { updatedProposal, provenanceRecord };
+          return updatedProposal;
         },
       );
+
+      const provenanceRecordId = await writeAcceptedProvenance({
+        storyworldId: proposal.storyworldId,
+        canonCommitSha: mergeCommitSha,
+        sourcePathId: proposal.pathId,
+        sourcePrNumber: proposal.prNumber,
+        contributors: provenanceContributors,
+        steward,
+        decidedAt: mergedPullRequest?.mergedAt
+          ? new Date(mergedPullRequest.mergedAt)
+          : now,
+      });
 
       logger.info(
         {
           proposalId: proposal.id,
           prNumber: proposal.prNumber,
           mergeCommitSha,
-          provenanceId: provenanceRecord?.id,
         },
         "Proposal accepted into canon",
       );
 
       const responsePayload = AcceptProposalResponse.parse({
         proposal: updatedProposal,
-        provenanceRecordId: provenanceRecord?.id ?? 0,
+        provenanceRecordId: provenanceRecordId ?? 0,
       });
       res.json(responsePayload);
     } catch (err) {

@@ -181,6 +181,32 @@ export const ListContributionsResponse = zod.array(
 );
 
 /**
+ * Reader-facing lineage for accepted story contributions. Uses plain story language rather than source-control terminology.
+
+ * @summary Show how contributions entered the canon
+ */
+export const ListStoryworldProvenanceParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListStoryworldProvenanceResponseItem = zod
+  .object({
+    id: zod.number(),
+    storyworldId: zod.number(),
+    sourcePathId: zod.number().nullish(),
+    sourcePathTitle: zod.string(),
+    contributorNames: zod.array(zod.string()),
+    contributorIdentityFallbacks: zod.array(zod.string()),
+    stewardName: zod.string().nullish(),
+    decision: zod.string(),
+    acceptedAt: zod.coerce.date(),
+  })
+  .describe("Reader-facing record of an accepted contribution.");
+export const ListStoryworldProvenanceResponse = zod.array(
+  ListStoryworldProvenanceResponseItem,
+);
+
+/**
  * Returns open capsules (GitHub Issues tagged capsule:*) for the storyworld. Requires authentication.
 
  * @summary List concept capsules for a storyworld

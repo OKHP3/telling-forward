@@ -1,4 +1,14 @@
-import { useGetStoryworld, getGetStoryworldQueryKey, useListStoryPaths, getListStoryPathsQueryKey, useListContributions, getListContributionsQueryKey, StoryPathState } from "@workspace/api-client-react";
+import {
+  useGetStoryworld,
+  getGetStoryworldQueryKey,
+  useListStoryPaths,
+  getListStoryPathsQueryKey,
+  useListContributions,
+  getListContributionsQueryKey,
+  useListStoryworldProvenance,
+  getListStoryworldProvenanceQueryKey,
+  StoryPathState,
+} from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
 import { ReaderLayout } from "@/components/layout";
 import { marked } from "marked";
@@ -22,10 +32,20 @@ export default function PathReaderPage() {
     query: { enabled: !!(worldId && pathId), queryKey: getListContributionsQueryKey(worldId, pathId) }
   });
 
+  const { data: provenance } = useListStoryworldProvenance(worldId, {
+    query: {
+      enabled: !!worldId,
+      queryKey: getListStoryworldProvenanceQueryKey(worldId),
+    },
+  });
+
   const currentPath = paths?.find(p => p.id === pathId);
   
   // Find paths that branched from this one
   const branchingPaths = paths?.filter(p => p.originPathId === pathId && p.state === StoryPathState["published-alternate"]) || [];
+  const acceptedMoments = provenance?.filter(
+    (record) => record.sourcePathId === pathId,
+  ) ?? [];
 
   return (
     <ReaderLayout>
@@ -127,6 +147,55 @@ export default function PathReaderPage() {
               </div>
             )}
           </div>
+        )}
+
+        {acceptedMoments.length > 0 && (
+          <section
+            className="mt-20 pt-10"
+            style={{ borderTop: "1px solid var(--reader-canon-indicator)" }}
+            aria-labelledby="lineage-heading"
+          >
+            <h3
+              id="lineage-heading"
+              className="text-xs font-semibold tracking-widest uppercase mb-5"
+              style={{ color: "var(--reader-canon-indicator)" }}
+            >
+              This path in the canon
+            </h3>
+            <div className="space-y-5">
+              {acceptedMoments.map((record) => {
+                const contributors = [
+                  ...record.contributorNames,
+                  ...record.contributorIdentityFallbacks,
+                ];
+                return (
+                  <div
+                    key={record.id}
+                    className="rounded-sm border border-border/40 bg-muted/10 p-5 text-sm leading-relaxed"
+                  >
+                    <p className="font-medium">
+                      {record.decision} on{" "}
+                      {new Intl.DateTimeFormat(undefined, {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      }).format(new Date(record.acceptedAt))}
+                    </p>
+                    {contributors.length > 0 && (
+                      <p className="mt-2 text-muted-foreground">
+                        Brought forward by {contributors.join(", ")}.
+                      </p>
+                    )}
+                    {record.stewardName && (
+                      <p className="mt-1 text-muted-foreground">
+                        Welcomed by {record.stewardName}.
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         )}
 
         {/* Branch-point Callouts — alternate-indicator styling, circle marker + label per theme contract */}

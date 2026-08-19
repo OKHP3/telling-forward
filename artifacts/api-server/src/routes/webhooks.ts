@@ -25,11 +25,24 @@ import {
   db,
   storyworldsTable,
   storyPathsTable,
-  contributionsTable,
   proposalsTable,
   editorQuestionsTable,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { getGitHubClient } from "../lib/github";
+import {
+  contributorAttributionsForPath,
+  indexSavedMoment,
+  acceptanceIntentForOperation,
+  acceptanceOperationIdFromCommitMessage,
+  parseAcceptanceDecisionNote,
+  replacePathMomentMemberships,
+  resolveContributor,
+  resolveContributorIdentity,
+  stewardAttribution,
+  verifyAcceptanceDecisionNote,
+  writeAcceptedProvenance,
+} from "../lib/provenance";
 
 // ---------------------------------------------------------------------------
 // HMAC signature verification
@@ -62,6 +75,7 @@ function verifySignature(
 
 interface GitHubUser {
   login: string;
+  name?: string | null;
 }
 
 interface GitHubRepo {
@@ -76,6 +90,7 @@ interface PushPayload {
     id: string;
     message: string;
     author: { name: string; email: string };
+    author_login?: string;
     timestamp: string;
   }>;
   head_commit: { id: string } | null;
@@ -88,11 +103,14 @@ interface PullRequestPayload {
     number: number;
     state: string;
     merged: boolean;
+    merge_commit_sha?: string | null;
     created_at: string;
     closed_at: string | null;
     merged_at: string | null;
     head: { ref: string };
     base: { ref: string };
+    user?: GitHubUser;
+    merged_by?: GitHubUser | null;
   };
   repository: GitHubRepo;
 }
@@ -140,6 +158,167 @@ async function findStoryworld(owner: string, repo: string) {
     )
     .limit(1);
   return rows[0] ?? null;
+}
+
+async function rebuildAcceptedDecision(input: {
+  world: { id: number; repoOwner: string; repoName: string };
+  pathId: number;
+  prNumber: number;
+  canonCommitSha: string;
+  mergedAt: string | null;
+  author?: GitHubUser | null;
+  mergedBy?: GitHubUser | null;
+  decisionNote?: ReturnType<typeof parseAcceptanceDecisionNote>;
+}): Promise<boolean> {
+  const gh = getGitHubClient();
+  const details = await gh.getPullRequest(
+    input.world.repoOwner,
+    input.world.repoName,
+    input.prNumber,
+  );
+  if (
+    !details?.merged ||
+    details.mergeCommitSha !== input.canonCommitSha
+  ) {
+    logger.warn(
+      {
+        prNumber: input.prNumber,
+        expectedMergeCommitSha: input.canonCommitSha,
+        actualMergeCommitSha: details?.mergeCommitSha ?? null,
+      },
+      "Ignoring unverified accepted-contribution decision",
+    );
+    return false;
+  }
+  const comments = await gh.listPullRequestComments(
+    input.world.repoOwner,
+    input.world.repoName,
+    input.prNumber,
+  );
+  const decisionNote =
+    input.decisionNote ??
+    comments
+      .map((comment) =>
+        verifyAcceptanceDecisionNote(
+          comment.body,
+          process.env["GITHUB_WEBHOOK_SECRET"],
+        ),
+      )
+      .find((note) => note?.canonCommitSha === input.canonCommitSha) ??
+    null;
+  const mergeRange = await gh.getMergeCommitRange(
+    input.world.repoOwner,
+    input.world.repoName,
+    input.canonCommitSha,
+  );
+  const decisionRangeMatchesMerge =
+    !decisionNote?.baseCommitSha ||
+    !decisionNote.sourceHeadSha ||
+    (mergeRange?.baseSha === decisionNote.baseCommitSha &&
+      mergeRange.headSha === decisionNote.sourceHeadSha);
+  if (!decisionRangeMatchesMerge) {
+    logger.warn(
+      { prNumber: input.prNumber, canonCommitSha: input.canonCommitSha },
+      "Ignoring acceptance decision whose signed range does not match merge parents",
+    );
+  }
+  const verifiedDecisionNote = decisionRangeMatchesMerge ? decisionNote : null;
+  const acceptedRange = mergeRange;
+  if (!acceptedRange) {
+    logger.warn(
+      { prNumber: input.prNumber, canonCommitSha: input.canonCommitSha },
+      "Cannot safely reconstruct a non-merge accepted contribution",
+    );
+    return false;
+  }
+  const operationId = verifiedDecisionNote
+    ? null
+    : acceptanceOperationIdFromCommitMessage(
+        await gh.getCommitMessage(
+          input.world.repoOwner,
+          input.world.repoName,
+          input.canonCommitSha,
+        ),
+      );
+  const intentNote = operationId
+    ? acceptanceIntentForOperation(
+        comments,
+        process.env["GITHUB_WEBHOOK_SECRET"],
+        operationId,
+        acceptedRange.headSha,
+      )
+    : null;
+  const attributionRecord = verifiedDecisionNote ?? intentNote;
+  const commits = await gh.listCommitsBetween(
+    input.world.repoOwner,
+    input.world.repoName,
+    acceptedRange.baseSha,
+    acceptedRange.headSha,
+  );
+
+  const commitContributors = await Promise.all(
+    commits.map((commit) => indexSavedMoment(input.world.id, input.pathId, commit)),
+  );
+  await replacePathMomentMemberships(
+    input.world.id,
+    input.pathId,
+    commits.map((commit) => commit.sha),
+  );
+  const sourceContributor = await resolveContributor({
+    login: details?.author?.login ?? input.author?.login ?? null,
+    displayName:
+      details?.author?.displayName ?? input.author?.name ?? null,
+  });
+  const noteContributors = await Promise.all(
+    attributionRecord?.contributors.map((contributor) =>
+      resolveContributorIdentity(contributor.identity, contributor.displayName),
+    ) ?? [],
+  );
+  const savedMomentContributors = await contributorAttributionsForPath(
+    input.pathId,
+  );
+  const notedSteward = attributionRecord?.stewardGithubIdentity?.startsWith("github:")
+    ? {
+        login: attributionRecord.stewardGithubIdentity.slice("github:".length),
+        displayName: null,
+      }
+    : null;
+  const steward = await stewardAttribution(
+    input.world.id,
+    notedSteward ??
+      details?.mergedBy ??
+      (input.mergedBy
+        ? { login: input.mergedBy.login, displayName: input.mergedBy.name ?? null }
+        : null),
+  );
+
+  await writeAcceptedProvenance({
+    storyworldId: input.world.id,
+    canonCommitSha: input.canonCommitSha,
+    sourcePathId: input.pathId,
+    sourcePrNumber: input.prNumber,
+    contributors: [
+      ...savedMomentContributors,
+      ...commitContributors.filter(
+        (value): value is Exclude<typeof value, null> => value !== null,
+      ),
+      ...noteContributors.filter(
+        (value): value is Exclude<typeof value, null> => value !== null,
+      ),
+      ...(sourceContributor ? [sourceContributor] : []),
+    ],
+    steward,
+    decidedAt: verifiedDecisionNote?.decidedAt
+      ? new Date(verifiedDecisionNote.decidedAt)
+      : intentNote?.intendedAt
+        ? new Date(intentNote.intendedAt)
+      : details?.mergedAt
+        ? new Date(details.mergedAt)
+        : input.mergedAt
+          ? new Date(input.mergedAt)
+          : new Date(),
+  });
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -204,20 +383,14 @@ async function handlePush(payload: PushPayload): Promise<void> {
 
   // Upsert each commit as a contribution (keyed on storyworld_id + commit_sha)
   for (const commit of payload.commits) {
-    const [title = commit.id.slice(0, 7), ...rest] = commit.message.split("\n");
-    const summary = rest.filter(Boolean).join("\n").trim() || null;
-
-    await db
-      .insert(contributionsTable)
-      .values({
-        storyworldId: world.id,
-        pathId: path.id,
-        commitSha: commit.id,
-        title: title.trim(),
-        summary,
-        createdAt: new Date(commit.timestamp),
-      })
-      .onConflictDoNothing();
+    await indexSavedMoment(world.id, path.id, {
+      sha: commit.id,
+      message: commit.message,
+      authorName: commit.author.name,
+      authorEmail: commit.author.email,
+      authorLogin: commit.author_login ?? null,
+      timestamp: commit.timestamp,
+    });
   }
 
   logger.info(
@@ -306,7 +479,7 @@ async function handlePullRequest(payload: PullRequestPayload): Promise<void> {
           ELSE excluded.decided_at
         END`;
 
-  await db
+  const [proposal] = await db
     .insert(proposalsTable)
     .values({
       storyworldId: world.id,
@@ -319,7 +492,23 @@ async function handlePullRequest(payload: PullRequestPayload): Promise<void> {
     .onConflictDoUpdate({
       target: [proposalsTable.storyworldId, proposalsTable.prNumber],
       set: { state: stateSet, decidedAt: decidedAtSet },
+    })
+    .returning();
+
+  // A merged PR is GitHub's durable acceptance decision. Rebuild the local
+  // provenance index from the PR author, merge actor, and saved moments rather
+  // than relying on the account that happened to process this webhook.
+  if (proposal && pr.merged && payload.pull_request.merge_commit_sha) {
+    await rebuildAcceptedDecision({
+      world,
+      pathId: path.id,
+      prNumber: pr.number,
+      canonCommitSha: payload.pull_request.merge_commit_sha,
+      mergedAt: pr.merged_at,
+      author: pr.user ?? null,
+      mergedBy: pr.merged_by ?? null,
     });
+  }
 
   logger.info(
     { owner, repo, prNumber: pr.number, proposalState, pathState },
@@ -335,6 +524,11 @@ async function handlePullRequestReview(
   const review = payload.review;
   // Only record reviews that have a body (pure approvals with no comment are not editor questions)
   if (!review.body?.trim()) return;
+  const parsedAcceptanceDecision = parseAcceptanceDecisionNote(review.body);
+  const acceptanceDecision = verifyAcceptanceDecisionNote(
+    review.body,
+    process.env["GITHUB_WEBHOOK_SECRET"],
+  );
 
   const owner = payload.repository.owner.login;
   const repo = payload.repository.name;
@@ -359,6 +553,34 @@ async function handlePullRequestReview(
       { prNumber: payload.pull_request.number },
       "pull_request_review: no proposal found — skipping",
     );
+    return;
+  }
+
+  if (parsedAcceptanceDecision && !acceptanceDecision) {
+    logger.warn(
+      { reviewId: review.id, prNumber: payload.pull_request.number },
+      "Ignoring unsigned or invalid accepted-contribution decision note",
+    );
+    return;
+  }
+
+  if (acceptanceDecision) {
+    const pathRows = await db
+      .select({ id: storyPathsTable.id })
+      .from(storyPathsTable)
+      .where(eq(storyPathsTable.id, proposal.pathId))
+      .limit(1);
+    const path = pathRows[0];
+    if (path) {
+      await rebuildAcceptedDecision({
+        world,
+        pathId: path.id,
+        prNumber: payload.pull_request.number,
+        canonCommitSha: acceptanceDecision.canonCommitSha,
+        mergedAt: acceptanceDecision.decidedAt,
+        decisionNote: acceptanceDecision,
+      });
+    }
     return;
   }
 
@@ -407,6 +629,39 @@ async function handleIssueComment(
 
   const proposal = proposals[0];
   if (!proposal) return;
+  const parsedAcceptanceDecision = parseAcceptanceDecisionNote(
+    payload.comment.body,
+  );
+  const acceptanceDecision = verifyAcceptanceDecisionNote(
+    payload.comment.body,
+    process.env["GITHUB_WEBHOOK_SECRET"],
+  );
+  if (parsedAcceptanceDecision && !acceptanceDecision) {
+    logger.warn(
+      { commentId: payload.comment.id, prNumber: payload.issue.number },
+      "Ignoring unsigned or invalid accepted-contribution decision comment",
+    );
+    return;
+  }
+  if (acceptanceDecision) {
+    const pathRows = await db
+      .select({ id: storyPathsTable.id })
+      .from(storyPathsTable)
+      .where(eq(storyPathsTable.id, proposal.pathId))
+      .limit(1);
+    const path = pathRows[0];
+    if (path) {
+      await rebuildAcceptedDecision({
+        world,
+        pathId: path.id,
+        prNumber: payload.issue.number,
+        canonCommitSha: acceptanceDecision.canonCommitSha,
+        mergedAt: acceptanceDecision.decidedAt,
+        decisionNote: acceptanceDecision,
+      });
+    }
+    return;
+  }
 
   // comment.id is a GitHub-native bigint; stored as bigint in Postgres (lossless)
   await db

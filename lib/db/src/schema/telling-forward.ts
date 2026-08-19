@@ -113,6 +113,28 @@ export const contributionsTable = pgTable("contributions", {
   index("idx_contributions_path").on(t.pathId),
 ]);
 
+// A saved moment can be shared by more than one path. The commit record itself
+// remains unique per storyworld; this table preserves every path membership
+// needed to rebuild readers' views after a reconciliation.
+export const contributionPathMembershipsTable = pgTable(
+  "contribution_path_memberships",
+  {
+    contributionId: integer("contribution_id")
+      .notNull()
+      .references(() => contributionsTable.id),
+    pathId: integer("path_id")
+      .notNull()
+      .references(() => storyPathsTable.id),
+  },
+  (t) => [
+    unique("contribution_path_membership_unique").on(
+      t.contributionId,
+      t.pathId,
+    ),
+    index("idx_contribution_path_memberships_path").on(t.pathId),
+  ],
+);
+
 // Maps to a pull request
 export const proposalsTable = pgTable("proposals", {
   id: serial("id").primaryKey(),
@@ -173,7 +195,8 @@ export const contributorsTable = pgTable("contributors", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+},
+(t) => [unique("contributors_github_identity_unique").on(t.githubIdentity)]);
 
 // The durable provenance ledger from Section 7.4
 export const provenanceRecordsTable = pgTable("provenance_records", {
@@ -183,8 +206,16 @@ export const provenanceRecordsTable = pgTable("provenance_records", {
     .references(() => storyworldsTable.id),
   canonCommitSha: text("canon_commit_sha").notNull(),
   sourcePathId: integer("source_path_id").references(() => storyPathsTable.id),
+  // GitHub PR number is the durable source reference used to rebuild this
+  // record. It intentionally is not a local proposal foreign key.
+  sourcePrNumber: integer("source_pr_number"),
+  // Local IDs support quick joins; durable GitHub identities allow the index to
+  // be reconstructed even when local serial IDs have changed.
   contributorIds: integer("contributor_ids").array().notNull(),
+  contributorIdentities: text("contributor_identities").array().notNull().default([]),
   stewardId: integer("steward_id").references(() => stewardsTable.id),
+  stewardGithubIdentity: text("steward_github_identity"),
+  decision: text("decision").notNull().default("accepted-into-canon"),
   decidedAt: timestamp("decided_at", { withTimezone: true }).notNull(),
 },
 (t) => [

@@ -5,4 +5,6 @@ set -e
 sh "$(git rev-parse --show-toplevel)/scripts/setup-hooks.sh"
 
 pnpm install --frozen-lockfile
-pnpm --filter db run push-force
+# Schema changes are applied by the API's additive ensure-schema guard at
+# startup. Never run a forced Drizzle schema sync automatically after merge:
+# it can apply destructive changes without a human-reviewed migration.

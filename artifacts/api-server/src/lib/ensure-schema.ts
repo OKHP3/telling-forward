@@ -141,6 +141,19 @@ export async function ensureSchema(): Promise<void> {
       CONSTRAINT contributions_commit_unique UNIQUE (storyworld_id, commit_sha)
     );
 
+    CREATE TABLE IF NOT EXISTS contribution_path_memberships (
+      contribution_id INTEGER NOT NULL REFERENCES contributions(id),
+      path_id         INTEGER NOT NULL REFERENCES story_paths(id),
+      CONSTRAINT contribution_path_membership_unique UNIQUE (contribution_id, path_id)
+    );
+
+    -- Existing contribution rows predate multi-path membership. Their original
+    -- path remains a valid membership and gives the new table a complete base
+    -- before reconciliation adds shared-commit memberships.
+    INSERT INTO contribution_path_memberships (contribution_id, path_id)
+      SELECT id, path_id FROM contributions
+      ON CONFLICT (contribution_id, path_id) DO NOTHING;
+
     CREATE TABLE IF NOT EXISTS proposals (
       id            SERIAL         PRIMARY KEY,
       storyworld_id INTEGER        NOT NULL REFERENCES storyworlds(id),
@@ -174,8 +187,12 @@ export async function ensureSchema(): Promise<void> {
       storyworld_id    INTEGER     NOT NULL REFERENCES storyworlds(id),
       canon_commit_sha TEXT        NOT NULL,
       source_path_id   INTEGER     REFERENCES story_paths(id),
+      source_pr_number INTEGER,
       contributor_ids  INTEGER[]   NOT NULL,
+      contributor_identities TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
       steward_id       INTEGER     REFERENCES stewards(id),
+      steward_github_identity TEXT,
+      decision         TEXT        NOT NULL DEFAULT 'accepted-into-canon',
       decided_at       TIMESTAMPTZ NOT NULL,
       CONSTRAINT provenance_canon_commit_unique UNIQUE (storyworld_id, canon_commit_sha)
     );
@@ -204,6 +221,38 @@ export async function ensureSchema(): Promise<void> {
           AND column_name = 'seed'
       ) THEN
         ALTER TABLE storyworlds ADD COLUMN seed TEXT;
+      END IF;
+    END $$;
+
+    -- Provenance migrations. These fields preserve the GitHub-native
+    -- attribution record so Postgres can be rebuilt without depending on its
+    -- previous serial IDs.
+    ALTER TABLE provenance_records
+      ADD COLUMN IF NOT EXISTS source_pr_number INTEGER;
+    ALTER TABLE provenance_records
+      ADD COLUMN IF NOT EXISTS contributor_identities TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
+    ALTER TABLE provenance_records
+      ADD COLUMN IF NOT EXISTS steward_github_identity TEXT;
+    ALTER TABLE provenance_records
+      ADD COLUMN IF NOT EXISTS decision TEXT NOT NULL DEFAULT 'accepted-into-canon';
+
+    -- A GitHub identity maps to one local contributor record. PostgreSQL permits
+    -- multiple NULL values, so contributors without a GitHub identity remain
+    -- supported.
+    DO $$ BEGIN
+      -- A prior deployment may have created the backing unique index before
+      -- this named constraint migration ran. Either database object enforces
+      -- the required identity uniqueness; avoid trying to recreate it.
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'contributors_github_identity_unique'
+          AND conrelid = 'contributors'::regclass
+      ) AND NOT EXISTS (
+        SELECT 1 FROM pg_class
+        WHERE relname = 'contributors_github_identity_unique'
+      ) THEN
+        ALTER TABLE contributors
+          ADD CONSTRAINT contributors_github_identity_unique UNIQUE (github_identity);
       END IF;
     END $$;
 
@@ -237,6 +286,7 @@ export async function ensureSchema(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_story_paths_storyworld ON story_paths (storyworld_id);
     CREATE INDEX IF NOT EXISTS idx_contributions_path ON contributions (path_id);
+    CREATE INDEX IF NOT EXISTS idx_contribution_path_memberships_path ON contribution_path_memberships (path_id);
     CREATE INDEX IF NOT EXISTS idx_proposals_path ON proposals (path_id);
     CREATE INDEX IF NOT EXISTS idx_editor_questions_proposal ON editor_questions (proposal_id);
     CREATE INDEX IF NOT EXISTS idx_stewards_storyworld ON stewards (storyworld_id);

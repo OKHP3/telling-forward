@@ -36,6 +36,7 @@ import type {
   RegisterRequest,
   ReturnProposalBody,
   StoryPath,
+  StoryProvenance,
   Storyworld,
   TranscribeRequest,
   TranscribeResponse,
@@ -954,6 +955,97 @@ export function useListContributions<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getListContributionsQueryOptions(id, pathId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Reader-facing lineage for accepted story contributions. Uses plain story language rather than source-control terminology.
+
+ * @summary Show how contributions entered the canon
+ */
+export const getListStoryworldProvenanceUrl = (id: number) => {
+  return `/api/storyworlds/${id}/provenance`;
+};
+
+export const listStoryworldProvenance = async (
+  id: number,
+  options?: RequestInit,
+): Promise<StoryProvenance[]> => {
+  return customFetch<StoryProvenance[]>(getListStoryworldProvenanceUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListStoryworldProvenanceQueryKey = (id: number) => {
+  return [`/api/storyworlds/${id}/provenance`] as const;
+};
+
+export const getListStoryworldProvenanceQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStoryworldProvenance>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listStoryworldProvenance>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListStoryworldProvenanceQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listStoryworldProvenance>>
+  > = ({ signal }) =>
+    listStoryworldProvenance(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStoryworldProvenance>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListStoryworldProvenanceQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStoryworldProvenance>>
+>;
+export type ListStoryworldProvenanceQueryError = ErrorType<NotFoundResponse>;
+
+/**
+ * @summary Show how contributions entered the canon
+ */
+
+export function useListStoryworldProvenance<
+  TData = Awaited<ReturnType<typeof listStoryworldProvenance>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listStoryworldProvenance>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListStoryworldProvenanceQueryOptions(id, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

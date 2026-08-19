@@ -1,12 +1,16 @@
 import { Router, type IRouter } from "express";
-import { eq, and, asc, desc } from "drizzle-orm";
+import { eq, and, asc, desc, inArray } from "drizzle-orm";
 import {
   db,
   storyworldsTable,
   storyPathsTable,
   contributionsTable,
+  contributionPathMembershipsTable,
   contributorsTable,
   proposalsTable,
+  provenanceRecordsTable,
+  stewardsTable,
+  usersTable,
 } from "@workspace/db";
 import {
   GetStoryworldParams,
@@ -157,7 +161,14 @@ router.get("/:id/paths/:pathId/contributions", async (req, res) => {
         createdAt: contributionsTable.createdAt,
         contributorDisplayName: contributorsTable.displayName,
       })
-      .from(contributionsTable)
+      .from(contributionPathMembershipsTable)
+      .innerJoin(
+        contributionsTable,
+        eq(
+          contributionPathMembershipsTable.contributionId,
+          contributionsTable.id,
+        ),
+      )
       .leftJoin(
         contributorsTable,
         eq(contributionsTable.contributorId, contributorsTable.id),
@@ -165,7 +176,7 @@ router.get("/:id/paths/:pathId/contributions", async (req, res) => {
       .where(
         and(
           eq(contributionsTable.storyworldId, params.data.id),
-          eq(contributionsTable.pathId, params.data.pathId),
+          eq(contributionPathMembershipsTable.pathId, params.data.pathId),
         ),
       )
       .orderBy(asc(contributionsTable.createdAt));
@@ -173,6 +184,122 @@ router.get("/:id/paths/:pathId/contributions", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "listContributions DB error");
     res.status(500).json({ error: "Failed to load contributions" });
+  }
+});
+
+// GET /api/storyworlds/:id/provenance
+// Public, reader-facing lineage for moments a steward accepted into canon.
+// Deliberately returns product language only; GitHub-native mechanics remain
+// the durable implementation source, not reader-facing vocabulary.
+router.get("/:id/provenance", async (req, res) => {
+  const params = GetStoryworldParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid storyworld id" });
+    return;
+  }
+
+  try {
+    const records = await db
+      .select({
+        id: provenanceRecordsTable.id,
+        storyworldId: provenanceRecordsTable.storyworldId,
+        sourcePathId: provenanceRecordsTable.sourcePathId,
+        sourcePathTitle: storyPathsTable.title,
+        contributorIds: provenanceRecordsTable.contributorIds,
+        contributorIdentities: provenanceRecordsTable.contributorIdentities,
+        stewardId: provenanceRecordsTable.stewardId,
+        stewardGithubIdentity: provenanceRecordsTable.stewardGithubIdentity,
+        decision: provenanceRecordsTable.decision,
+        decidedAt: provenanceRecordsTable.decidedAt,
+      })
+      .from(provenanceRecordsTable)
+      .leftJoin(
+        storyPathsTable,
+        eq(provenanceRecordsTable.sourcePathId, storyPathsTable.id),
+      )
+      .where(eq(provenanceRecordsTable.storyworldId, params.data.id))
+      .orderBy(desc(provenanceRecordsTable.decidedAt));
+
+    const contributorIds = [
+      ...new Set(records.flatMap((record) => record.contributorIds)),
+    ];
+    const contributors = contributorIds.length
+      ? await db
+          .select({
+            id: contributorsTable.id,
+            displayName: contributorsTable.displayName,
+            githubIdentity: contributorsTable.githubIdentity,
+          })
+          .from(contributorsTable)
+          .where(inArray(contributorsTable.id, contributorIds))
+      : [];
+    const contributorNames = new Map(
+      contributors.map((contributor) => [
+        contributor.id,
+        contributor.displayName,
+      ]),
+    );
+    const contributorNamesByIdentity = new Map(
+      contributors
+        .filter(
+          (contributor): contributor is typeof contributor & {
+            githubIdentity: string;
+          } => contributor.githubIdentity !== null,
+        )
+        .map((contributor) => [
+          contributor.githubIdentity,
+          contributor.displayName,
+        ]),
+    );
+
+    const stewardIds = [
+      ...new Set(
+        records
+          .map((record) => record.stewardId)
+          .filter((id): id is number => id !== null),
+      ),
+    ];
+    const stewards = stewardIds.length
+      ? await db
+          .select({
+            id: stewardsTable.id,
+            displayName: usersTable.displayName,
+          })
+          .from(stewardsTable)
+          .innerJoin(usersTable, eq(stewardsTable.userId, usersTable.id))
+          .where(inArray(stewardsTable.id, stewardIds))
+      : [];
+    const stewardNames = new Map(
+      stewards.map((steward) => [steward.id, steward.displayName]),
+    );
+
+    res.json(
+      records.map((record) => ({
+        id: record.id,
+        storyworldId: record.storyworldId,
+        sourcePathId: record.sourcePathId,
+        sourcePathTitle: record.sourcePathTitle ?? "A story path",
+        contributorNames: record.contributorIds
+          .map((id) => contributorNames.get(id))
+          .filter((name): name is string => Boolean(name)),
+        // An older rebuilt record can have identities before a contributor row
+        // is indexed. Show a readable identity rather than a numeric placeholder.
+        contributorIdentityFallbacks: record.contributorIdentities
+          .filter((identity) => !contributorNamesByIdentity.has(identity))
+          .map((identity) => identity.replace(/^(github:|git-email:|git-name:)/, "")),
+        stewardName:
+          (record.stewardId
+            ? stewardNames.get(record.stewardId)
+            : null) ??
+          record.stewardGithubIdentity?.replace(/^github:/, "") ??
+          null,
+        decision: "Accepted into canon",
+        acceptedAt: record.decidedAt,
+      })),
+    );
+  } catch (err) {
+    req.log.error({ err }, "listProvenance DB error");
+    res.status(500).json({ error: "Failed to load story lineage" });
   }
 });
 

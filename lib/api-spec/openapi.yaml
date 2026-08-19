@@ -255,6 +255,32 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /storyworlds/{id}/provenance:
+    get:
+      operationId: listStoryworldProvenance
+      tags: [storyworlds]
+      summary: Show how contributions entered the canon
+      description: >
+        Reader-facing lineage for accepted story contributions. Uses plain story
+        language rather than source-control terminology.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Accepted contribution lineage
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StoryProvenance"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /storyworlds/{id}/capsules:
     get:
       operationId: listCapsules
@@ -974,6 +1000,45 @@ components:
         - title
         - agentAssisted
         - createdAt
+
+    StoryProvenance:
+      type: object
+      description: Reader-facing record of an accepted contribution.
+      properties:
+        id:
+          type: integer
+        storyworldId:
+          type: integer
+        sourcePathId:
+          type: integer
+          nullable: true
+        sourcePathTitle:
+          type: string
+        contributorNames:
+          type: array
+          items:
+            type: string
+        contributorIdentityFallbacks:
+          type: array
+          items:
+            type: string
+        stewardName:
+          type: string
+          nullable: true
+        decision:
+          type: string
+          example: Accepted into canon
+        acceptedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - storyworldId
+        - sourcePathTitle
+        - contributorNames
+        - contributorIdentityFallbacks
+        - decision
+        - acceptedAt
 
     TranscribeRequest:
       type: object

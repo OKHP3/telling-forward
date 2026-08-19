@@ -2,7 +2,7 @@
 
 ## Status
 
-**Open.** This is a documented tension, not yet a reconciled decision. It needs a call from the project owner.
+**Accepted — GitHub-canonical hybrid (2026-08-19).**
 
 ## Context
 
@@ -24,10 +24,47 @@ This is not a violation of the original security caveat. The PAT lives server-si
 
 The repository's own status line in `README.md` ("This repository is an early concept and prototype seed") is more consistent with (b) than with a project that has already outgrown the fast path. That is an inference, not a confirmed fact, and should not be treated as one.
 
-## Recommendation
+## Decision
 
-Given the project is still explicitly at the concept/prototype-seed stage, and the original goal was to test whether people return to read and contribute before investing further (see `README.md`, "A staged model," step 4), the lower-risk default is to confirm framing (a) only where the API server is already earning its complexity: for example, contributor accounts or agent-orchestration state that GitHub genuinely cannot hold. Where the backend is standing in for what a native PR/Actions flow could still do (the read to propose to review to accept loop itself), it's worth a deliberate check before more is built on top of it.
+The project adopts framing **(a), intentional supersession**, with an explicit
+constraint that preserves the original "GitHub holds / Replit executes"
+principle:
 
-## Next action
+- GitHub is the durable record for story content, contribution authorship,
+  editorial review, and the decision to accept a contribution into canon.
+- The Replit API provides trusted actions, account-aware permissions, and a
+  reader-friendly language layer. It must not become the only record of a
+  contributor's work or a steward's decision.
+- PostgreSQL is a rebuildable index. Local serial IDs improve joins and
+  presentation but are never sufficient provenance on their own; records must
+  retain their GitHub-native identity alongside them.
 
-This ADR should not be marked Accepted or Superseded until the project owner confirms which framing applies, or documents a third one. Once confirmed, update this ADR's Status and record the rationale here rather than leaving it in conversation only.
+This makes the API/database architecture a deliberately narrow support layer,
+not a replacement backend for the collaborative editorial record.
+
+## Rationale
+
+The platform now needs trusted server-side actions and account-aware
+permissions, neither of which should be embedded in a static page. GitHub
+already provides the durable collaboration history needed for stories: a
+contribution's author, its saved moments, editor questions, and the merged
+decision. Keeping that history canonical avoids a second, lossy ledger while
+the API translates it into the product vocabulary readers and stewards use.
+
+## Guardrails
+
+- Any new indexed story record must name its durable GitHub source and be
+  recoverable by reconciliation.
+- A reconciliation must replay paths, saved moments, proposals, editor
+  questions, and accepted-contribution provenance without needing a prior
+  database snapshot.
+- Reader-facing interfaces describe lineage in story language ("accepted into
+  canon," contributor, steward, and date), not implementation mechanics.
+- A future move to a GitHub App may replace the prototype PAT at the client
+  factory boundary; it does not alter this source-of-truth decision.
+
+## Superseded recommendation
+
+This decision resolves the previous request for owner confirmation. The
+reconciliation/provenance implementation that follows is governed by the
+guardrails above.

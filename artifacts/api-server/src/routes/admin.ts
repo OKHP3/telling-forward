@@ -22,11 +22,25 @@ import {
   db,
   storyworldsTable,
   storyPathsTable,
-  contributionsTable,
   proposalsTable,
+  editorQuestionsTable,
 } from "@workspace/db";
 import { getGitHubClient } from "../lib/github";
 import { logger } from "../lib/logger";
+import {
+  contributorAttributionsForPath,
+  indexSavedMoment,
+  acceptanceIntentForOperation,
+  acceptanceOperationIdFromCommitMessage,
+  parseAcceptanceDecisionNote,
+  isAcceptanceIntentNote,
+  resolveContributor,
+  resolveContributorIdentity,
+  replacePathMomentMemberships,
+  stewardAttribution,
+  verifyAcceptanceDecisionNote,
+  writeAcceptedProvenance,
+} from "../lib/provenance";
 
 const router: IRouter = Router();
 
@@ -119,6 +133,8 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
     contributions_upserted: 0,
     prs_fetched: 0,
     proposals_upserted: 0,
+    editor_questions_upserted: 0,
+    provenance_records_upserted: 0,
   };
 
   try {
@@ -129,6 +145,11 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
     summary["branches_fetched"] = branches.length;
 
     const canonRef = world.canonBranchRef.replace("refs/heads/", "");
+    const prs = await gh.listOpenPullRequests(owner, repo);
+    summary["prs_fetched"] = prs.length;
+    const baseRefByHead = new Map(
+      prs.map((pr) => [pr.headRef, pr.baseRef]),
+    );
 
     for (const branch of branches) {
       const isCanon = branch.name === canonRef;
@@ -150,7 +171,8 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
     }
 
     // -----------------------------------------------------------------------
-    // 2. Reconcile commits → contributions (per branch, capped at 3 pages)
+    // 2. Reconcile only moments introduced by each path. Listing every commit
+    // reachable from a branch would incorrectly credit inherited canon work.
     // -----------------------------------------------------------------------
     for (const branch of branches) {
       const pathRows = await db
@@ -167,32 +189,26 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
       const path = pathRows[0];
       if (!path) continue;
 
-      const commits = await gh.listCommitsForBranch(owner, repo, branch.name, 3);
+      const baseRef = baseRefByHead.get(branch.name) ?? canonRef;
+      if (baseRef === branch.name) continue;
+      const commits = await gh.listCommitsBetween(
+        owner,
+        repo,
+        baseRef,
+        branch.name,
+      );
       summary["commits_fetched"] = (summary["commits_fetched"] ?? 0) + commits.length;
 
       for (const commit of commits) {
-        const [title = commit.sha.slice(0, 7), ...rest] =
-          commit.message.split("\n");
-        const summaryText = rest.filter(Boolean).join("\n").trim() || null;
-
-        const inserted = await db
-          .insert(contributionsTable)
-          .values({
-            storyworldId: world.id,
-            pathId: path.id,
-            commitSha: commit.sha,
-            title: title.trim(),
-            summary: summaryText,
-            createdAt: new Date(commit.timestamp),
-          })
-          .onConflictDoNothing()
-          .returning({ id: contributionsTable.id });
-
-        if (inserted.length > 0) {
-          summary["contributions_upserted"] =
-            (summary["contributions_upserted"] ?? 0) + 1;
-        }
+        await indexSavedMoment(world.id, path.id, commit);
+        summary["contributions_upserted"] =
+          (summary["contributions_upserted"] ?? 0) + 1;
       }
+      await replacePathMomentMemberships(
+        world.id,
+        path.id,
+        commits.map((commit) => commit.sha),
+      );
     }
 
     // -----------------------------------------------------------------------
@@ -202,9 +218,6 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
     //    after the last webhook delivery will have its path state and proposal
     //    state updated to reflect reality.
     // -----------------------------------------------------------------------
-    const prs = await gh.listOpenPullRequests(owner, repo);
-    summary["prs_fetched"] = prs.length;
-
     for (const pr of prs) {
       const isClosed = pr.state === "closed";
       const pathState = prToPathState(pr.merged, isClosed);
@@ -243,6 +256,23 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
 
       if (!path) continue;
       summary["paths_state_updated"] = (summary["paths_state_updated"] ?? 0) + 1;
+      const basePathRows = await db
+        .select({ id: storyPathsTable.id })
+        .from(storyPathsTable)
+        .where(
+          and(
+            eq(storyPathsTable.storyworldId, world.id),
+            eq(storyPathsTable.branchRef, pr.baseRef),
+          ),
+        )
+        .limit(1);
+      const basePath = basePathRows[0];
+      if (basePath && basePath.id !== path.id) {
+        await db
+          .update(storyPathsTable)
+          .set({ originPathId: basePath.id, updatedAt: new Date() })
+          .where(eq(storyPathsTable.id, path.id));
+      }
 
       const decidedAt =
         pr.mergedAt ?? pr.closedAt
@@ -267,7 +297,7 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
             END`;
 
       // Upsert proposal; only overwrite state when GitHub's outcome is terminal.
-      await db
+      const [proposal] = await db
         .insert(proposalsTable)
         .values({
           storyworldId: world.id,
@@ -280,9 +310,188 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
         .onConflictDoUpdate({
           target: [proposalsTable.storyworldId, proposalsTable.prNumber],
           set: { state: proposalStateSet, decidedAt: decidedAtSet },
-        });
+        })
+        .returning();
 
       summary["proposals_upserted"] = (summary["proposals_upserted"] ?? 0) + 1;
+      if (!proposal) continue;
+
+      // A pull request remains queryable after its source branch is deleted, so
+      // it is the reliable reconstruction source for every saved moment,
+      // editor question, and accepted-into-canon decision.
+      const [details, reviews, comments] = await Promise.all([
+        gh.getPullRequest(owner, repo, pr.number),
+        gh.listPullRequestReviews(owner, repo, pr.number),
+        gh.listPullRequestComments(owner, repo, pr.number),
+      ]);
+      const acceptedPr = details ?? pr;
+      const decisionNote =
+        acceptedPr.merged && acceptedPr.mergeCommitSha
+          ? comments
+              .map((comment) =>
+                verifyAcceptanceDecisionNote(
+                  comment.body,
+                  process.env["GITHUB_WEBHOOK_SECRET"],
+                ),
+              )
+              .find(
+                (note) => note?.canonCommitSha === acceptedPr.mergeCommitSha,
+              ) ?? null
+          : null;
+      const mergeRange = acceptedPr.merged && acceptedPr.mergeCommitSha
+        ? await gh.getMergeCommitRange(owner, repo, acceptedPr.mergeCommitSha)
+        : null;
+      const decisionRangeMatchesMerge =
+        !decisionNote?.baseCommitSha ||
+        !decisionNote.sourceHeadSha ||
+        (mergeRange?.baseSha === decisionNote.baseCommitSha &&
+          mergeRange.headSha === decisionNote.sourceHeadSha);
+      if (!decisionRangeMatchesMerge) {
+        logger.warn(
+          { prNumber: pr.number, canonCommitSha: acceptedPr.mergeCommitSha },
+          "Ignoring acceptance decision whose signed range does not match merge parents",
+        );
+      }
+      const verifiedDecisionNote = decisionRangeMatchesMerge ? decisionNote : null;
+      const acceptedRange = acceptedPr.merged
+        ? mergeRange
+        : { baseSha: pr.baseSha, headSha: pr.headSha };
+      const operationId =
+        !verifiedDecisionNote && acceptedPr.merged && acceptedPr.mergeCommitSha
+          ? acceptanceOperationIdFromCommitMessage(
+              await gh.getCommitMessage(owner, repo, acceptedPr.mergeCommitSha),
+            )
+          : null;
+      const intentNote = operationId
+        ? acceptanceIntentForOperation(
+            comments,
+            process.env["GITHUB_WEBHOOK_SECRET"],
+            operationId,
+            acceptedRange?.headSha ?? "",
+          )
+        : null;
+      const attributionRecord = verifiedDecisionNote ?? intentNote;
+      const commits = acceptedRange
+        ? await gh.listCommitsBetween(
+            owner,
+            repo,
+            acceptedRange.baseSha,
+            acceptedRange.headSha,
+          )
+        : [];
+
+      for (const commit of commits) {
+        await indexSavedMoment(world.id, path.id, commit);
+        summary["contributions_upserted"] =
+          (summary["contributions_upserted"] ?? 0) + 1;
+      }
+      if (acceptedRange) {
+        await replacePathMomentMemberships(
+          world.id,
+          path.id,
+          commits.map((commit) => commit.sha),
+        );
+      } else {
+        logger.warn(
+          { prNumber: pr.number },
+          "Skipped destructive membership reconciliation for a non-merge PR",
+        );
+      }
+
+      for (const review of reviews) {
+        if (!review.body.trim()) continue;
+        if (parseAcceptanceDecisionNote(review.body)) continue;
+        await db
+          .insert(editorQuestionsTable)
+          .values({
+            proposalId: proposal.id,
+            reviewCommentId: review.id,
+            body: review.body,
+            ...(review.submittedAt
+              ? { createdAt: new Date(review.submittedAt) }
+              : {}),
+          })
+          .onConflictDoUpdate({
+            target: editorQuestionsTable.reviewCommentId,
+            set: { body: review.body },
+          });
+        summary["editor_questions_upserted"] =
+          (summary["editor_questions_upserted"] ?? 0) + 1;
+      }
+
+      for (const comment of comments) {
+        if (!comment.body.trim()) continue;
+        if (
+          parseAcceptanceDecisionNote(comment.body) ||
+          isAcceptanceIntentNote(comment.body)
+        ) continue;
+        await db
+          .insert(editorQuestionsTable)
+          .values({
+            proposalId: proposal.id,
+            reviewCommentId: comment.id,
+            body: comment.body,
+            createdAt: new Date(comment.createdAt),
+          })
+          .onConflictDoUpdate({
+            target: editorQuestionsTable.reviewCommentId,
+            set: { body: comment.body },
+          });
+        summary["editor_questions_upserted"] =
+          (summary["editor_questions_upserted"] ?? 0) + 1;
+      }
+
+      if (acceptedPr.merged && acceptedPr.mergeCommitSha) {
+        const sourceContributor = acceptedPr.author
+          ? await resolveContributor(acceptedPr.author)
+          : null;
+        const decisionContributors = await Promise.all(
+          attributionRecord?.contributors.map((contributor) =>
+            resolveContributorIdentity(
+              contributor.identity,
+              contributor.displayName,
+            ),
+          ) ?? [],
+        );
+        const savedMomentContributors = await contributorAttributionsForPath(
+          path.id,
+        );
+        const notedSteward = attributionRecord?.stewardGithubIdentity?.startsWith(
+          "github:",
+        )
+          ? {
+              login: attributionRecord.stewardGithubIdentity.slice("github:".length),
+              displayName: null,
+            }
+          : null;
+        const steward = await stewardAttribution(
+          world.id,
+          notedSteward ?? acceptedPr.mergedBy,
+        );
+        await writeAcceptedProvenance({
+          storyworldId: world.id,
+          canonCommitSha: acceptedPr.mergeCommitSha,
+          sourcePathId: path.id,
+          sourcePrNumber: acceptedPr.number,
+          contributors: [
+            ...savedMomentContributors,
+            ...decisionContributors.filter(
+              (value): value is Exclude<typeof value, null> => value !== null,
+            ),
+            ...(sourceContributor ? [sourceContributor] : []),
+          ],
+          steward,
+          decidedAt: verifiedDecisionNote?.decidedAt
+            ? new Date(verifiedDecisionNote.decidedAt)
+            : intentNote?.intendedAt
+              ? new Date(intentNote.intendedAt)
+            : acceptedPr.mergedAt
+            ? new Date(acceptedPr.mergedAt)
+            : (decidedAt ?? new Date()),
+        });
+        summary["provenance_records_upserted"] =
+          (summary["provenance_records_upserted"] ?? 0) + 1;
+      }
     }
 
     logger.info(
