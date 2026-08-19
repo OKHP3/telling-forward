@@ -7,7 +7,8 @@ import {
   getListContributionsQueryKey,
   useListStoryworldProvenance,
   getListStoryworldProvenanceQueryKey,
-  StoryPathState,
+  isCanonState,
+  isAlternateState,
 } from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
 import { ReaderLayout, resolveReaderTheme } from "@/components/layout";
@@ -55,9 +56,9 @@ export default function PathReaderPage() {
   const theme = resolveReaderTheme(world?.readerTheme);
   
   // Find paths that branched from this one
-  const branchingPaths = paths?.filter(p => p.originPathId === pathId && p.state === StoryPathState["published-alternate"]) || [];
+  const branchingPaths = paths?.filter(p => p.originPathId === pathId && isAlternateState(p.state)) || [];
   // A path is in canon if it is open (actively growing) or published-canon (accepted into canon by a steward decision).
-  const isCanonPath = currentPath?.state === StoryPathState.open || currentPath?.state === StoryPathState["published-canon"];
+  const isCanonPath = !!currentPath && isCanonState(currentPath.state);
   const acceptedMoments = provenance?.filter(
     (record) => record.sourcePathId === pathId,
   ) ?? [];
@@ -129,7 +130,7 @@ export default function PathReaderPage() {
                 </span>
               </>
             )}
-            {currentPath?.state === StoryPathState["published-alternate"] && (
+            {currentPath && isAlternateState(currentPath.state) && (
               <>
                 <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: "var(--reader-alternate-indicator)" }} aria-hidden="true" />
                 <span className="text-xs font-bold tracking-[0.2em] uppercase" style={{ color: "var(--reader-alternate-indicator)" }}>
@@ -137,7 +138,7 @@ export default function PathReaderPage() {
                 </span>
               </>
             )}
-            {currentPath && !isCanonPath && currentPath.state !== StoryPathState["published-alternate"] && (
+            {currentPath && !isCanonPath && !isAlternateState(currentPath.state) && (
               <>
                 <span className="inline-block w-2 h-2 border border-current" style={{ color: "var(--reader-draft-indicator)" }} aria-hidden="true" />
                 <span className="text-xs font-bold tracking-[0.2em] uppercase" style={{ color: "var(--reader-draft-indicator)" }}>

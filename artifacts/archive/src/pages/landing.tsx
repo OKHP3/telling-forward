@@ -7,6 +7,8 @@ import {
   getListStoryPathsQueryKey,
   useListContributions,
   getListContributionsQueryKey,
+  isAlternateState,
+  isCanonState,
 } from '@workspace/api-client-react';
 
 export function Landing() {
@@ -21,8 +23,8 @@ export function Landing() {
     query: { enabled: !!featuredWorld, queryKey: getListStoryPathsQueryKey(featuredWorldId) }
   });
   
-  // Find first open path
-  const featuredPath = paths?.find(p => p.state === 'open') || paths?.[0];
+  // Find the first publicly readable canon path.
+  const featuredPath = paths?.find(p => isCanonState(p.state)) || paths?.[0];
   const featuredPathId = featuredPath?.id ?? 0;
   
   const { data: contributions, isLoading: contributionsLoading } = useListContributions(
@@ -34,8 +36,8 @@ export function Landing() {
   const stats = [
     ['Active storyworlds', storyworlds?.length?.toString().padStart(2, '0') ?? '00'],
     ['Paths in play', paths?.length?.toString().padStart(2, '0') ?? '00'],
-    ['Open paths', paths?.filter(p => p.state === 'open').length.toString().padStart(2, '0') ?? '00'],
-    ['Alternate paths', paths?.filter(p => p.state === 'published-alternate').length.toString().padStart(2, '0') ?? '00']
+    ['Canon paths', paths?.filter(p => isCanonState(p.state)).length.toString().padStart(2, '0') ?? '00'],
+    ['Alternate paths', paths?.filter(p => isAlternateState(p.state)).length.toString().padStart(2, '0') ?? '00']
   ];
 
   return (

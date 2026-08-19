@@ -1,4 +1,4 @@
-import { useGetStoryworld, getGetStoryworldQueryKey, useListStoryPaths, getListStoryPathsQueryKey, StoryPathState } from "@workspace/api-client-react";
+import { useGetStoryworld, getGetStoryworldQueryKey, useListStoryPaths, getListStoryPathsQueryKey, isCanonState, isAlternateState, isDevelopmentState } from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
 import { ReaderLayout, resolveReaderTheme } from "@/components/layout";
 import { ArrowLeft } from "lucide-react";
@@ -17,13 +17,9 @@ export default function WorldLandingPage() {
   });
   const theme = resolveReaderTheme(world?.readerTheme);
 
-  const canonPaths = paths?.filter(p => p.state === StoryPathState.open || p.state === StoryPathState["published-canon"]) || [];
-  const alternatePaths = paths?.filter(p => p.state === StoryPathState["published-alternate"]) || [];
-  const otherPaths = paths?.filter(p =>
-    p.state !== StoryPathState.open &&
-    p.state !== StoryPathState["published-canon"] &&
-    p.state !== StoryPathState["published-alternate"]
-  ) || [];
+  const canonPaths = paths?.filter(p => isCanonState(p.state)) || [];
+  const alternatePaths = paths?.filter(p => isAlternateState(p.state)) || [];
+  const otherPaths = paths?.filter(p => isDevelopmentState(p.state)) || [];
 
   if (!hasValidWorldId || errorWorld || (!loadingWorld && !world)) {
     return (

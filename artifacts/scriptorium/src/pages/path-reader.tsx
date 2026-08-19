@@ -1,5 +1,5 @@
 import { Link, useParams } from 'wouter';
-import { useGetStoryworld, useListStoryPaths, useListContributions, getGetStoryworldQueryKey, getListStoryPathsQueryKey, getListContributionsQueryKey } from '@workspace/api-client-react';
+import { useGetStoryworld, useListStoryPaths, useListContributions, getGetStoryworldQueryKey, getListStoryPathsQueryKey, getListContributionsQueryKey, isAlternateState, isCanonState } from '@workspace/api-client-react';
 import { ArrowLeft } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -27,7 +27,7 @@ export default function PathReader() {
           <ArrowLeft className="w-3 h-3" /> Back to {world.title}
         </Link>
         <div className="font-mono text-[0.65rem] text-primary tracking-[0.14em] mb-2 uppercase opacity-70">
-           {path.state === 'open' ? 'Canon Path' : path.state === 'published-alternate' ? 'Alternate Path' : 'In Development'}
+           {isCanonState(path.state) ? 'Canon Path' : isAlternateState(path.state) ? 'Alternate Path' : 'In Development'}
         </div>
         <h1 className="font-serif text-3xl md:text-5xl text-[#f6f2ee]">{path.title}</h1>
       </header>

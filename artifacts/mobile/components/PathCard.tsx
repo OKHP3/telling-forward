@@ -8,7 +8,8 @@ const STATE_LABEL: Record<string, string> = {
   personal: 'Personal Work',
   open: 'Open Path',
   proposed: 'Proposed Canon',
-  'published-alternate': 'Published',
+  'published-canon': 'Canon',
+  'published-alternate': 'Alternate',
 };
 
 interface Props {
@@ -23,6 +24,7 @@ function stateColor(primary: string, accent: string, mutedFg: string, state: str
     case 'published-alternate':
       return '#4CAF50';
     case 'open':
+    case 'published-canon':
       return accent;
     default:
       return mutedFg;

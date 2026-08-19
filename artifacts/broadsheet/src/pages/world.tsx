@@ -1,5 +1,5 @@
 import { useParams, Link } from 'wouter';
-import { useGetStoryworld, useListStoryPaths, getGetStoryworldQueryKey, getListStoryPathsQueryKey } from '@workspace/api-client-react';
+import { useGetStoryworld, useListStoryPaths, getGetStoryworldQueryKey, getListStoryPathsQueryKey, isAlternateState, isCanonState, isDevelopmentState } from '@workspace/api-client-react';
 import { Masthead } from '@/components/masthead';
 import { BsFooter } from '@/components/bs-footer';
 import { LoadingState, ErrorState } from '@/components/states';
@@ -25,9 +25,9 @@ export default function WorldPage() {
   if (worldLoading || pathsLoading) return <LoadingState />;
   if (worldError || pathsError) return <ErrorState />;
 
-  const canonPaths = paths?.filter(p => p.state === 'open') || [];
-  const altPaths = paths?.filter(p => p.state === 'published-alternate') || [];
-  const devPaths = paths?.filter(p => p.state === 'personal' || p.state === 'proposed') || [];
+  const canonPaths = paths?.filter(p => isCanonState(p.state)) || [];
+  const altPaths = paths?.filter(p => isAlternateState(p.state)) || [];
+  const devPaths = paths?.filter(p => isDevelopmentState(p.state)) || [];
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -74,7 +74,7 @@ function WorldSection({ title, paths, worldId }: { title: string, paths: any[], 
                 {p.title}
               </h4>
               <span className="font-mono text-[#c46a2c] text-[0.6rem] uppercase tracking-wider bg-[#ede8e2] px-2 py-1 rounded-[2px] border border-[#d4cfc9] inline-block">
-                {p.state.replace('-', ' ')}
+                {p.state === 'published-canon' ? 'canon' : p.state.replace(/-/g, ' ')}
               </span>
             </Link>
           ))}

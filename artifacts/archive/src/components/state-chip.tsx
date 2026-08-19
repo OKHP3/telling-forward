@@ -2,7 +2,7 @@ export function StateChip({ state }: { state: string }) {
   const normalizedState = state.toUpperCase();
   
   let tint = '#91a19f'; // default muted
-  if (normalizedState === 'CANON' || normalizedState === 'OPEN') {
+  if (normalizedState === 'CANON' || normalizedState === 'OPEN' || normalizedState === 'PUBLISHED-CANON' || normalizedState === 'PUBLISHED CANON') {
     tint = '#b85c38'; // coral
   } else if (normalizedState === 'IN REVIEW' || normalizedState === 'PROPOSED') {
     tint = '#3d6b73'; // teal
@@ -12,7 +12,11 @@ export function StateChip({ state }: { state: string }) {
     tint = '#6b4fa0'; // purple
   }
   
-  const displayState = normalizedState === 'PUBLISHED-ALTERNATE' ? 'PUBLISHED ALTERNATE' : normalizedState;
+  const displayState = normalizedState === 'PUBLISHED-ALTERNATE'
+    ? 'PUBLISHED ALTERNATE'
+    : normalizedState === 'PUBLISHED-CANON'
+      ? 'CANON'
+      : normalizedState;
 
   return (
     <span

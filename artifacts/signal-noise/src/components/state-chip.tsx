@@ -6,7 +6,8 @@ const stateMap: Record<string, { display: string, color: string }> = {
   'under-review': { display: 'IN_REVIEW', color: '#e6a03c' },
   'returned-with-notes': { display: 'RETURNED', color: '#9ca3af' },
   'accepted-into-canon': { display: 'ACCEPTED', color: '#34d399' },
-  'published-alternate': { display: 'PUBLISHED', color: '#818cf8' },
+  'published-canon': { display: 'CANON', color: '#34d399' },
+  'published-alternate': { display: 'ALTERNATE', color: '#818cf8' },
 };
 
 export function StateChip({ state }: { state: Proposal['state'] }) {

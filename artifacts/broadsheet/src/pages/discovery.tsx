@@ -1,5 +1,4 @@
-import { useListStoryworlds, useListStoryPaths } from '@workspace/api-client-react';
-import { getListStoryPathsQueryKey } from '@workspace/api-client-react';
+import { useListStoryworlds, useListStoryPaths, getListStoryPathsQueryKey, isAlternateState, isCanonState, isDevelopmentState } from '@workspace/api-client-react';
 import { Link } from 'wouter';
 import { Masthead } from '@/components/masthead';
 import { BsFooter } from '@/components/bs-footer';
@@ -20,9 +19,9 @@ export default function DiscoveryPage() {
   if (worldsLoading || pathsLoading) return <LoadingState />;
   if (worldsError || pathsError) return <ErrorState />;
 
-  const canonPaths = paths?.filter(p => p.state === 'open') || [];
-  const altPaths = paths?.filter(p => p.state === 'published-alternate') || [];
-  const devPaths = paths?.filter(p => p.state === 'personal' || p.state === 'proposed') || [];
+  const canonPaths = paths?.filter(p => isCanonState(p.state)) || [];
+  const altPaths = paths?.filter(p => isAlternateState(p.state)) || [];
+  const devPaths = paths?.filter(p => isDevelopmentState(p.state)) || [];
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -1,5 +1,5 @@
 import { Link, useParams } from 'wouter';
-import { useGetStoryworld, useListStoryPaths, getGetStoryworldQueryKey, getListStoryPathsQueryKey } from '@workspace/api-client-react';
+import { useGetStoryworld, useListStoryPaths, getGetStoryworldQueryKey, getListStoryPathsQueryKey, isAlternateState, isCanonState, isDevelopmentState } from '@workspace/api-client-react';
 import { ArrowLeft } from 'lucide-react';
 
 export default function WorldDetail() {
@@ -11,9 +11,9 @@ export default function WorldDetail() {
   if (isWorldLoading || isPathsLoading) return <div className="p-10 font-mono text-muted-foreground max-w-[900px] mx-auto w-full">Loading § {String(id).padStart(3, '0')}...</div>;
   if (!world) return <div className="p-10 font-mono text-muted-foreground max-w-[900px] mx-auto w-full">World not found.</div>;
 
-  const canonPaths = paths?.filter(p => p.state === 'open') || [];
-  const altPaths = paths?.filter(p => p.state === 'published-alternate') || [];
-  const devPaths = paths?.filter(p => p.state === 'personal' || p.state === 'proposed') || [];
+  const canonPaths = paths?.filter(p => isCanonState(p.state)) || [];
+  const altPaths = paths?.filter(p => isAlternateState(p.state)) || [];
+  const devPaths = paths?.filter(p => isDevelopmentState(p.state)) || [];
 
   const PathCard = ({ p, type }: { p: any, type: 'canon' | 'alternate' | 'dev' }) => {
     let stateStyle = "";

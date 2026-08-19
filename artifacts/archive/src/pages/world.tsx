@@ -1,7 +1,7 @@
 import { Link, useParams } from 'wouter';
 import { Nav } from '@/components/nav';
 import { StateChip } from '@/components/state-chip';
-import { useGetStoryworld, useListStoryPaths } from '@workspace/api-client-react';
+import { useGetStoryworld, useListStoryPaths, isAlternateState, isCanonState } from '@workspace/api-client-react';
 
 export function WorldArchive() {
   const { worldId } = useParams();
@@ -11,8 +11,8 @@ export function WorldArchive() {
   const { data: paths, isLoading: pathsLoading } = useListStoryPaths(id);
   
   const totalPaths = paths?.length || 0;
-  const openPaths = paths?.filter(p => p.state === 'open').length || 0;
-  const alternatePaths = paths?.filter(p => p.state === 'published-alternate').length || 0;
+  const openPaths = paths?.filter(p => isCanonState(p.state)).length || 0;
+  const alternatePaths = paths?.filter(p => isAlternateState(p.state)).length || 0;
 
   return (
     <div className="min-h-[100dvh] bg-paper text-ink font-sans flex flex-col">
@@ -37,7 +37,7 @@ export function WorldArchive() {
               
               <div className="flex flex-wrap gap-6 font-mono text-[.68rem] text-[#68797b] uppercase tracking-[.08em]">
                 <div>Total Paths: <span className="text-ink">{totalPaths.toString().padStart(2, '0')}</span></div>
-                <div>Open: <span className="text-ink">{openPaths.toString().padStart(2, '0')}</span></div>
+                <div>Canon: <span className="text-ink">{openPaths.toString().padStart(2, '0')}</span></div>
                 <div>Alternate: <span className="text-ink">{alternatePaths.toString().padStart(2, '0')}</span></div>
               </div>
             </header>

@@ -1,5 +1,5 @@
 import { useParams } from "wouter";
-import { useGetStoryworld, useListStoryPaths, getGetStoryworldQueryKey, getListStoryPathsQueryKey } from "@workspace/api-client-react";
+import { useGetStoryworld, useListStoryPaths, getGetStoryworldQueryKey, getListStoryPathsQueryKey, isAlternateState } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { BookOpen, Map, ArrowLeft, PenTool, Globe, ChevronRight, ShieldCheck, Lightbulb } from "lucide-react";
@@ -26,8 +26,8 @@ export function WorldDetail() {
   // Canon: open (actively growing) or published-canon (accepted into canon by steward decision).
   // Alternate: published-alternate (visible continuity that never entered canon).
   // Everything else (personal, proposed) falls into canon section as in-progress.
-  const canonPaths = paths?.filter(p => p.state !== "published-alternate") || [];
-  const alternatePaths = paths?.filter(p => p.state === "published-alternate") || [];
+  const canonPaths = paths?.filter(p => !isAlternateState(p.state)) || [];
+  const alternatePaths = paths?.filter(p => isAlternateState(p.state)) || [];
 
   if (isLoadingWorld || isLoadingPaths) {
     return (
