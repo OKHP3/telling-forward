@@ -1,0 +1,260 @@
+# Consent Ladder Design
+
+## Status
+
+**Design complete; enforcement not approved.** This records the Stage 0–1 design
+required by open question 15.14. It does not authorize a consent screen, API
+gate, database migration, or public-contribution feature.
+
+## Context
+
+Telling Forward distinguishes authored creative contribution from passive
+reading and ordinary product telemetry. A contributor may want to react to a
+story, submit an idea, share a branch for display, or ask for canon review
+without granting every other permission. A blanket terms checkbox cannot
+accurately express those choices.
+
+This design follows:
+
+- ADR-0008's requirement for separately decidable contribution actions;
+- `CONTENT-LICENSE.md`, which says public repository availability is not a
+  license to copy, adapt, train on, or create derivatives;
+- the Stage 0–1 identity decision: an app-native signed-in user is sufficient,
+  with a `contributors` record where attribution requires one; and
+- the rule that GitHub is the durable source for creative content while
+  PostgreSQL is a rebuildable product index where possible.
+
+Consent is a rights and privacy control, not an editorial judgment. A steward
+may still restrict a submission for safety, quality, or policy reasons; that
+does not revoke the contributor's underlying authorship.
+
+## Decision
+
+Use a **versioned, per-action consent ladder**. Each action below is distinct
+and must be presented in plain language immediately before its first use for a
+given contributor and storyworld scope. A successful action records the
+specific consent version that enabled it. Future Stage 2/3 enforcement must
+deny an action when the applicable consent is absent, revoked, expired, or
+superseded by a materially changed policy.
+
+No single action implies another action. In particular, submitting content does
+not license it for display, canon review, adaptation, model training, or
+derivative transformation.
+
+### Action catalogue
+
+| Action type | Separate consent covers | Does not cover |
+|---|---|---|
+| `read` | Viewing a storyworld under its reader notice, including the minimum service data needed to deliver that view | Feedback, telemetry beyond the stated notice, reuse of story content, or any contribution right |
+| `react` | Saving or publishing an explicit reaction such as a rating, response, or response choice | Writing a theory or branch; use of reaction data as a proxy for creative-rights permission |
+| `submit-theory` | Sending original interpretive or speculative text for the scope and visibility stated in the prompt | A branch, canon review, display of that theory outside the stated surface, or a license to adapt it |
+| `submit-branch` | Uploading original proposed branch material into the stated private or steward-review workflow | Public display, canon review, transfer of copyright, or permission to derive new work |
+| `license-for-display` | A clearly stated, non-exclusive permission to host and display the identified contribution in the named storyworld and surface | Canon acceptance, commercial use, sublicensing beyond the declared operator, or derivative transformation |
+| `submit-for-canon-review` | Asking the steward to review the identified branch or scene for canon consideration | A promise of acceptance, ownership transfer, display beyond its agreed scope, or permission for later transformations |
+| `ai-assisted-draft` | The contributor's use of the disclosed drafting assistance for the contributor's own input, plus the required disclosure of that use | Consent to train an AI on the contribution, reuse another contributor's work, CIE/PIE operations, or any derivative transformation |
+| `cie-pie-derivative` | **Not available under this design.** Reserved for a future, source-specific derivative consent design | Generic AI assistance, display licensing, canon-review submission, or any prior contribution consent |
+
+`read` must not become a disguised creative-rights waiver. For anonymous public
+reading, the product may present a notice without creating a persistent
+identity-linked record. If a signed-in reader turns on a feature that requires
+an affirmative reading choice or separately consented telemetry, that
+acknowledgment is recorded as `read`.
+
+## Rationale
+
+The ladder preserves meaningful choice at the exact point a contributor takes
+on a new kind of participation. It is deliberately finer-grained than a
+single terms acceptance because the platform's core promise is visible
+provenance without implied reuse. It also keeps the future CIE/PIE decision
+honest: a contributor who permits drafting assistance has not necessarily
+permitted another person or agent to transform their work.
+
+### Generic AI-assist boundary
+
+Generic `ai-assisted-draft` consent is deliberately narrow. It allows a
+contributor to ask a disclosed drafting tool to assist with material they are
+submitting under the action's own terms. It does **not** authorize:
+
+- Concept Inversion Engine (CIE) use on a contributor's capsule;
+- Prose Inversion Engine (PIE) or Disrupt use on a contributor's accepted
+  scene;
+- any derivative transformation, remix, adaptation, or training use of
+  contributor material; or
+- a steward, another contributor, or an agent to invoke a tool on the
+  contributor's material merely because the contributor used AI themselves.
+
+Open question 15.10 remains the authority for whether and how a source
+contributor may authorize CIE/PIE work. A future 15.10 decision must define a
+source-specific consent, attribution, scope, and withdrawal rule before the
+reserved `cie-pie-derivative` action can be enabled.
+
+## Capture and scope model
+
+### User flow
+
+When a contributor first invokes a gated action, the interface presents one
+short, action-specific sheet:
+
+1. name the action and storyworld;
+2. state who may see or use the material and for what purpose;
+3. state the rights the contributor retains and the permission being requested;
+4. link the full, versioned policy text;
+5. show a clear affirmative control; and
+6. offer a route to decline without silently changing the requested action.
+
+The future action request carries a `consentRecordId` field, not a generic
+`acceptedTerms: true` flag. The server derives the required action type from
+the endpoint, then verifies that the referenced record belongs to the
+signed-in user, matches the storyworld and required action, is currently
+granted, and names the required policy version. Clients must not be trusted to
+infer consent from a previous navigation or checkbox.
+
+### Scope rules
+
+- **Per contributor:** a record is bound to the authenticated app user and,
+  when a creative record exists, the linked `contributor_id`.
+- **Per storyworld:** contribution, display, and canon-review consent are
+  scoped to one storyworld. A permission in one world never transfers to
+  another world.
+- **Per action type:** every row names one action. Consent to a lower ladder
+  rung never unlocks a higher rung.
+- **Per policy version:** materially changed terms require a new affirmative
+  record. Historical records remain auditable.
+- **Per resource when necessary:** a display license, canon-review request, or
+  future derivative permission must additionally identify the contribution,
+  branch, capsule, or scene it covers. A world-wide grant is not the default.
+- **Revocable:** future use stops when a withdrawal is recorded, subject to the
+  preservation limits below.
+
+## Draft data model
+
+This is a design only. Do not add this table or migration in Stage 0–1.
+
+```sql
+CREATE TABLE consent_records (
+  id UUID PRIMARY KEY,
+  subject_user_id INTEGER NOT NULL REFERENCES users(id),
+  contributor_id INTEGER REFERENCES contributors(id),
+  storyworld_id INTEGER REFERENCES storyworlds(id),
+
+  action_type TEXT NOT NULL CHECK (action_type IN (
+    'read',
+    'react',
+    'submit-theory',
+    'submit-branch',
+    'license-for-display',
+    'submit-for-canon-review',
+    'ai-assisted-draft',
+    'cie-pie-derivative'
+  )),
+  scope_kind TEXT NOT NULL CHECK (scope_kind IN (
+    'storyworld',
+    'contribution',
+    'branch',
+    'scene',
+    'capsule'
+  )),
+  scope_reference TEXT,
+
+  status TEXT NOT NULL CHECK (status IN ('granted', 'revoked', 'superseded')),
+  policy_document_ref TEXT NOT NULL,
+  policy_version TEXT NOT NULL,
+  policy_hash TEXT NOT NULL,
+
+  recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  effective_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ,
+  supersedes_consent_id UUID REFERENCES consent_records(id),
+  recorded_via TEXT NOT NULL,
+  request_id TEXT
+);
+
+CREATE INDEX consent_records_subject_scope_action_idx
+  ON consent_records (subject_user_id, storyworld_id, action_type, recorded_at DESC);
+CREATE INDEX consent_records_contributor_idx
+  ON consent_records (contributor_id, recorded_at DESC);
+```
+
+The ledger is append-only: revocation and supersession create a new record
+linked to the prior grant rather than mutating consent history. The effective
+consent is the most recent applicable record for the scope and action. A future
+implementation must validate that `scope_reference` is present for every
+resource-specific action and must not allow `cie-pie-derivative` to be granted
+until 15.10 is resolved.
+
+Consent records are intentionally a **private PostgreSQL control-plane
+exception** to the general GitHub-rebuildable-content rule. Putting identity,
+withdrawal timing, or private policy choices into a public repository would
+create a new privacy problem. The implementation proposal must document backup,
+access controls, export, deletion handling, and recovery before this table is
+created. GitHub remains canonical for the creative content and its provenance;
+the consent ledger only governs whether future product actions may use it.
+
+## Revocation, withdrawal, and preservation
+
+A contributor can revoke an action consent from their consent settings or
+through the relevant submission flow. Revocation applies prospectively:
+
+- no new action relying on that consent may begin;
+- a display-license revocation removes future display permission after the
+  declared operational window;
+- a canon-review revocation prevents further review activity where the proposal
+  is still eligible to be withdrawn;
+- an AI-assist revocation prevents future use of that assistance; and
+- revocation does not silently erase Git history, a merged canon commit, or a
+  legally required audit trail.
+
+The proposal lifecycle is the operational companion to consent:
+
+- the original PR author may withdraw an eligible draft, submitted,
+  under-review, or returned-with-notes proposal;
+- a steward may restrict an active proposal, with an optional contributor-facing
+  reason;
+- a steward may archive a completed outcome; and
+- accepted, alternate, restricted, withdrawn, and archived proposal outcomes
+  cannot be reopened by a consent toggle.
+
+Withdrawing a proposal is not a general data-erasure request, and a restricted
+proposal is not proof that the contributor revoked consent or committed
+misconduct. A future service process must separately handle requests to remove
+displayed material, preserve Git/provenance history where required, and explain
+what cannot be retroactively undone.
+
+## Consequences
+
+### Positive
+
+- Contributors make specific, understandable choices instead of accepting an
+  overbroad click-through.
+- Future API gates can be deterministic and auditable.
+- The design protects the CIE/PIE decision from accidental authorization by a
+  generic AI feature.
+- Consent and proposal state remain distinct, preventing editorial actions from
+  being misrepresented as rights transfers.
+
+### Costs and risks
+
+- Versioned consent and revocation require product, legal, privacy, and support
+  work before implementation.
+- The private control ledger has a recovery obligation distinct from GitHub.
+- Policy copy and the exact meaning of a display license still require owner
+  and legal review; this design does not supply legal terms.
+
+## Not yet decided
+
+- The contributor-facing legal text, jurisdictional basis, retention schedule,
+  and age/guardian rules.
+- The exact deletion/export process and the operational window for taking
+  licensed displays down.
+- The source-specific CIE/PIE derivative consent model (open question 15.10).
+- Whether anonymous readers may use any optional reaction or telemetry features.
+- Whether a future storyworld may offer a broader, independently negotiated
+  contribution agreement; it must remain an explicit alternative, not a hidden
+  default.
+
+## References
+
+- `docs/adr/0008-reader-contribution-consent-ladder-data-stream-separation-and-echo-relay-concept.md`
+- `docs/decisions/open-questions.md` (15.10, 15.14)
+- `docs/platform-requirements.md` §§6.5, 7.1–7.4
+- `CONTENT-LICENSE.md`

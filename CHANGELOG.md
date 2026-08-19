@@ -8,6 +8,23 @@ Format: plain dated entries per task or meaningful change, newest first.
 
 ## 2026-08-19
 
+### Design consent and moderation safeguards for public contribution (Task #73)
+
+Completed the Stage 0–1 design prerequisites for any future public
+contribution surface. No enforcement UI, API gate, database migration, or
+public contribution feature was implemented.
+
+- Added [`docs/decisions/consent-ladder-design.md`](docs/decisions/consent-ladder-design.md):
+  per-action, versioned, revocable consent; a draft private consent ledger; and
+  an explicit rule that generic AI-assist consent does not authorize CIE/PIE or
+  other derivative transformation.
+- Added [`docs/decisions/moderation-tooling-design.md`](docs/decisions/moderation-tooling-design.md):
+  steward minimums for spam, safety reports, plagiarism review, block/mute,
+  batch review, and an auditable private case/event model.
+- Recorded 15.14 and 15.15 as design-complete decisions in
+  `docs/decisions/open-questions.md`, while retaining the implementation and
+  policy work they intentionally do not decide.
+
 ### Record owner decisions and update repository governance (Task #69)
 
 Propagated ten explicit owner decisions from the PRD Build Directive v1
