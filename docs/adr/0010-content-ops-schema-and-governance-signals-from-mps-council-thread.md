@@ -22,7 +22,7 @@ The source thread's own recommended architecture is Notion-centric. This is the 
 
 ADR-0005 item 2 proposes a side-car provenance record on capsules/scenes without a field list. The source thread's "Revision Runs / Maturity" and "AI Council Outputs" database schemas supply one.
 
-**Proposal — fields to reserve on the `capsules` table (or a linked provenance record), when that table is designed:**
+**Proposal — fields to reserve on a linked provenance record per capsule (decision 15.12, 2026-08-19: no `capsules` database table; capsules are GitHub Issues with `capsule:*` labels; these fields belong in a Postgres provenance record keyed on the Issue number):**
 
 | Field | Type / values | Purpose |
 |---|---|---|
@@ -78,7 +78,7 @@ TF's storyworld *content* topology is already confirmed as one repo per storywor
 
 ## Non-goals of this ADR
 
-- Does not authorize building the `capsules` table itself — still a shared prerequisite blocking items 1 and 2, per ADR-0004/0005/0006.
+- Does not authorize building a `capsules` database table — decision 15.12 (2026-08-19) confirms no such table will be created. Items 1 and 2's fields belong in a provenance record keyed on the GitHub Issue number, not a separate capsules table.
 - Does not adopt the source thread's Notion database structure, saturation/cadence scoring, or execution-hierarchy machinery.
 - Does not resolve the pre-existing 0007/0008/0009 ADR numbering collisions from other sessions — flagged, left to the owner.
 - Does not propose a frontmatter YAML standard for scene/capsule markdown — still logged only as an open question in the thread-extract, not decided here.
@@ -88,16 +88,16 @@ TF's storyworld *content* topology is already confirmed as one repo per storywor
 
 | Item | Recommendation |
 |---|---|
-| 1. Provenance field schema | Accept design intent; adopt as the starting field list when the `capsules` table is designed |
-| 2. Term/motif ledger field schema | Accept design intent; adopt as the starting field list for ADR-0006 item 2's ledger |
+| 1. Provenance field schema | Accept design intent; adopt as the starting field list for a provenance record keyed on GitHub Issue number (no `capsules` table — decision 15.12, 2026-08-19) |
+| 2. Term/motif ledger field schema | Accept design intent; adopt as the starting field list for ADR-0006 item 2's ledger, derived from Issue labels and body |
 | 3. Name "Canon as Code" as an explicit principle | Accept; low-cost documentation addition, draft on request |
 | 4. Immutable raw-source rule for ingestion | Accept; low-cost documentation addition to ADR-0004, draft on request |
 | 5. Repo-splitting heuristic | Log as guidance; no action required until a real repo-topology question arises |
 
 ## Consequences
 
-- When the `capsules` table is designed, its first schema version should account for items 1 and 2's field lists, including the `source_manuscript_ref` field, which depends on item 4's immutability rule being adopted first.
-- Items 3 and 4 are independent documentation changes and can ship without waiting on the `capsules` table.
+- Items 1 and 2's field lists should be implemented in a Postgres provenance record keyed on the GitHub Issue number (not a `capsules` table — decision 15.12, 2026-08-19), including `source_manuscript_ref`, which depends on item 4's immutability rule being adopted first.
+- Items 3 and 4 are independent documentation changes and can ship without waiting on any schema work.
 - Item 5 has no immediate consequence; it becomes relevant only if/when repo-splitting is proposed for platform code.
 
 ## Next action

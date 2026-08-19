@@ -48,7 +48,7 @@ TF's agent-transform surface is growing (capsule extraction in Tiers 1/2, Disrup
 
 **Proposal:** log a candidate per-storyworld "locked terms" list (character names, place names, invented vocabulary) that every agent-assisted transform — present or future — is instructed to preserve verbatim. Complementary to, not a replacement for, ADR-0006 item 2's ledger: the lock list is the constraint, the ledger is the audit trail.
 
-**Status of this item:** proposed concept only. Depends on the same `capsules` table work ADR-0006 item 2 is already blocked on; no new blocker introduced.
+**Status of this item:** proposed concept only. The `capsules` table dependency is resolved (decision 15.12, 2026-08-19): if this item is accepted, the locked-terms list must be expressed in capsule Issue labels or body, not a database table. Needs owner review before any design work.
 
 ### 4. Staged, human-checked passes as a standing design rule for agent transforms
 
@@ -86,15 +86,15 @@ Separately, the thread's own tool-selection pattern for its author ("primary dra
 |---|---|
 | 1. Author-facing clarity/register pass | Log as proposed; candidate Tier 2 / local-LLM capability, needs owner review before any design work |
 | 2. Reader accessibility/density metadata | Log as open question (15.13); no default answer proposed, Lexical Ladder noted as one candidate mechanism |
-| 3. Canon-lock enforcement for agent transforms | Log as proposed; complementary to ADR-0006 item 2, shares its `capsules`-table blocker |
+| 3. Canon-lock enforcement for agent transforms | Log as proposed; complementary to ADR-0006 item 2; `capsules`-table dependency resolved (decision 15.12, 2026-08-19) — implementation via Issue labels/body |
 | 4. Staged-pass / named-drift design rule | Log as proposed process convention; low cost, no schema impact |
 | 5. Progressive disclosure for onboarding copy | Log as proposed writing convention; low cost, no schema impact |
 
 ## Consequences
 
 - If item 1 is accepted, it adds a new transform type to the Concept Board / Author App vocabulary alongside Disrupt and Invert, distinct from both, and would need its own UI and prompt-template design.
-- If item 2 is accepted, it adds a metadata field to the eventual `capsules`/scene schema, joining the provenance field already flagged by ADR-0005 and the entity-reference field flagged by ADR-0006 as things to reserve when that table is first designed.
-- If item 3 is accepted, the same entity-reference field ADR-0006 item 2 needs would also need to support a "locked" flag, so the `capsules` table's first schema version should account for both together rather than in two separate passes.
+- If item 2 is accepted, it adds a metadata field to the scene schema. Note: there is no `capsules` database table (decision 15.12, 2026-08-19); metadata lives in capsule Issue labels and body or on the scene record itself.
+- If item 3 is accepted, the locked-terms mechanism must be expressed in capsule Issue conventions, not a database table column (decision 15.12, 2026-08-19).
 - Items 4 and 5 are process/documentation conventions and can be adopted independently of everything else in this ADR, at any time, with no schema dependency.
 
 ## Next action

@@ -22,7 +22,7 @@ One piece of the thread is a reusable authoring pattern, independent of the saga
 
 Per `telling_forward_ui_vision.md`, Concept Board's **Promote to scene** action is a deliberate, non-automatic hand-off: an author decides a capsule (character, arc beat, planned event) is ready to become a scene in the Scene Writer. Right now that decision is a bare state transition — the interface doesn't ask the author to say anything about *why* this capsule earned promotion. The six-question frame above is a ready-made prompt for that moment, and connects to Mission working principle #1 ("Start with the person, not the prose") and principle #3 ("Make the hidden machinery humane").
 
-**Proposal:** at Promote-to-scene, offer (not require) a short structured purpose note, stored as metadata on the resulting scene rather than as new prose content. Candidate minimal set, given TF's existing four-state model and Concept Board's two-action scope:
+**Proposal:** at Promote-to-scene, offer (not require) a short structured purpose note, stored as metadata on the resulting scene rather than as new prose content. Candidate minimal set, given TF's six-state model (decided 2026-08-19) and Concept Board's two-action scope:
 
 - Why this scene exists (one line)
 - What it advances (character, plot, or thematic — author's own words)

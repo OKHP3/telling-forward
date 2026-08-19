@@ -60,7 +60,7 @@ The public interface must never surface the left column. Every screen, notificat
 
 | Git / GitHub primitive | Product term | Notes |
 |---|---|---|
-| Repository | Storyworld | One repo per storyworld (Confirmed direction; see Open question 15.1 for multi-world-per-repo alternative) |
+| Repository | Storyworld | One repo per storyworld (Decided 2026-08-19; see `docs/decisions/open-questions.md` 15.1) |
 | Root branch / protected branch | Canon | The originating author's protected continuity |
 | Feature branch | Path | A contributor's continuation or divergence |
 | Commit | Saved moment | Contributor-facing term per ADR-0001. `Contribution` is the internal data-model and API name for the same record (Section 8's `contributions` table); it must not surface as UI copy for a commit |
@@ -143,9 +143,9 @@ flowchart TB
 
 ### 6.1 Authentication
 
-**Recommended:** move from the current PAT-via-`git-askpass.sh` pattern (fine for the workspace's own outbound push) to a **GitHub App** for the platform's read/write integration. A GitHub App gives per-installation, per-repository scoped permissions, higher rate limits than a PAT, and short-lived installation tokens instead of a long-lived personal token. Keep the existing `GITHUB_PAT` Replit-secret pattern only for the workspace's own auto-push; don't reuse it as the platform's service identity.
+**Decided (2026-08-19, Jamie Hill, PRD Build Directive v1 §4):** Migrate to a GitHub App for the platform's read/write integration. A GitHub App gives per-installation, per-repository scoped permissions, higher rate limits than a PAT, and short-lived installation tokens instead of a long-lived personal token. The current PAT-via-`git-askpass.sh` pattern is acceptable for the single private pilot but is scheduled tech debt within Stage 1. Keep `GITHUB_PAT` only for the workspace's own auto-push; never reuse it as the platform's service identity.
 
-**Open question:** does each storyworld get its own repository (one GitHub App installation per world, cleanest permission boundary) or do multiple storyworlds live in one repository under different top-level directories? The terminology table in Section 4 assumes one repo per storyworld. Confirm before building the sync job's repository-discovery logic.
+**Decided (2026-08-19, Jamie Hill, PRD Build Directive v1 §4):** One GitHub repository per storyworld. New storyworlds are created from a template repo ("Storyworld Kit"). See `docs/decisions/open-questions.md` 15.1 and 15.6.
 
 ### 6.2 Read path
 
@@ -189,14 +189,9 @@ The commit history of a path, reprojected as a chronological feed: contributor, 
 
 ### 7.2 Contributor identity
 
-**Open question:** does a contributor need a GitHub account at all? The mission and CONTRIBUTING docs describe a voice-first, non-technical audience — requiring a GitHub login is a real barrier for exactly the people this product is trying to reach. Two options:
+**Decided (2026-08-19, Jamie Hill, PRD Build Directive v1 §4, decision 15.2):** App-native identity is sufficient for Stage 0–1. Contributors sign up with email/OAuth on the platform; the API commits on their behalf using the GitHub App's installation identity, storing the real contributor as commit trailer metadata (`Co-authored-by` or a custom trailer) and in the Postgres attribution table. Optional GitHub OAuth linking is available for contributors who want their name on the actual commit author field, but it is not required.
 
-| Option | How it works | Trade-off |
-|---|---|---|
-| Platform-native identity, service-account commits | Contributor signs up with email/OAuth on the platform; the API commits on their behalf using the GitHub App's installation identity, storing the real contributor as commit trailer metadata (`Co-authored-by` or a custom trailer) and in the Postgres attribution table | No GitHub literacy required at all; attribution lives in the app's data model, which must then be treated as carefully as the Git history itself |
-| Bring-your-own GitHub identity | Contributor connects a GitHub account via OAuth; commits are authored as them | True Git-native provenance, portable outside the app; reintroduces a GitHub-account requirement the product is trying to avoid |
-
-**Recommended:** platform-native identity for the general contributor flow (matches the stated audience), with GitHub-identity linking available as an option for technically comfortable contributors who want their name on the actual commit author field. Record this decision once made; it changes the data model in Section 8.
+This matches the stated voice-first, non-technical audience: no GitHub literacy required. Attribution lives in the app's data model (the `contributors` table and provenance records), which must be treated as carefully as Git history itself. A full contributor identity model (e.g. federation, GitHub-native primary authorship, adaptation-rights linking) is Stage 2/3 work and should not be designed or built in Stage 0–1.
 
 ### 7.3 Review as editorial process (PRs → proposed canon)
 
@@ -335,17 +330,23 @@ Directly answering the "Vite, Tailwind, TypeScript, Playwright" question: here's
 
 ## 15. Known gaps and open questions
 
-Carried forward from `AGENTS.md` plus what this document surfaced:
+The primary decisions log is `docs/decisions/open-questions.md`. The items below reflect current status; see that file for full decision text and rationale.
 
-1. **One repo per storyworld, or one repo with multiple storyworlds?** Section 6.1. Blocks the sync job's repository-discovery design.
-2. **Contributor identity model.** Section 7.2. Blocks the `contributors` table design and the commit-authoring flow.
-3. **Production web app package location** (`artifacts/web` vs. promoting `mockup-sandbox`). Section 11.
-4. **No code license file confirmed at the repository root** — only content/story licensing is documented. Confirm with the project owner before any code-reuse or open-source-adjacent decision.
-5. **`attached_assets/` content boundary** — contains creative source material whose public/private status relative to the platform isn't documented yet.
-6. **GitHub App vs. continued PAT usage** for the platform's own read/write integration. Section 6.1 recommends a GitHub App; needs a decision before Octokit wiring starts.
-7. **Mobile scope and timing.** The Expo-compatible React version pin signals intent; there's no scaffolded mobile package and no stated timeline.
+| # | Topic | Status |
+|---|---|---|
+| 15.1 | One repo per storyworld | **Decided 2026-08-19** — one repo per storyworld, Storyworld Kit template |
+| 15.2 | Contributor identity model | **Decided 2026-08-19** — app-native identity sufficient for Stage 0–1; full model is Stage 2/3 |
+| 15.3 | Production web app package | **Decided 2026-08-19** — `artifacts/web` is the canonical Author App candidate |
+| 15.4 | Code license | **Decided 2026-08-19** — proprietary/all-rights-reserved placeholder; root `LICENSE` file added |
+| 15.5 | `attached_assets/` boundary | **Decided 2026-08-19** — `content/pilot-storyworld/` is the authorized location for pilot source material |
+| 15.6 | GitHub App vs. PAT | **Decided 2026-08-19** — migrate to GitHub App; PAT is Stage 1 tech debt |
+| 15.7 | Mobile scope and timing | Open |
+| 15.11 | Four-vs-six submission states | **Decided 2026-08-19** — six-state model locked; four-state references are stale |
+| 15.12 | Capsules table / term ledger | **Decided 2026-08-19** — no capsules table; GitHub Issues with `capsule:*` labels are canonical |
+| 15.14 | Per-action consent ladder | **Decided 2026-08-19** — design only in Stage 0–1 |
+| 15.15 | Baseline moderation tooling | **Decided 2026-08-19** — design only in Stage 0–1 |
 
-Don't convert any of these into an assumption in code. Record the decision here once the project owner makes it.
+Don't convert any remaining Open items into implementation assumptions. Record decisions in `docs/decisions/open-questions.md` when the project owner makes them.
 
 ---
 
@@ -376,11 +377,12 @@ Mirrors the staged model already stated in `README.md`, mapped to this document'
 
 ## 18. Next actions
 
-- [ ] Decide Open questions 15.1–15.7, starting with repo-per-storyworld (blocks the most downstream work).
-- [ ] Add Octokit and scaffold the GitHub sync job as a new package (e.g. `lib/github-sync` or `artifacts/sync-worker`).
-- [ ] Write the first real OpenAPI paths for storyworlds/paths/contributions and run Orval codegen.
-- [ ] Stand up the `storyworlds`, `story_paths`, `contributions`, `proposals` Drizzle tables from Section 8; leave `editor_questions`, `stewards`, `provenance_records` for the editorial-loop phase.
-- [ ] Add Vitest + MSW to the workspace; write the first tests against the sync job's idempotency behavior.
-- [ ] Decide the production frontend package boundary (Open question 15.3) before writing UI beyond the mockup sandbox.
+Open questions 15.1–15.6 and 15.11–15.12 were decided on 2026-08-19 by Jamie Hill (PRD Build Directive v1). The following remain as active build work for Stage 0–1:
 
-This document should get committed into `docs/` once reviewed, and `AGENTS.md` should gain a pointer to it the same way `skillz/AGENTS.md` points to its own PRD.
+- [ ] Build the Storyworld Kit GitHub template repo (PRD §7.1).
+- [ ] Normalize the capsule Issue label contract across API, MCP server, and ingestion pipeline (Task #71).
+- [ ] Fix the canon acceptance state bug — accepting a proposal must not set path to `published-alternate` (Task #70).
+- [ ] Implement proposal restriction, withdrawal, and archive lifecycle (Task #72).
+- [ ] Design the per-action consent ladder and baseline moderation tooling (Task #73).
+- [ ] Migrate platform GitHub integration from PAT to GitHub App (PRD §7.9).
+- [ ] Add Vitest + MSW tests for proposal state transitions and sync job idempotency.

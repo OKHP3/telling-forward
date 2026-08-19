@@ -28,12 +28,12 @@ The manuscript's Traceability Matrix and Terminology Incursion Ledger track, per
 
 **Proposal:** a lightweight, derived (not separately authored) per-entity record — origin, current canon status, change log — generated from capsule/scene metadata, visible to the storyworld's steward. This is read-only tooling, not a new authoring surface, and it's a much smaller ask than the manuscript's own saturation/cadence-scoring machinery, which solves a single-author prose-rhythm problem TF doesn't have.
 
-**Status of this item:** proposed concept; blocked on the `capsules` table, which does not exist yet per ADR-0004's finding. If accepted, the entity-reference field this ledger needs should be designed into that table's first version rather than retrofitted later — the same pattern ADR-0005 already recommends for its provenance field.
+**Status of this item:** proposed concept. The blocking dependency on a `capsules` database table is now resolved: decision 15.12 (2026-08-19, Jamie Hill, PRD Build Directive v1) confirms that no `capsules` table will be created — GitHub Issues tagged `capsule:*` are the canonical capsule store. If this ledger is accepted, the entity-reference field it needs should be designed into the capsule Issue label or body convention, not a database table. The owner should give a per-item call on whether to proceed under this constraint.
 
 ## Non-goals of this ADR
 
 - Does not reopen ADR-0003, ADR-0004's four-vs-six submission-state discrepancy, or ADR-0005's five open items.
-- Does not authorize building anything. Item 1 is a documentation change pending owner sign-off on wording; item 2 remains a proposal pending owner review and pending the `capsules` table's design.
+- Does not authorize building anything. Item 1 is a documentation change pending owner sign-off on wording; item 2 remains a proposal pending owner review. The `capsules` table dependency is resolved (decision 15.12, 2026-08-19): the ledger, if accepted, would be derived from capsule Issue labels and body, not a database table.
 - Does not adopt the manuscript's execution-hierarchy, fallback-escalation, or symbolic-load-scoring machinery — real patterns for a single-author automated prose system, not a fit for TF's current three-tier ingestion pipeline or two-action Concept Board.
 
 ## Recommendation
@@ -41,11 +41,11 @@ The manuscript's Traceability Matrix and Terminology Incursion Ledger track, per
 | Item | Recommendation |
 |---|---|
 | 1. Explicit branch-locality failure mode | Accept; low-cost documentation addition, draft on request |
-| 2. Steward-facing term/motif ledger | Log as proposed; needs owner review and depends on the `capsules` table's design |
+| 2. Steward-facing term/motif ledger | Log as proposed; needs owner review. `capsules` table dependency resolved (decision 15.12, 2026-08-19) — ledger derived from Issue labels and body, not a database table |
 
 ## Consequences
 
-- If item 2 is accepted, the `capsules` table's first schema version should reserve an entity-reference field, matching the same "reserve now, build later" pattern ADR-0005 recommends for its provenance field.
+- If item 2 is accepted, the entity-reference field it needs must be expressed in the capsule Issue label or body convention (there is no `capsules` table — decision 15.12, 2026-08-19).
 - Item 1 can ship independent of everything else in this ADR or ADR-0004/0005.
 
 ## Next action

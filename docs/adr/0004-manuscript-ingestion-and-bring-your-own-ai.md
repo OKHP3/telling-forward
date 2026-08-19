@@ -38,28 +38,13 @@ footprint anywhere else in the codebase as of this ADR. The tooling this
 ADR proposes (`artifacts/mcp-server/`, the Tier-1 Actions workflow) would
 be the first code in this repository to create a GitHub Issue at all.
 
-## Discrepancy 1: the submission-state model has drifted
+## Discrepancy 1: the submission-state model — RESOLVED
 
-Project memory records: "**CONFIRMED submission status model (Jamie,
-2026-08-17): stays at four states**, simple, does not adopt BAC's richer
-seven-state vocabulary. Draft, Under review, Accepted into canon,
-Published as alternate path."
+**Decided (2026-08-19, Jamie Hill, PRD Build Directive v1 §4, open question 15.11):** The six-state model is locked. The earlier project-memory record of "stays at four states" was stale. The live schema and `CONTRIBUTING.md` are both correct:
 
-What's actually in the repository today, in two places that agree with
-each other but not with that memory: `CONTRIBUTING.md` documents **six**
-states (Draft, Submitted, Under review, Returned with notes, then one of
-Accepted into canon or Published as an alternate path), and
-`proposalStateEnum` in `lib/db/src/schema/telling-forward.ts` encodes
-those same six values verbatim (`draft`, `submitted`, `under-review`,
-`returned-with-notes`, `accepted-into-canon`, `published-alternate`).
+`draft → submitted → under-review → returned-with-notes → accepted-into-canon` or `published-alternate`
 
-This is not this ADR's decision to resolve. Flagging it here because the
-capsule state model this ADR proposes (see "Capsule state, kept
-separate") only works cleanly if it's understood as sitting *before* the
-proposal state machine, not as another attempt at the same four-vs-six
-question. Confirm which of memory or the live schema is the accurate
-record, and update the stale one, before the next thing that depends on
-this drifts too.
+Any documentation still referencing four states is stale and should be updated. The capsule state model proposed in this ADR (see "Capsule state, kept separate") sits *before* the proposal state machine and is unaffected by this resolution.
 
 ## Discrepancy 2: ADR-0003's open tension has evidence bearing on it
 
@@ -123,8 +108,8 @@ pure permissive license). See `.github/scripts/ingestion/NOTICE-phi-4-mini.md`.
 
 Capsule state, kept separate: every capsule Tier 1 or Tier 2 creates is
 labeled `capsule` + `state:draft` and nothing else. Neither tier promotes
-a capsule to a scene or touches the proposal state machine (four-state or
-six-state, whichever memory and the live schema settle on). Promotion
+a capsule to a scene or touches the proposal state machine (six-state
+model — decided 2026-08-19, see Discrepancy 1 above). Promotion
 stays the deliberate human "Promote to scene" action already established
 for Concept Board.
 
@@ -187,9 +172,8 @@ been exercised against a real GitHub repository.
 
 This ADR should not move to Accepted until:
 
-1. The project owner confirms which of the four-state or six-state
-   submission model is correct, and the stale record (memory or the live
-   schema/docs) gets corrected — see Discrepancy 1.
+1. ~~Submission-state model confirmed~~ — **Resolved.** Six-state model
+   decided 2026-08-19 (see Discrepancy 1 above).
 2. The project owner weighs the evidence in Discrepancy 2 and either
    updates ADR-0003's status or explicitly leaves it Open with this
    evidence noted.

@@ -137,11 +137,12 @@ from ADR-0004 with a different prompt, not a new tier.
 
 ## Non-goals of this ADR
 
-- Does not reopen ADR-0003 (backend architecture question) or the
-  four-vs-six submission-state discrepancy ADR-0004 already owns.
+- Does not reopen ADR-0003 (backend architecture question). The four-vs-six
+  submission-state discrepancy is resolved: six-state model is locked
+  (decision 15.11, 2026-08-19, Jamie Hill, PRD Build Directive v1).
 - Does not authorize building anything. Item 2 recommends reserving a
-  schema field when a capsule schema is designed; items 1, 3, and 5 remain
-  proposals pending owner review; item 4 authorizes vocabulary logging only.
+  provenance field; items 1, 3, and 5 remain proposals pending owner
+  review; item 4 authorizes vocabulary logging only.
 - Does not describe, evaluate, or make any decision about the source
   thread's own property — plot, characters, branding, or domains. That
   material was scavenged for architecture ideas only and is otherwise out
@@ -152,16 +153,18 @@ from ADR-0004 with a different prompt, not a new tier.
 | Item | Recommendation |
 |---|---|
 | 1. Reader path state | Log as proposed; needs explicit owner review against Mission principles #6 and #8 before any design work |
-| 2. Side-car provenance layer | Accept design intent now (reserve the field when the capsule schema is built); defer the Reader App UI |
+| 2. Side-car provenance layer | Accept design intent now (reserve the field in a provenance record keyed on the GitHub Issue number — no `capsules` table, decision 15.12, 2026-08-19); defer the Reader App UI |
 | 3. Trending signal on alternate paths | Log as proposed; low-risk if kept steward-only and non-gamified |
 | 4. Monetization vocabulary | Log shape only; explicitly deferred per Mission principle #10 and the staged model |
 | 5. Outside-reader legibility check | Log as proposed; natural extension of ADR-0004's existing tiers if accepted |
 
 ## Consequences
 
-- If item 2 is accepted, the capsule schema — which does not exist yet per
-  ADR-0004's "no `capsules` table" finding — should reserve a provenance
-  field from its first version rather than retrofitting it later.
+- If item 2 is accepted, the provenance field belongs in a Postgres record
+  keyed on the GitHub Issue number (decision 15.12, 2026-08-19: no
+  `capsules` database table; capsules are GitHub Issues with `capsule:*`
+  labels). Reserve this field from the first version of that record rather
+  than retrofitting it later.
 - Any future design work on items 1 or 3 should explicitly test against
   Mission principles #6 and #8 before implementation, not after.
 - Item 4's logged shape is a reference only; it does not reduce the amount

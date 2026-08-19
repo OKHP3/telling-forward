@@ -32,9 +32,7 @@ Each distinct level of reader participation (read only, react, submit a theory, 
 
 This directly extends open question 15.10 (consent boundary for Disrupt/Invert derivatives), which already asks whether an original contributor gets a say when their accepted material is used to generate derivative output. The ladder pattern generalizes 15.10 from "one mechanic's consent gap" to "does TF need a general per-action consent model."
 
-**Proposal:** log a new open question (15.14) asking whether TF should define a general, per-action consent ladder covering read/react/submit-theory/submit-branch/license-for-display/submit-for-canon-review, with 15.10 named as a specific instance of the same underlying gap.
-
-**Status:** proposed open question only, added to `docs/decisions/open-questions.md` as 15.14.
+**Decided (2026-08-19, Jamie Hill, PRD Build Directive v1, decision 15.14):** Design the per-action consent ladder in Stage 0–1. No enforcement is required in this phase — the output is a design document and draft schema, not a live enforcement mechanism. Design must exist before any Stage 2/3 public-contribution or enforcement work proceeds. See `docs/decisions/open-questions.md` 15.14.
 
 ### 3. Constrained-choice contribution mode
 
@@ -62,9 +60,7 @@ Any open community-contribution system needs community norms and moderation appa
 
 This is a real gap: items 3 and 4 above (constrained-choice contributions, sequential relay) both assume a steward can handle a stream of incoming public content, and neither should ship without it.
 
-**Proposal:** log a new open question (15.15) — what moderation primitives does a TF steward need (GitHub-native candidates: labels, issue templates, a blocklist/mute mechanism, batch actions) before any open, public contribution surface (item 3, item 4, or any future equivalent) goes live? No specific mechanism is proposed or assumed.
-
-**Status:** proposed open question only, added to `docs/decisions/open-questions.md` as 15.15. Treated as a blocking prerequisite for items 3 and 4, not an independent nice-to-have.
+**Decided (2026-08-19, Jamie Hill, PRD Build Directive v1, decision 15.15):** Design baseline moderation tooling in Stage 0–1. No enforcement is required in this phase — the output is a design document and draft schema specifying what primitives a steward needs (GitHub-native candidates: labels, issue templates, a blocklist/mute mechanism, batch actions) before any open public contribution surface goes live. Design must exist before items 3 or 4 reach implementation. See `docs/decisions/open-questions.md` 15.15.
 
 ### 6. Parallel-construction / independent-creation protection
 
@@ -86,7 +82,7 @@ A recurring, scheduled cadence for a steward to review queued community contribu
 
 ## Corroborating evidence, not new items
 
-- The source material's AI-role concepts (an agent role for flagging canon contradictions, and a separate one for mapping branches to entities/timelines) restate the same gap already logged as ADR-0005 item 5 (optional legibility check before canon acceptance) and ADR-0006 item 2 (steward-facing term/motif ledger, open question 15.12). No new item added.
+- The source material's AI-role concepts (an agent role for flagging canon contradictions, and a separate one for mapping branches to entities/timelines) restate the same gap already logged as ADR-0005 item 5 (optional legibility check before canon acceptance) and ADR-0006 item 2 (steward-facing term/motif ledger). Note: 15.12 is decided (2026-08-19) — no `capsules` database table; ADR-0006 item 2's ledger is derived from GitHub Issue labels and body. No new item added here.
 - An idea for aggregating reader-choice patterns into a roadmap signal restates ADR-0005 items 1 and 3 (reader path state / steward-only trending signal). No new item added.
 - A phased monetization model (free/paid/premium tiers, contributor revenue share, a periodic "assimilation event" as a paid mechanic) restates ADR-0005 item 4, already logged and explicitly deferred under Mission principle #10 ("earn the right to monetize" before introducing paid access, credits, or adaptation economics). No new item added; still deferred. Item 7 above deliberately splits out only the non-monetary scheduling/recognition half of this idea, which does not depend on the monetization decision.
 - A multi-tier canon/visibility model in the source material is structurally the same shape as a richer state model the project owner explicitly declined to port into TF's submission-state model on 2026-08-17 ("stay simple" — see project memory `telling_forward_ui_vision.md`). This ADR does not propose reopening that decision or open question 15.11. If the owner wants a richer canon-visibility tiering independent of the submission-review-state question, that would need to be raised as its own explicit ask, not inferred from this thread.
@@ -99,19 +95,19 @@ The source thread makes several external factual/legal claims (a fan-fiction arc
 
 - Does not adopt the sibling property's own naming, canon-tier vocabulary, or any of its fictional entities, plot, characters, or theme content.
 - Does not archive or reproduce the source thread, including its long reconstruction of the sibling property's own purpose and themes — reviewed for TF relevance and excluded as out of scope.
-- Does not reopen ADR-0003, ADR-0004's four-vs-six discrepancy (15.11), or ADR-0005/0006's existing items.
+- Does not reopen ADR-0003. The four-vs-six submission-state discrepancy (15.11) is resolved: six-state model is locked (decision 2026-08-19).
 - Does not duplicate the existing provenance field-schema proposal; item 6 above explicitly rides on it rather than proposing a second mechanism.
-- Does not authorize building anything. All seven items are proposals pending owner review.
+- Items 2 and 5 are now decided design requirements (15.14, 15.15, 2026-08-19). Items 1, 3, 4, 6, and 7 remain proposals pending owner review.
 
 ## Recommendation
 
 | Item | Recommendation |
 |---|---|
 | 1. Three-stream data separation | Log as a design principle for the first reader-analytics/feedback surface, with concrete mechanisms; no immediate action |
-| 2. Per-action consent ladder | Log as open question 15.14, cross-referenced to 15.10 |
+| 2. Per-action consent ladder | **Decided 2026-08-19 (15.14):** design in Stage 0–1; no enforcement required yet; design must precede Stage 2/3 public-contribution work |
 | 3. Constrained-choice contribution mode | Log as a candidate feature; needs its own scoping if pursued |
 | 4. Sequential contributor relay | Log as a candidate Reader App feature; flag as high complexity, needs its own future ADR; blocked on item 5 |
-| 5. Baseline moderation tooling | Log as open question 15.15; treat as a blocking prerequisite for items 3 and 4 |
+| 5. Baseline moderation tooling | **Decided 2026-08-19 (15.15):** design in Stage 0–1; no enforcement required yet; design must precede items 3 and 4 reaching implementation |
 | 6. Parallel-construction protection | Log as a documentation practice; rides on the existing provenance-field proposal, no new schema |
 | 7. Scheduled review cadence with recognition | Log as a candidate process pattern; independent of the deferred monetization decision |
 
@@ -127,7 +123,7 @@ The source thread makes several external factual/legal claims (a fan-fiction arc
 
 ## Next action
 
-The project owner should give a per-item call — accept, reject, or defer — for items 1 through 7. Update this ADR's Status once that call is made.
+Items 2 (15.14) and 5 (15.15) are decided as design requirements for Stage 0–1 (2026-08-19, Jamie Hill, PRD Build Directive v1). Task #73 covers the design work for both. The project owner should give a per-item call — accept, reject, or defer — for items 1, 3, 4, 6, and 7. Update this ADR's Status once that call is made.
 
 ## Housekeeping note (unrelated to this thread's content)
 

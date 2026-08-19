@@ -28,7 +28,7 @@ The Notion note's own "protection mechanism" for MPS/BAC's claim is explicitly "
 
 **Proposal:** re-prioritize ADR-0005 item 2's design work upward — not its content, which stays as already scoped (reserve the field when the capsule schema is built, defer the actual Reader App UI) — on the strength of this external signal that the underlying capability has standalone positioning value, not only a per-storyworld aesthetic one.
 
-**Status of this item:** re-prioritization proposal only. Still blocked on the same prerequisite ADR-0005 already named: no `capsules` table exists yet.
+**Status of this item:** re-prioritization proposal only. The `capsules` table dependency is resolved (decision 15.12, 2026-08-19): provenance fields belong in a Postgres record keyed on the GitHub Issue number. The re-prioritization signal itself still stands.
 
 ### 2. The meta-narrative element, made concrete: an assembled "process narrative" view, not just a data field
 
@@ -44,7 +44,7 @@ The Notion note's trifecta element 2 assumes a maintained, comprehensive referen
 
 **Proposal:** log a candidate steward- and reader-facing "canon compendium" view per storyworld: an auto-generated, always-current compilation of accepted-canon capsules plus the ADR-0006 term/motif ledger, organized by entity (character, place, term) rather than by submission order. Distinct from the Reader App's linear story presentation — this is a reference surface, not a narrative one — and distinct from the process-narrative view in item 2, which documents *how* the world was made rather than *what* is currently canon. Because it is generated from existing canon data rather than separately authored and maintained, it stays accurate by construction instead of drifting the way a manually maintained bible does.
 
-**Status of this item:** proposed concept, no schema or UI design yet. Depends on ADR-0006 item 2's term/motif ledger existing, which itself depends on the `capsules` table not yet existing (same blocking chain as items 1 and 2).
+**Status of this item:** proposed concept, no schema or UI design yet. Depends on ADR-0006 item 2's term/motif ledger existing. The `capsules` table dependency is resolved (decision 15.12, 2026-08-19): the ledger is derived from capsule Issue labels and body, not a database table.
 
 ### 4. Naming the existing methodology, not inventing one
 
@@ -76,15 +76,15 @@ Mission principle #10 ("earn the right to monetize") and the README's staged mod
 
 | Item | Recommendation |
 |---|---|
-| 1. Re-prioritize ADR-0005 item 2 | Accept the re-prioritization signal; content stays as-is, still blocked on the `capsules` table |
+| 1. Re-prioritize ADR-0005 item 2 | Accept; `capsules` table dependency resolved (decision 15.12, 2026-08-19) — provenance fields go in a record keyed on GitHub Issue number |
 | 2. Assembled "process narrative" view | Log as proposed; depends on item 1 and ADR-0007 item 1 shipping first |
-| 3. Auto-compiled canon compendium | Log as proposed; depends on ADR-0006 item 2's term/motif ledger, same blocking chain as item 1 |
+| 3. Auto-compiled canon compendium | Log as proposed; depends on ADR-0006 item 2's term/motif ledger (now unblocked from `capsules` table dependency — decision 15.12, 2026-08-19) |
 | 4. Named platform methodology document | Lowest-cost item; could be written now if accepted, no schema dependency |
 | 5. TF-native positioning idea | Log only; revisit after items 2-4 ship and a real storyworld exists to point at |
 
 ## Consequences
 
-- If item 1 is accepted, whoever eventually designs the `capsules` table schema should treat the provenance field as a higher-priority reservation than ADR-0005 originally implied, not a deferred afterthought.
+- If item 1 is accepted, the provenance fields should be implemented in a Postgres record keyed on the GitHub Issue number (no `capsules` table — decision 15.12, 2026-08-19), treated as a higher-priority build than ADR-0005 originally implied.
 - If items 2 or 3 are accepted, they should be scoped as *composition* work (assembling already-proposed data into a new view) once their dependencies ship, not as new data-model proposals in their own right.
 - If item 4 is accepted, it can proceed independently of the `capsules` table and of the rest of this ADR, since it only documents capability already decided or already proposed elsewhere.
 - Item 5 has no consequence until real traction exists. It does not block, and is not blocked by, items 1 through 4.
