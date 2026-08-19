@@ -5,4 +5,4 @@ set -e
 sh "$(git rev-parse --show-toplevel)/scripts/setup-hooks.sh"
 
 pnpm install --frozen-lockfile
-pnpm --filter db push
+pnpm --filter db run push-force
