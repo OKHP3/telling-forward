@@ -42,7 +42,7 @@ Only then: commercial or adaptation programmes
 
 | Requirement slice | Why now | Evidence of completion |
 | --- | --- | --- |
-| Resolve repository-per-world, contributor identity, service identity, and six-state workflow decisions. | These affect every durable identifier, permission check, and GitHub write. | Decisions are recorded in the open-questions log and reflected in architecture and requirements. |
+| Resolve repository-per-world, contributor identity, service identity, and six-state workflow decisions. | These affect every durable identifier, permission check, and GitHub write. | Decisions are recorded in the open-questions log and reflected in architecture and requirements. ADR-0013 defines the boundary between GitHub-native primitives and the product layer. |
 | Define the first rights and consent profile for one low-risk pilot world. | A contribution system cannot safely launch on implied permissions. | Plain-language pilot terms, an explicit consent record, and withdrawal/escalation procedure exist. |
 | Define restriction and withdrawal lifecycle. | Canon and alternate publication are not safe outcomes for every submission. | Authority, visibility effect, non-public archive/tombstone, export, restoration, and contributor-notice rules are tested with a rights-sensitive fixture. |
 | Define the untrusted-upload boundary. | A private upload is still an attack and confidentiality surface. | Threat model, data lifecycle, isolation and resource limits, cleanup, incident behavior, and malicious-fixture test plan are approved. |
@@ -213,7 +213,7 @@ These are intentionally small enough to plan next, while still building Stage 1 
 2. Define the versioned `world-manifest`, capsule, source-asset, ingestion-job, and transformation-record schemas.
 3. Create the template’s contribution policy, canon policy, content notices, issue forms, labels, and Actions.
 4. Define the untrusted-upload threat model, source lifecycle, retention/deletion/restriction behavior, and malicious-fixture acceptance contract. Do not accept real uploads until this gate passes.
-5. Build the private Concept Board, manual capsule creation, candidate-capsule review, and source-provenance links.
+5. Build the private Concept Board, manual capsule creation, candidate-capsule review, and source-provenance links. GitHub Issues and labels remain the canonical capsule store; native Project fields or Actions are optional derived controls.
 6. Define the scene file format and metadata required to render full story text.
 7. Build a static reader edition for one seeded or pilot world.
 8. Add a documented, repeatable way to create a new world from the template.

@@ -18,6 +18,7 @@ portable summaries; the document heading holds the full decision title.
 - [ADR-0010: Content operations and governance](0010-content-ops-and-governance.md)
 - [ADR-0011: Provenance and process artifacts](0011-provenance-and-process-artifacts.md)
 - [ADR-0012: Scene-purpose framing](0012-scene-purpose-framing-from-synopsis-discipline.md)
+- [ADR-0013: GitHub-native boundary and donor primitives](0013-github-native-boundary-and-donor-primitives.md)
 
 ## Filename transition
 

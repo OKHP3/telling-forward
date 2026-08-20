@@ -117,7 +117,7 @@ Do not claim a command was executed unless it was actually run in a suitable env
 
 **Confirmed (2026-08-19, Jamie Hill, PRD Build Directive v1 §4):** The custom Express/Postgres backend on Replit is the confirmed architecture direction. GitHub remains the durable system of record for story content, contribution authorship, editorial review, and canon decisions. PostgreSQL is a rebuildable index keyed on GitHub-native identifiers (SHAs, PR numbers, branch refs). The Replit API provides trusted server-side actions, account-aware permissions, and a reader-friendly language layer.
 
-This is the "GitHub holds / Replit executes" framing formalised in ADR-0003. Any new indexed story record must name its durable GitHub source and be recoverable by reconciliation. See `docs/adr/0003-github-native-fast-path-vs-custom-backend.md` for full rationale and guardrails.
+This is the "GitHub holds / Replit executes" framing formalised in ADR-0003 and clarified by ADR-0013. GitHub-native Projects, Actions, CODEOWNERS, and branch controls are complementary donor and defense-in-depth primitives, not replacements for the product layer. Any new indexed story record must name its durable GitHub source and be recoverable by reconciliation. See `docs/adr/0003-github-native-fast-path-vs-custom-backend.md` and `docs/adr/0013-github-native-boundary-and-donor-primitives.md`.
 
 **Confirmed (2026-08-19):** One GitHub repository per storyworld. New storyworlds are created from a template repo ("Storyworld Kit"). See `docs/decisions/open-questions.md` 15.1.
 

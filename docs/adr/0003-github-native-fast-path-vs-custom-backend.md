@@ -2,7 +2,8 @@
 
 ## Status
 
-**Accepted — GitHub-canonical hybrid (2026-08-19).**
+**Accepted — GitHub-canonical hybrid (2026-08-19). Clarified by
+[ADR-0013](0013-github-native-boundary-and-donor-primitives.md) on 2026-08-20.**
 
 ## Context
 

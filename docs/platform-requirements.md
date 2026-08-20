@@ -21,7 +21,7 @@ Telling Forward needs a requirements baseline for one specific problem: how does
 This document specifies:
 
 1. How the platform sits on top of GitHub as an alternate UI.
-2. How commits and pull requests get reprojected into a community interface (activity feed, review, canon selection, provenance).
+2. How commits and pull requests get reprojected into a community interface (activity feed, review, canon selection, provenance), with selected GitHub-native metadata and checks used as complementary projections.
 3. The underlying technology already committed to in the repo, and what's still open.
 
 It deliberately reuses the governance and packaging patterns already proven in the `skillz` repo, since Jamie asked for this app to carry forward functions, features, technology, and methods from that project. Section 9 makes that lineage explicit.
@@ -89,7 +89,7 @@ flowchart TB
 
     subgraph SYNC["Sync layer"]
         INGEST["Webhook receiver + reconciliation job"]
-        OCTO["Octokit client (GitHub App auth)"]
+        OCTO["Octokit client (GitHub App target; PAT pilot)"]
     end
 
     subgraph DATA["Data layer"]
@@ -132,9 +132,9 @@ flowchart TB
 **Layers, in plain terms:**
 
 1. **GitHub** stays the durable store. Nothing about a storyworld's history lives only in Postgres.
-2. **Sync layer** listens to GitHub webhooks (`push`, `pull_request`, `pull_request_review`, `issue_comment`) and also runs a periodic reconciliation job against the REST/GraphQL API, because webhooks can be missed or arrive out of order. This layer is new work; nothing like it exists in the repo yet.
+2. **Sync layer** listens to GitHub webhooks (`push`, `pull_request`, `pull_request_review`, `issue_comment`) and supports reconciliation against the REST/GraphQL API, because webhooks can be missed or arrive out of order. The checkout contains this prototype layer; live GitHub repository and deployment evidence remain separate gates.
 3. **Data layer** is a read-optimized cache and query index, not a second source of truth. Every row traces back to a GitHub object (commit SHA, PR number, branch ref) so the cache can be rebuilt from GitHub at any time.
-4. **Application API** is the already-scaffolded Express 5 + OpenAPI + Orval + Zod pipeline. It serves the cached, human-shaped view to clients and proxies writes (new contribution, submit for canon, steward decision) back through Octokit so GitHub remains authoritative.
+4. **Application API** is the Express 5 + OpenAPI + Orval + Zod pipeline. It serves the cached, human-shaped view to clients and proxies writes (new contribution, submit for canon, steward decision) back through Octokit so GitHub remains authoritative. Private consent and moderation records remain application-owned control-plane data when those designs are implemented.
 5. **Clients** are the React 19/Vite web app (primary), an Expo mobile client scaffold with discovery, reading, narration, and offline-cache capability, and several configured reader-oriented web surfaces. Mobile product scope and production deployment evidence remain open. A separate GitHub Pages discovery SPA remains optional.
 
 ---
@@ -312,8 +312,8 @@ Directly answering the "Vite, Tailwind, TypeScript, Playwright" question: here's
 
 | Layer | Tool | Status | Priority |
 |---|---|---|---|
-| Unit (schema, business logic) | Vitest | Not present | Recommended before first real feature ships |
-| API contract | Generated Zod schemas + Vitest against Express handlers | Not present | Recommended alongside first API endpoints |
+| Unit (schema, business logic) | Vitest | Present for API and core flows | Continue expanding coverage around state transitions and sync behavior |
+| API contract | Generated Zod schemas + Vitest against Express handlers | Present for API routes and generated contracts | Keep the generated API contract aligned with route behavior |
 | GitHub API boundary | MSW (already reserved in `pnpm-workspace.yaml`) | Reserved, unused | Recommended — mock Octokit calls in tests |
 | End-to-end / editorial workflow | Playwright | Not present | Recommended once the submission → review → canon flow exists (Section 7.3) |
 | Type safety | `tsc --build` (already wired via `pnpm run typecheck`) | Confirmed, working | Keep as-is |
@@ -356,9 +356,9 @@ Mirrors the staged model already stated in `README.md`, mapped to this document'
 
 1. **Foundation.** Data model (Section 8), OpenAPI-first API for storyworlds/paths/contributions (Section 10), GitHub sync layer read path (Section 6.2) for a single pilot storyworld repo.
 2. **Editorial loop.** Proposal/review flow (Section 7.3), steward authority enforcement (Section 6.4), provenance ledger (Section 7.4). This is the flow Playwright coverage should target first.
-3. **Reader experience.** Public-facing path/branch discovery, activity feed (Section 7.1), plain-language state machine across the full terminology table (Section 4).
+3. **Reader experience.** Public-facing path/branch discovery, activity feed (Section 7.1), plain-language state machine across the full terminology table (Section 4), and optional public-edition publishing. GitHub Pages is not the access-control layer for private or restricted material.
 4. **Community surface.** Contributor identity resolution (Section 7.2), optional public discovery SPA (Section 5, 9) for unauthenticated browsing and sharing.
-5. **Commercial and mobile exploration.** Only after the above earns real usage, per the README's own staged model: adaptation rights, contributor rewards, Expo mobile client.
+5. **Commercial and later mobile scope.** Only after the above earns real usage, per the README's own staged model: adaptation rights, contributor rewards, and the still-open product scope for the Expo mobile client.
 
 ---
 
