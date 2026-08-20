@@ -5,6 +5,7 @@ import {
   useGetMe,
   getGetMeQueryKey,
 } from "@workspace/api-client-react";
+import { apiUrl } from "@/lib/api-url";
 import {
   ArrowLeft,
   Github,
@@ -156,7 +157,7 @@ export function Settings() {
     setSavingName(true);
     setNameError(null);
     try {
-      const res = await fetch("/api/auth/profile", {
+      const res = await fetch(apiUrl("/api/auth/profile"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ displayName: displayName.trim() }),
@@ -292,7 +293,7 @@ export function Settings() {
                 description: "GitHub unlinking is not yet available.",
               });
             } else {
-              window.location.href = "/api/auth/github/authorize";
+              window.location.href = apiUrl("/api/auth/github/authorize");
             }
           }}
         />

@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { apiUrl } from "@/lib/api-url";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -85,7 +86,7 @@ export function ResetPassword() {
     setStatus("loading");
 
     try {
-      const res = await fetch("/api/auth/reset-password", {
+      const res = await fetch(apiUrl("/api/auth/reset-password"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, newPassword }),

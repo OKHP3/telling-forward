@@ -1,0 +1,59 @@
+name: Deploy web app to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'artifacts/web/**'
+      - 'lib/api-client-react/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - name: Build the canonical web app
+        env:
+          BASE_PATH: /telling-forward/
+          PORT: 3000
+          VITE_API_BASE_URL: ${{ vars.TELLING_FORWARD_API_BASE_URL }}
+        run: pnpm --filter @workspace/web run build
+      - name: Add GitHub Pages SPA fallback
+        run: cp artifacts/web/dist/public/index.html artifacts/web/dist/public/404.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: artifacts/web/dist/public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

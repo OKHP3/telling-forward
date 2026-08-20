@@ -13,6 +13,7 @@ import {
   useGetStoryworld,
   getGetStoryworldQueryKey,
 } from "@workspace/api-client-react";
+import { apiUrl } from "@/lib/api-url";
 import {
   ArrowLeft,
   Sparkles,
@@ -99,7 +100,7 @@ export function SceneWriter() {
     abortRef.current = new AbortController();
 
     try {
-      const res = await fetch(`/api/storyworlds/${worldId}/capsules/${capsuleId}/promote`, {
+      const res = await fetch(apiUrl(`/api/storyworlds/${worldId}/capsules/${capsuleId}/promote`), {
         method: "POST",
         credentials: "include",
         signal: abortRef.current.signal,
