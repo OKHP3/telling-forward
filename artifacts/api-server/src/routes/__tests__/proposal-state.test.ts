@@ -36,6 +36,8 @@ import express, { type Express } from "express";
 const capture = vi.hoisted(() => ({
   /** State value written to the path row inside the accept transaction */
   pathState: null as string | null,
+  /** State value returned by the simulated persisted path row */
+  persistedPathState: null as string | null,
   /** State value written to the proposal row (review handler update) */
   proposalState: null as string | null,
   /** Restriction reason written with a steward restriction */
@@ -44,6 +46,7 @@ const capture = vi.hoisted(() => ({
   steward: true,
   reset() {
     this.pathState = null;
+    this.persistedPathState = null;
     this.proposalState = null;
     this.decisionReason = null;
     this.authenticated = true;
@@ -683,6 +686,7 @@ describe("POST /:id/accept — published-canon regression", () => {
             }
             if (callCount === 2 && val["state"]) {
               capture.pathState = val["state"] as string;
+              capture.persistedPathState = val["state"] as string;
             }
             const result =
               callCount === 1
@@ -698,11 +702,15 @@ describe("POST /:id/accept — published-canon regression", () => {
       });
     });
 
-    await request(app).post("/100/accept");
+    const res = await request(app).post("/100/accept");
 
     // Core regression assertion
+    expect(res.status).toBe(200);
+    expect(res.body.proposal.state).toBe("accepted-into-canon");
     expect(capture.pathState).toBe("published-canon");
+    expect(capture.persistedPathState).toBe("published-canon");
     expect(capture.pathState).not.toBe("published-alternate");
+    expect(capture.persistedPathState).not.toBe("published-alternate");
   });
 
   it("returns 409 when trying to accept from draft state", async () => {
