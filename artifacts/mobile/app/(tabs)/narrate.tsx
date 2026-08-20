@@ -74,6 +74,10 @@ export default function NarrateScreen() {
     },
   );
   const submitMutation = useCreateContribution();
+  const submitErrorMessage =
+    submitMutation.error?.status === 409
+      ? 'This path is no longer accepting submissions'
+      : 'We couldn’t submit this scene. Check your connection and try again.';
 
   const persistDraft = useCallback(
     async (
@@ -590,7 +594,7 @@ export default function NarrateScreen() {
 
               {submitMutation.isError ? (
                 <Text style={[styles.submitError, { color: colors.destructive, fontFamily: 'Inter_400Regular' }]}>
-                  We couldn’t submit this scene. Check your connection and try again.
+                  {submitErrorMessage}
                 </Text>
               ) : null}
 

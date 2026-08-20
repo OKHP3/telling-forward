@@ -236,6 +236,37 @@ describe("POST /storyworlds/:id/paths/:pathId/contributions", () => {
     expect(state.createCommit).not.toHaveBeenCalled();
   });
 
+  it("rejects a path that closes after it was selected before touching GitHub", async () => {
+    // The mobile list showed this path while it was open. A steward closes it
+    // before the contributor taps Submit, so the server must re-check state.
+    const pathSelectedByMobile = {
+      id: 7,
+      storyworldId: 1,
+      branchRef: "path/opening",
+      state: "open",
+    };
+    expect(pathSelectedByMobile.state).toBe("open");
+
+    state.selectResults[1] = [
+      { ...pathSelectedByMobile, state: "closed" },
+    ];
+
+    const response = await request(buildApp())
+      .post("/1/paths/7/contributions")
+      .send({
+        title: "Too late",
+        content: "The path closed while I was writing.",
+        submissionId: "660e8400-e29b-41d4-a716-446655440006",
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      error: "This story path is not open for contributions",
+    });
+    expect(state.createBranch).not.toHaveBeenCalled();
+    expect(state.createCommit).not.toHaveBeenCalled();
+  });
+
   it("does not index a contribution when the GitHub commit fails", async () => {
     state.createCommit.mockRejectedValue(new Error("GitHub unavailable"));
 
