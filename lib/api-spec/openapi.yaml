@@ -143,6 +143,65 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /consents:
+    get:
+      operationId: listConsentRecords
+      tags: [auth]
+      summary: List the current user's active consent choices
+      responses:
+        "200":
+          description: Active consent choices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConsentRecord"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: grantConsent
+      tags: [auth]
+      summary: Grant one versioned consent choice
+      responses:
+        "201":
+          description: Recorded consent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsentRecord"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Reserved derivative consent is unavailable
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /consents/{id}/revoke:
+    post:
+      operationId: revokeConsent
+      tags: [auth]
+      summary: Revoke one active consent prospectively
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Revocation record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsentRecord"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /auth/github/authorize:
     get:
       operationId: githubAuthorize

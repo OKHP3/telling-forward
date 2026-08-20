@@ -345,6 +345,30 @@ export async function ensureSchema(): Promise<void> {
       reset_at TIMESTAMPTZ NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS consent_records (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      subject_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      contributor_id INTEGER REFERENCES contributors(id) ON DELETE SET NULL,
+      storyworld_id INTEGER REFERENCES storyworlds(id) ON DELETE CASCADE,
+      action_type TEXT NOT NULL,
+      scope_kind TEXT NOT NULL,
+      scope_reference TEXT,
+      status TEXT NOT NULL,
+      policy_document_ref TEXT NOT NULL,
+      policy_version TEXT NOT NULL,
+      policy_hash TEXT NOT NULL,
+      recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      effective_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      revoked_at TIMESTAMPTZ,
+      supersedes_consent_id UUID,
+      recorded_via TEXT NOT NULL,
+      request_id TEXT
+    );
+    CREATE INDEX IF NOT EXISTS consent_records_subject_scope_action_idx
+      ON consent_records (subject_user_id, storyworld_id, action_type, recorded_at);
+    CREATE INDEX IF NOT EXISTS consent_records_contributor_idx
+      ON consent_records (contributor_id, recorded_at);
+
     CREATE INDEX IF NOT EXISTS idx_story_paths_storyworld ON story_paths (storyworld_id);
     CREATE INDEX IF NOT EXISTS idx_contributions_path ON contributions (path_id);
     CREATE INDEX IF NOT EXISTS idx_contribution_path_memberships_path ON contribution_path_memberships (path_id);

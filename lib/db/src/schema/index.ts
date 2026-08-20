@@ -4,3 +4,4 @@ export * from "./email-verifications";
 export * from "./password-reset-tokens";
 export * from "./transcribe-usage";
 export * from "./telling-forward";
+export * from "./consents";

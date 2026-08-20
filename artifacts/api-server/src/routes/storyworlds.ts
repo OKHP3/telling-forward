@@ -34,6 +34,7 @@ import {
   parseNarrationCommit,
 } from "../lib/provenance";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import { hasActiveConsent } from "./consents";
 
 // ---------------------------------------------------------------------------
 // Capsule helpers (GitHub Issues as capsule data layer)
@@ -344,7 +345,14 @@ router.post(
 
     const { id: storyworldId, pathId } = params.data;
 
-    const { title, content, submissionId, agentAssisted = false } = body.data;
+    const {
+      title,
+      content,
+      submissionId,
+      agentAssisted = false,
+      consentRecordId,
+      aiAssistedConsentRecordId,
+    } = body.data;
     try {
       const [world] = await db
         .select({
@@ -382,6 +390,34 @@ router.post(
       }
       if (path.state !== "open") {
         res.status(409).json({ error: "This story path is not open for contributions" });
+        return;
+      }
+
+      if (
+        !(await hasActiveConsent(
+          userId,
+          consentRecordId,
+          storyworldId,
+          "submit-branch",
+        ))
+      ) {
+        res.status(403).json({
+          error: "Grant submit-branch consent for this storyworld before contributing",
+        });
+        return;
+      }
+      if (
+        agentAssisted &&
+        !(await hasActiveConsent(
+          userId,
+          aiAssistedConsentRecordId,
+          storyworldId,
+          "ai-assisted-draft",
+        ))
+      ) {
+        res.status(403).json({
+          error: "Grant ai-assisted-draft consent before submitting AI-assisted work",
+        });
         return;
       }
 
