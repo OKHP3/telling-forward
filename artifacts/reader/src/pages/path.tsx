@@ -209,7 +209,7 @@ export default function PathReaderPage() {
                 <footer className="mt-16 flex flex-col md:flex-row items-center justify-center gap-4 text-sm text-muted-foreground pt-8 relative">
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-px bg-border/40" />
                   <span className="italic" style={{ fontFamily: "var(--reader-font-body)" }}>
-                    by {scene.contributorDisplayName ?? "Anonymous"}
+                    by {scene.contributorDisplayName?.trim() || "Anonymous"}
                   </span>
                   {scene.agentAssisted && (
                     <>
