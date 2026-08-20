@@ -32,10 +32,10 @@ const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 function Router() {
   return (
-    <RoutedErrorBoundary>
-      <Switch>
-        <Route>
-          <AppLayout>
+    <Switch>
+      <Route>
+        <AppLayout>
+          <RoutedErrorBoundary>
             <Switch>
               <Route path="/" component={Home} />
               <Route path="/sign-in" component={SignInPage} />
@@ -52,10 +52,10 @@ function Router() {
               <Route path="/worlds/:worldId/proposals/:proposalId" component={ProposalView} />
               <Route component={NotFound} />
             </Switch>
-          </AppLayout>
-        </Route>
-      </Switch>
-    </RoutedErrorBoundary>
+          </RoutedErrorBoundary>
+        </AppLayout>
+      </Route>
+    </Switch>
   );
 }
 

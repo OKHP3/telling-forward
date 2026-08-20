@@ -4,24 +4,41 @@ import { Link } from "wouter";
 import { format } from "date-fns";
 import { BookOpen, Map, ArrowLeft, PenTool, Globe, ChevronRight, ShieldCheck, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  isNotFoundApiError,
+  StoryLinkRecovery,
+} from "@/components/story-link-recovery";
 
 export function WorldDetail() {
   const params = useParams();
-  const worldId = params.worldId ? parseInt(params.worldId, 10) : 0;
+  const worldId = Number(params.worldId);
+  const hasValidWorldId = Number.isSafeInteger(worldId) && worldId > 0;
 
-  const { data: world, isLoading: isLoadingWorld } = useGetStoryworld(worldId, {
+  const worldQuery = useGetStoryworld(worldId, {
     query: {
-      enabled: !!worldId,
-      queryKey: getGetStoryworldQueryKey(worldId)
+      enabled: hasValidWorldId,
+      queryKey: getGetStoryworldQueryKey(worldId),
+      retry: false,
     }
   });
 
-  const { data: paths, isLoading: isLoadingPaths } = useListStoryPaths(worldId, {
+  const pathsQuery = useListStoryPaths(worldId, {
     query: {
-      enabled: !!worldId,
-      queryKey: getListStoryPathsQueryKey(worldId)
+      enabled: hasValidWorldId,
+      queryKey: getListStoryPathsQueryKey(worldId),
+      retry: false,
     }
   });
+
+  const world = worldQuery.data;
+  const paths = pathsQuery.data;
+  const errors = [worldQuery.error, pathsQuery.error];
+  const hasNotFoundError = errors.some(isNotFoundApiError);
+  const hasRequestError = errors.some(Boolean);
+
+  function retryStoryworld() {
+    void Promise.all([worldQuery.refetch(), pathsQuery.refetch()]);
+  }
 
   // Canon: open (actively growing) or published-canon (accepted into canon by steward decision).
   // Alternate: published-alternate (visible continuity that never entered canon).
@@ -29,7 +46,25 @@ export function WorldDetail() {
   const canonPaths = paths?.filter(p => !isAlternateState(p.state)) || [];
   const alternatePaths = paths?.filter(p => isAlternateState(p.state)) || [];
 
-  if (isLoadingWorld || isLoadingPaths) {
+  if (
+    !hasValidWorldId ||
+    hasNotFoundError ||
+    (!worldQuery.isLoading && !world && !worldQuery.isError)
+  ) {
+    return <StoryLinkRecovery kind="not-found" subject="storyworld" />;
+  }
+
+  if (hasRequestError) {
+    return (
+      <StoryLinkRecovery
+        kind="error"
+        subject="storyworld"
+        onRetry={retryStoryworld}
+      />
+    );
+  }
+
+  if (worldQuery.isLoading || pathsQuery.isLoading) {
     return (
       <div className="space-y-12 animate-pulse">
         <div className="h-8 w-24 bg-secondary rounded" />
@@ -43,14 +78,7 @@ export function WorldDetail() {
   }
 
   if (!world) {
-    return (
-      <div className="p-12 text-center rounded-lg border border-dashed border-border">
-        <h3 className="text-lg font-serif">Storyworld not found</h3>
-        <Link href="/" className="text-primary mt-4 inline-block hover:underline">
-          Return to directory
-        </Link>
-      </div>
-    );
+    return <StoryLinkRecovery kind="not-found" subject="storyworld" />;
   }
 
   return (

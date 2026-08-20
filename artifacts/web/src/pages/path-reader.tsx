@@ -10,25 +10,88 @@ import {
 import { format } from "date-fns";
 import { ArrowLeft, Clock, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  isNotFoundApiError,
+  StoryLinkRecovery,
+} from "@/components/story-link-recovery";
 
 export function PathReader() {
   const params = useParams();
-  const worldId = params.worldId ? parseInt(params.worldId, 10) : 0;
-  const pathId = params.pathId ? parseInt(params.pathId, 10) : 0;
+  const worldId = Number(params.worldId);
+  const pathId = Number(params.pathId);
+  const hasValidIds =
+    Number.isSafeInteger(worldId) &&
+    worldId > 0 &&
+    Number.isSafeInteger(pathId) &&
+    pathId > 0;
 
-  const { data: world } = useGetStoryworld(worldId, {
-    query: { enabled: !!worldId, queryKey: getGetStoryworldQueryKey(worldId) }
+  const worldQuery = useGetStoryworld(worldId, {
+    query: {
+      enabled: hasValidIds,
+      queryKey: getGetStoryworldQueryKey(worldId),
+      retry: false,
+    }
   });
 
-  const { data: paths } = useListStoryPaths(worldId, {
-    query: { enabled: !!worldId, queryKey: getListStoryPathsQueryKey(worldId) }
+  const pathsQuery = useListStoryPaths(worldId, {
+    query: {
+      enabled: hasValidIds,
+      queryKey: getListStoryPathsQueryKey(worldId),
+      retry: false,
+    }
   });
   
+  const world = worldQuery.data;
+  const paths = pathsQuery.data;
   const path = paths?.find(p => p.id === pathId);
 
-  const { data: contributions, isLoading } = useListContributions(worldId, pathId, {
-    query: { enabled: !!(worldId && pathId), queryKey: getListContributionsQueryKey(worldId, pathId) }
+  const contributionsQuery = useListContributions(worldId, pathId, {
+    query: {
+      enabled: hasValidIds,
+      queryKey: getListContributionsQueryKey(worldId, pathId),
+      retry: false,
+    }
   });
+  const contributions = contributionsQuery.data;
+
+  const errors = [
+    worldQuery.error,
+    pathsQuery.error,
+    contributionsQuery.error,
+  ];
+  const hasNotFoundError = errors.some(isNotFoundApiError);
+  const hasRequestError = errors.some(Boolean);
+  const isPathMissing =
+    !hasValidIds ||
+    hasNotFoundError ||
+    (!worldQuery.isLoading && !world && !worldQuery.isError) ||
+    (!!paths && !path);
+  const isLoading =
+    worldQuery.isLoading ||
+    pathsQuery.isLoading ||
+    contributionsQuery.isLoading;
+
+  function retryStoryLink() {
+    void Promise.all([
+      worldQuery.refetch(),
+      pathsQuery.refetch(),
+      contributionsQuery.refetch(),
+    ]);
+  }
+
+  if (isPathMissing) {
+    return <StoryLinkRecovery kind="not-found" subject="path" />;
+  }
+
+  if (hasRequestError) {
+    return (
+      <StoryLinkRecovery
+        kind="error"
+        subject="path"
+        onRetry={retryStoryLink}
+      />
+    );
+  }
 
   if (isLoading) {
     return (

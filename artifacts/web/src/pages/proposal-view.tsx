@@ -18,26 +18,69 @@ import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ArrowLeft, Send, Search, MessageSquare, CheckCircle, FileText, Eye, CheckCircle2, Loader2, ShieldCheck, ShieldAlert, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  isNotFoundApiError,
+  StoryLinkRecovery,
+} from "@/components/story-link-recovery";
 
 export function ProposalView() {
   const params = useParams();
-  const worldId = params.worldId ? parseInt(params.worldId, 10) : 0;
-  const proposalId = params.proposalId ? parseInt(params.proposalId, 10) : 0;
+  const worldId = Number(params.worldId);
+  const proposalId = Number(params.proposalId);
+  const hasValidIds =
+    Number.isSafeInteger(worldId) &&
+    worldId > 0 &&
+    Number.isSafeInteger(proposalId) &&
+    proposalId > 0;
   const queryClient = useQueryClient();
 
-  const { data: proposal, isLoading: isProposalLoading, refetch: refetchProposal } = useGetProposal(proposalId, {
-    query: { enabled: !!proposalId, queryKey: getGetProposalQueryKey(proposalId) }
+  const proposalQuery = useGetProposal(proposalId, {
+    query: {
+      enabled: hasValidIds,
+      queryKey: getGetProposalQueryKey(proposalId),
+      retry: false,
+    }
   });
 
-  const { data: world } = useGetStoryworld(worldId, {
-    query: { enabled: !!worldId, queryKey: getGetStoryworldQueryKey(worldId) }
+  const worldQuery = useGetStoryworld(worldId, {
+    query: {
+      enabled: hasValidIds,
+      queryKey: getGetStoryworldQueryKey(worldId),
+      retry: false,
+    }
   });
 
-  const { data: paths } = useListStoryPaths(worldId, {
-    query: { enabled: !!worldId, queryKey: getListStoryPathsQueryKey(worldId) }
+  const pathsQuery = useListStoryPaths(worldId, {
+    query: {
+      enabled: hasValidIds,
+      queryKey: getListStoryPathsQueryKey(worldId),
+      retry: false,
+    }
   });
 
+  const proposal = proposalQuery.data;
+  const world = worldQuery.data;
+  const paths = pathsQuery.data;
+  const refetchProposal = proposalQuery.refetch;
   const path = paths?.find(p => p.id === proposal?.pathId);
+  const errors = [proposalQuery.error, worldQuery.error, pathsQuery.error];
+  const hasNotFoundError = errors.some(isNotFoundApiError);
+  const hasRequestError = errors.some(Boolean);
+  const isProposalMissing =
+    !hasValidIds ||
+    hasNotFoundError ||
+    (!proposalQuery.isLoading && !proposal && !proposalQuery.isError) ||
+    (!worldQuery.isLoading && !world && !worldQuery.isError);
+  const isLoading =
+    proposalQuery.isLoading || worldQuery.isLoading || pathsQuery.isLoading;
+
+  function retryStoryLink() {
+    void Promise.all([
+      proposalQuery.refetch(),
+      worldQuery.refetch(),
+      pathsQuery.refetch(),
+    ]);
+  }
 
   // Steward actions
   const [showReturnInput, setShowReturnInput] = useState(false);
@@ -141,7 +184,21 @@ export function ProposalView() {
     proposal?.state === "restricted" ||
     proposal?.state === "withdrawn";
 
-  if (isProposalLoading) {
+  if (isProposalMissing) {
+    return <StoryLinkRecovery kind="not-found" subject="path" />;
+  }
+
+  if (hasRequestError) {
+    return (
+      <StoryLinkRecovery
+        kind="error"
+        subject="path"
+        onRetry={retryStoryLink}
+      />
+    );
+  }
+
+  if (isLoading) {
     return (
       <div className="space-y-8 max-w-4xl mx-auto animate-pulse">
         <div className="h-6 w-48 bg-secondary rounded" />
@@ -151,15 +208,8 @@ export function ProposalView() {
     );
   }
 
-  if (!proposal) {
-    return (
-      <div className="text-center p-12">
-        <p className="text-muted-foreground">Submission not found.</p>
-        <Link href={`/worlds/${worldId}`} className="text-primary mt-4 inline-block hover:underline">
-          Return to Storyworld
-        </Link>
-      </div>
-    );
+  if (!proposal || !world) {
+    return <StoryLinkRecovery kind="not-found" subject="path" />;
   }
 
   const steps = [
