@@ -9,6 +9,7 @@
  *     without modifying route handlers.
  */
 
+import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "@octokit/rest";
 import { graphql as createGraphql } from "@octokit/graphql";
 import { logger } from "./logger";
@@ -266,11 +267,74 @@ export interface GitHubClientInterface {
 // Concrete implementation
 // ---------------------------------------------------------------------------
 
+export interface GitHubAppCredentials {
+  appId: string;
+  installationId: string;
+  privateKey: string;
+}
+
+export type GitHubAuthConfig =
+  | { kind: "app"; credentials: GitHubAppCredentials }
+  | { kind: "pat"; token: string }
+  | { kind: "anonymous" };
+
+/**
+ * Resolve platform GitHub credentials without exposing secret values.
+ *
+ * App credentials are intentionally all-or-nothing. A partially configured
+ * App must not silently fall back to a PAT, because that would make a
+ * deployment appear scoped while it is still using the broad credential.
+ */
+export function resolveGitHubAuth(
+  env: NodeJS.ProcessEnv = process.env,
+): GitHubAuthConfig {
+  const appId = env["GITHUB_APP_ID"];
+  const installationId = env["GITHUB_APP_INSTALLATION_ID"];
+  const privateKey = env["GITHUB_APP_PRIVATE_KEY"];
+  const appFields = [appId, installationId, privateKey];
+  const configuredAppFields = appFields.filter(Boolean).length;
+
+  if (configuredAppFields > 0 && configuredAppFields < appFields.length) {
+    throw new Error(
+      "GitHub App authentication requires GITHUB_APP_ID, GITHUB_APP_INSTALLATION_ID, and GITHUB_APP_PRIVATE_KEY",
+    );
+  }
+
+  if (appId && installationId && privateKey) {
+    return {
+      kind: "app",
+      credentials: {
+        appId,
+        installationId,
+        privateKey: privateKey.replace(/\\n/g, "\n"),
+      },
+    };
+  }
+
+  const pat = env["GITHUB_PAT"];
+  if (pat) return { kind: "pat", token: pat };
+  return { kind: "anonymous" };
+}
+
 class OctokitGitHubClient implements GitHubClientInterface {
   private readonly octokit: Octokit;
 
-  constructor(token?: string) {
-    this.octokit = new Octokit({ auth: token });
+  constructor(auth: GitHubAuthConfig) {
+    if (auth.kind === "app") {
+      this.octokit = new Octokit({
+        authStrategy: createAppAuth,
+        auth: {
+          appId: auth.credentials.appId,
+          installationId: auth.credentials.installationId,
+          privateKey: auth.credentials.privateKey,
+        },
+      });
+      return;
+    }
+
+    this.octokit = new Octokit({
+      auth: auth.kind === "pat" ? auth.token : undefined,
+    });
   }
 
   async listBranches(owner: string, repo: string): Promise<GitHubBranch[]> {
@@ -904,20 +968,34 @@ export function createGraphqlClient(token?: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Singleton factory (PAT-based prototype; swap to App tokens here later)
+// Singleton factory. App auth is preferred; PAT remains the explicit private
+// pilot/workspace auto-push rollback boundary until the App gate is complete.
 // ---------------------------------------------------------------------------
 
 let _client: GitHubClientInterface | null = null;
 
 export function getGitHubClient(): GitHubClientInterface {
   if (!_client) {
-    const token = process.env["GITHUB_PAT"];
-    if (!token) {
+    const auth = resolveGitHubAuth();
+    if (auth.kind === "anonymous") {
       logger.warn(
-        "GITHUB_PAT not set — GitHub client will make unauthenticated requests (60 req/hr limit)",
+        "No GitHub App or PAT configured — GitHub client will make unauthenticated requests (60 req/hr limit)",
       );
     }
-    _client = new OctokitGitHubClient(token);
+    if (auth.kind === "app") {
+      logger.info(
+        {
+          githubAppId: auth.credentials.appId,
+          githubAppInstallationId: auth.credentials.installationId,
+        },
+        "GitHub client using installation-scoped App authentication",
+      );
+    } else if (auth.kind === "pat") {
+      logger.warn(
+        "GitHub client using the private-pilot PAT fallback; configure the GitHub App before production",
+      );
+    }
+    _client = new OctokitGitHubClient(auth);
   }
   return _client;
 }

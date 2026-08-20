@@ -125,6 +125,23 @@ implementation task must pass all applicable gates:
 
 1. **GitHub App gate:** scoped installation permissions, token lifecycle,
    webhook verification, audit identity, rollback, and private-pilot evidence.
+
+The platform client now prefers `GITHUB_APP_ID`,
+`GITHUB_APP_INSTALLATION_ID`, and `GITHUB_APP_PRIVATE_KEY`. Octokit's
+`@octokit/auth-app` strategy obtains and refreshes short-lived installation
+tokens; the application never stores those tokens. A partial App
+configuration fails closed instead of falling back to a PAT. When all App
+variables are absent, `GITHUB_PAT` remains the explicit private-pilot
+fallback. The workspace auto-push credential is separate and is not changed by
+this client migration.
+
+Webhook authenticity remains independently verified by
+`GITHUB_WEBHOOK_SECRET`; an App installation token is not used as a webhook
+signature. The audit identity is the GitHub App installation actor returned by
+GitHub, while contributor attribution continues to come from the application
+identity and signed provenance record. Rollback is configuration-only: remove
+the complete App configuration and restore the private-pilot PAT without
+changing route handlers or attribution code.
 2. **Rebuild gate:** a clean GitHub fixture rebuilds storyworlds, paths,
    contributions, proposals, shared saved-moment membership, and provenance
    without a prior PostgreSQL snapshot.
