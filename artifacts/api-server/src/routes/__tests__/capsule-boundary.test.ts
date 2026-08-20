@@ -19,6 +19,7 @@ import express, { type Express } from "express";
 
 const mockGh = vi.hoisted(() => ({
   listIssues:   vi.fn(),
+  getIssue:     vi.fn(),
   createIssue:  vi.fn(),
   updateIssue:  vi.fn(),
   closeIssue:   vi.fn(),
@@ -174,18 +175,19 @@ describe("PATCH /storyworlds/1/capsules/:capsuleId — capsule identity boundary
   });
 
   it("returns 404 and does NOT call updateIssue when the issue has no capsule:* label", async () => {
-    mockGh.listIssues.mockResolvedValue([NON_CAPSULE_ISSUE]);
+    mockGh.getIssue.mockResolvedValue(NON_CAPSULE_ISSUE);
 
     const res = await request(app)
       .patch("/1/capsules/99")
       .send({ title: "Attacker-supplied title" });
 
     expect(res.status).toBe(404);
+    expect(mockGh.listIssues).not.toHaveBeenCalled();
     expect(mockGh.updateIssue).not.toHaveBeenCalled();
   });
 
   it("returns 200 and calls updateIssue when the issue carries a capsule:character label", async () => {
-    mockGh.listIssues.mockResolvedValue([CHARACTER_CAPSULE]);
+    mockGh.getIssue.mockResolvedValue(CHARACTER_CAPSULE);
     mockGh.updateIssue.mockResolvedValue({
       ...CHARACTER_CAPSULE,
       title: "Updated Title",
@@ -196,19 +198,25 @@ describe("PATCH /storyworlds/1/capsules/:capsuleId — capsule identity boundary
       .send({ title: "Updated Title" });
 
     expect(res.status).toBe(200);
+    expect(mockGh.getIssue).toHaveBeenCalledWith({
+      owner: "testowner",
+      repo: "testrepo",
+      issueNumber: 42,
+    });
+    expect(mockGh.listIssues).not.toHaveBeenCalled();
     expect(mockGh.updateIssue).toHaveBeenCalledOnce();
     expect(res.body.title).toBe("Updated Title");
   });
 
   it("returns 404 when the issue number is not found at all", async () => {
-    // listIssues returns an entirely different issue number
-    mockGh.listIssues.mockResolvedValue([{ ...CHARACTER_CAPSULE, number: 100 }]);
+    mockGh.getIssue.mockResolvedValue(null);
 
     const res = await request(app)
       .patch("/1/capsules/42")
       .send({ title: "Should not apply" });
 
     expect(res.status).toBe(404);
+    expect(mockGh.listIssues).not.toHaveBeenCalled();
     expect(mockGh.updateIssue).not.toHaveBeenCalled();
   });
 });
@@ -394,21 +402,28 @@ describe("DELETE /storyworlds/1/capsules/:capsuleId — capsule identity boundar
   });
 
   it("returns 404 and does NOT call closeIssue when the issue has no capsule:* label", async () => {
-    mockGh.listIssues.mockResolvedValue([NON_CAPSULE_ISSUE]);
+    mockGh.getIssue.mockResolvedValue(NON_CAPSULE_ISSUE);
 
     const res = await request(app).delete("/1/capsules/99");
 
     expect(res.status).toBe(404);
+    expect(mockGh.listIssues).not.toHaveBeenCalled();
     expect(mockGh.closeIssue).not.toHaveBeenCalled();
   });
 
   it("returns 204 and calls closeIssue when the issue carries a capsule:arc label", async () => {
-    mockGh.listIssues.mockResolvedValue([ARC_CAPSULE]);
+    mockGh.getIssue.mockResolvedValue(ARC_CAPSULE);
     mockGh.closeIssue.mockResolvedValue(undefined);
 
     const res = await request(app).delete("/1/capsules/43");
 
     expect(res.status).toBe(204);
+    expect(mockGh.getIssue).toHaveBeenCalledWith({
+      owner: "testowner",
+      repo: "testrepo",
+      issueNumber: 43,
+    });
+    expect(mockGh.listIssues).not.toHaveBeenCalled();
     expect(mockGh.closeIssue).toHaveBeenCalledOnce();
     expect(mockGh.closeIssue).toHaveBeenCalledWith({
       owner: "testowner",
@@ -418,11 +433,12 @@ describe("DELETE /storyworlds/1/capsules/:capsuleId — capsule identity boundar
   });
 
   it("returns 404 when the issue number is not found in the open issues list", async () => {
-    mockGh.listIssues.mockResolvedValue([]);
+    mockGh.getIssue.mockResolvedValue(null);
 
     const res = await request(app).delete("/1/capsules/42");
 
     expect(res.status).toBe(404);
+    expect(mockGh.listIssues).not.toHaveBeenCalled();
     expect(mockGh.closeIssue).not.toHaveBeenCalled();
   });
 });

@@ -127,6 +127,12 @@ export interface ListIssuesParams {
   state?: "open" | "closed" | "all";
 }
 
+export interface GetIssueParams {
+  owner: string;
+  repo: string;
+  issueNumber: number;
+}
+
 export interface CreateIssueParams {
   owner: string;
   repo: string;
@@ -239,6 +245,7 @@ export interface GitHubClientInterface {
   ): Promise<number>;
   // Issues
   listIssues(params: ListIssuesParams): Promise<GitHubIssue[]>;
+  getIssue(params: GetIssueParams): Promise<GitHubIssue | null>;
   createIssue(params: CreateIssueParams): Promise<GitHubIssue>;
   updateIssue(params: UpdateIssueParams): Promise<GitHubIssue>;
   closeIssue(params: CloseIssueParams): Promise<void>;
@@ -685,6 +692,38 @@ class OctokitGitHubClient implements GitHubClientInterface {
       }
     }
     return results;
+  }
+
+  async getIssue(params: GetIssueParams): Promise<GitHubIssue | null> {
+    const { owner, repo, issueNumber } = params;
+    try {
+      const { data: issue } = await this.octokit.rest.issues.get({
+        owner,
+        repo,
+        issue_number: issueNumber,
+      });
+
+      // GitHub exposes pull requests through the issues API. They are never
+      // valid capsule records, matching the filtering contract of listIssues.
+      if (issue.pull_request) return null;
+
+      return {
+        number: issue.number,
+        title: issue.title,
+        body: issue.body ?? null,
+        state: issue.state === "open" ? "open" : "closed",
+        labels: issue.labels.map((l) =>
+          typeof l === "string" ? l : (l.name ?? ""),
+        ),
+        createdAt: issue.created_at,
+        updatedAt: issue.updated_at,
+      };
+    } catch (err: unknown) {
+      // A missing issue is a normal boundary result for capsule routes.
+      // Preserve other GitHub failures so callers can return a useful 502.
+      if ((err as { status?: number }).status === 404) return null;
+      throw err;
+    }
   }
 
   async createIssue(params: CreateIssueParams): Promise<GitHubIssue> {

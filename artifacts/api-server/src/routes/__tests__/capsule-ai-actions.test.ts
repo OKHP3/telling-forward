@@ -19,6 +19,7 @@ const mockOpenAiCreate = vi.hoisted(() => vi.fn());
 
 const mockGh = vi.hoisted(() => ({
   listIssues: vi.fn(),
+  getIssue: vi.fn(),
 }));
 
 vi.mock("@workspace/db", () => {
@@ -152,7 +153,8 @@ describe.each(ACTIONS)(
       state.steward = false;
       mockOpenAiCreate.mockReset();
       mockGh.listIssues.mockReset();
-      mockGh.listIssues.mockResolvedValue([CAPSULE]);
+      mockGh.getIssue.mockReset();
+      mockGh.getIssue.mockResolvedValue(CAPSULE);
     });
 
     it("returns 401 to unauthenticated requests before checking steward access", async () => {
@@ -161,6 +163,7 @@ describe.each(ACTIONS)(
       expect(res.status).toBe(401);
       expect(res.body).toEqual({ error: "Authentication required" });
       expect(mockGh.listIssues).not.toHaveBeenCalled();
+      expect(mockGh.getIssue).not.toHaveBeenCalled();
       expect(mockOpenAiCreate).not.toHaveBeenCalled();
     });
 
@@ -172,6 +175,7 @@ describe.each(ACTIONS)(
       expect(res.status).toBe(403);
       expect(res.body).toEqual({ error: "Not a steward for this storyworld" });
       expect(mockGh.listIssues).not.toHaveBeenCalled();
+      expect(mockGh.getIssue).not.toHaveBeenCalled();
       expect(mockOpenAiCreate).not.toHaveBeenCalled();
     });
 
@@ -210,7 +214,13 @@ describe.each(ACTIONS)(
       const res = await callAction(buildApp(), action);
 
       expect(res.status).toBe(200);
-      expect(mockGh.listIssues).toHaveBeenCalledOnce();
+      expect(mockGh.getIssue).toHaveBeenCalledWith({
+        owner: "telling-forward",
+        repo: "storyworld",
+        issueNumber: 42,
+      });
+      expect(mockGh.getIssue).toHaveBeenCalledOnce();
+      expect(mockGh.listIssues).not.toHaveBeenCalled();
       expect(mockOpenAiCreate).toHaveBeenCalledOnce();
 
       if (action.name === "promote") {

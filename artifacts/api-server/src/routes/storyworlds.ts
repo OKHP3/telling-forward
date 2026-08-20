@@ -829,14 +829,15 @@ router.patch("/:id/capsules/:capsuleId", requireAuth, requireStewardForStoryworl
   try {
     const gh = getGitHubClient();
 
-    // Fetch current issue to preserve existing type label
-    const current = await gh.listIssues({
+    // Fetch current issue to preserve existing type label. Resolve directly by
+    // number so a large repository does not require listing every issue.
+    const current = await gh.getIssue({
       owner: world.repoOwner,
-      repo:  world.repoName,
-      state: "open",
-    }).then(issues => issues.find(i => i.number === capsuleId));
+      repo: world.repoName,
+      issueNumber: capsuleId,
+    });
 
-    if (!current) {
+    if (!current || current.state !== "open") {
       res.status(404).json({ error: "Capsule not found" }); return;
     }
 
@@ -914,11 +915,18 @@ router.delete("/:id/capsules/:capsuleId", requireAuth, requireStewardForStorywor
   try {
     const gh = getGitHubClient();
 
-    // Fetch and verify the issue is a capsule before closing it.
-    // Without this check a steward could close any open issue in the repo.
-    const issues = await gh.listIssues({ owner: world.repoOwner, repo: world.repoName, state: "open" });
-    const target = issues.find(i => i.number === capsuleId);
-    if (!target || !target.labels.some(l => l.startsWith(CAPSULE_PREFIX))) {
+    // Fetch and verify the issue is an open capsule before closing it.
+    // Without this check a steward could close any issue in the repo.
+    const target = await gh.getIssue({
+      owner: world.repoOwner,
+      repo: world.repoName,
+      issueNumber: capsuleId,
+    });
+    if (
+      !target ||
+      target.state !== "open" ||
+      !target.labels.some(l => l.startsWith(CAPSULE_PREFIX))
+    ) {
       res.status(404).json({ error: "Capsule not found" }); return;
     }
 
@@ -948,9 +956,14 @@ async function resolveCapsule(
   storyworldId: number,
 ) {
   const gh = getGitHubClient();
-  const issues = await gh.listIssues({ owner, repo, state: "open" });
-  const issue  = issues.find(i => i.number === capsuleId);
-  if (!issue || !issue.labels.some(l => l.startsWith(CAPSULE_PREFIX))) return null;
+  const issue = await gh.getIssue({ owner, repo, issueNumber: capsuleId });
+  if (
+    !issue ||
+    issue.state !== "open" ||
+    !issue.labels.some(l => l.startsWith(CAPSULE_PREFIX))
+  ) {
+    return null;
+  }
   return mapIssueToCapsule(issue, storyworldId);
 }
 
