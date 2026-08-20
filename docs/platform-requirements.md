@@ -37,8 +37,8 @@ Pulled directly from the repo as of this writing:
 - **Contribution states** (`CONTRIBUTING.md`): personal work, open path, proposed canon, published alternate path.
 - **Content boundary** (`CONTENT-LICENSE.md`): all rights reserved by default on creative content; platform code may get a separate open-source license later; repository visibility is not reuse permission.
 - **Monorepo scaffold**: pnpm workspace, Node 24, TypeScript 5.9, already wired for Express 5 + PostgreSQL/Drizzle on the backend and Vite + React 19 + Tailwind v4 on the frontend (full detail in Section 8).
-- **GitHub sync mechanism already built**: every Replit commit auto-pushes to `github.com/OKHP3/telling-forward` via a `post-commit` git hook, authenticated through `scripts/git-askpass.sh` reading a `GITHUB_PAT` Replit secret. The token never touches git config, files, or process arguments. This is a one-way push (workspace → GitHub), not yet a GitHub-as-backend read/sync layer — that's the gap this document addresses.
-- **Nothing product-specific exists yet in the data or API layer.** `lib/db/src/schema/index.ts` is an empty template. `lib/api-spec/openapi.yaml` defines only a health check. `artifacts/api-server` is a bare Express skeleton. `artifacts/mockup-sandbox` is a Replit design-mockup sandbox preloaded with the full shadcn/ui component set, not a production frontend.
+- **GitHub workspace sync is built**: every Replit commit auto-pushes to `github.com/OKHP3/telling-forward` via a `post-commit` git hook, authenticated through `scripts/git-askpass.sh` reading a `GITHUB_PAT` Replit secret. The token never touches git config, files, or process arguments. Separately, the checkout now contains a GitHub-backed application read/write and reconciliation layer; live GitHub repository exercise remains an evidence gap.
+- **Product implementation exists in the data, API, and client layers.** `lib/db/src/schema/`, `lib/api-spec/openapi.yaml`, `artifacts/api-server`, `artifacts/web`, and `artifacts/mobile` contain storyworld, path, contribution, proposal, provenance, authentication, reader, steward, capsule, and narration capabilities with automated API tests. `artifacts/mockup-sandbox` remains a design sandbox and is not a production frontend.
 
 Everything in this document past this point is new design built on that foundation.
 
@@ -106,7 +106,7 @@ flowchart TB
 
     subgraph CLIENTS["Clients"]
         WEB["React 19 + Vite web app"]
-        MOBILE["Expo / React Native (planned)"]
+        MOBILE["Expo / React Native (scaffolded; scope open)"]
         PAGES["Optional: GitHub Pages discovery SPA (Skillz Forge pattern)"]
     end
 
@@ -135,7 +135,7 @@ flowchart TB
 2. **Sync layer** listens to GitHub webhooks (`push`, `pull_request`, `pull_request_review`, `issue_comment`) and also runs a periodic reconciliation job against the REST/GraphQL API, because webhooks can be missed or arrive out of order. This layer is new work; nothing like it exists in the repo yet.
 3. **Data layer** is a read-optimized cache and query index, not a second source of truth. Every row traces back to a GitHub object (commit SHA, PR number, branch ref) so the cache can be rebuilt from GitHub at any time.
 4. **Application API** is the already-scaffolded Express 5 + OpenAPI + Orval + Zod pipeline. It serves the cached, human-shaped view to clients and proxies writes (new contribution, submit for canon, steward decision) back through Octokit so GitHub remains authoritative.
-5. **Clients** are the React 19/Vite web app (primary), a planned Expo mobile client (the pinned `react`/`react-dom` versions in `pnpm-workspace.yaml` exist specifically because Expo requires them), and optionally a lightweight GitHub Pages discovery SPA for public, unauthenticated browsing of published storyworlds, following the same pattern as `okhp3-vite-github-pages` and Skillz Forge.
+5. **Clients** are the React 19/Vite web app (primary), an Expo mobile client scaffold with discovery, reading, narration, and offline-cache capability, and several configured reader-oriented web surfaces. Mobile product scope and production deployment evidence remain open. A separate GitHub Pages discovery SPA remains optional.
 
 ---
 
@@ -285,16 +285,16 @@ Directly answering the "Vite, Tailwind, TypeScript, Playwright" question: here's
 | Database | PostgreSQL | — | Confirmed |
 | Build/bundle (server) | esbuild | 0.27.3 (pinned) | Confirmed |
 | Runtime | Node.js | 24 | Confirmed |
-| Mobile (planned) | Expo / React Native | — | **Inferred**, not yet scaffolded — the React version pin exists specifically for Expo compatibility per an inline comment in `pnpm-workspace.yaml`; no `artifacts/mobile` package exists yet |
-| E2E testing | **Not present** | — | **Gap.** No Playwright, no Cypress, nothing in any `package.json` |
-| Unit/integration testing | **Not present** | — | **Gap.** No Vitest, no Jest configured |
+| Mobile | Expo / React Native | — | **Scaffolded and implemented in checkout; product scope and production acceptance remain open** |
+| E2E testing | **Not present** | — | **Gap.** No Playwright or Cypress browser harness is configured |
+| Unit/integration testing | **Present for API and core flows** | Vitest route and library tests under `artifacts/api-server/src/**/__tests__` | Expand coverage and keep the generated API contract aligned |
 | API mocking for tests | Mock Service Worker (`msw`) | listed in `pnpm-workspace.yaml`'s `onlyBuiltDependencies` | **Reserved but unused** — the dependency is pre-approved for pnpm's build-script allowlist, but nothing consumes it yet |
-| GitHub integration | Octokit (REST + GraphQL) | not yet added | **Recommended**, Section 6 |
-| Public discovery SPA | GitHub Pages + Vite (Skillz Forge pattern) | not yet built | **Recommended, optional**, Section 5 and 9 |
+| GitHub integration | GitHub client, webhooks, admin reconciliation, and indexed provenance | prototype layer present; GitHub App migration not complete | **Implemented in checkout; live repository and GitHub App evidence deferred** |
+| Public discovery SPA | GitHub Pages + Vite (Skillz Forge pattern) | separate configured reader surfaces exist; Pages-specific SPA remains optional | **Recommended, optional**, Section 5 and 9 |
 
 **Recommendation on Playwright specifically**, since it was named directly: adopt it for end-to-end coverage of the contribution → review → canon-acceptance flow once that flow exists. This product's core risk isn't a broken button, it's a broken editorial state machine (a proposal stuck between "submitted" and "accepted," a canon merge that doesn't produce a provenance record). That's exactly the class of bug Playwright's real-browser, multi-step flow testing catches and unit tests don't. Pair it with Vitest for the component and API-handler layer, and MSW (already reserved) to mock the GitHub API boundary in tests so test runs don't depend on live GitHub calls or rate limits.
 
-`artifacts/mockup-sandbox` is a Replit design-mockup sandbox, not the production app shell. **Open question:** does the production web client get built as a new `artifacts/web` package reusing the same Vite/Tailwind/shadcn setup, or does `mockup-sandbox` itself get promoted? Recommended: new package. Keep the mockup sandbox as a disposable design-iteration space; promoting it directly tends to drag Replit-mockup-specific plumbing (`mockupPreviewPlugin.ts`, `.generated/mockup-components.ts`) into production code that doesn't need it.
+`artifacts/mockup-sandbox` is a Replit design-mockup sandbox, not the production app shell. The decision log designates `artifacts/web` as the canonical Author App integration candidate and keeps the sandbox disposable. Keep that package boundary intact; promoting the sandbox directly would drag Replit-mockup-specific plumbing (`mockupPreviewPlugin.ts`, `.generated/mockup-components.ts`) into production code that does not need it.
 
 ---
 
@@ -371,18 +371,20 @@ Mirrors the staged model already stated in `README.md`, mapped to this document'
 | GitHub API rate limits under load | GitHub App tokens (higher limits than PAT), aggressive read-path caching (Section 6.2, 12) |
 | Canon merge happens without a provenance record | Record a durable pending provenance entry before invoking the GitHub merge, finalize it on merge confirmation, and have the reconciliation job detect and repair any merge that lacks a finalized record (Section 7.4). A single atomic transaction across GitHub and Postgres is not possible, so rely on outbox-style state plus reconciliation, not a follow-up job that can be skipped |
 | Secrets leak through the auto-push-on-every-commit workspace behavior | Continue `GIT_ASKPASS` pattern; treat every commit as public; never commit a `.env` or credential file (already an explicit `AGENTS.md` rule) |
-| Production app gets built on top of the disposable mockup sandbox | Explicit package-boundary decision (Section 11, Open question 15.3) before frontend work starts |
+| Production app gets built on top of the disposable mockup sandbox | Resolved package-boundary decision: `artifacts/web` is the canonical Author App integration candidate; the sandbox remains disposable |
 
 ---
 
 ## 18. Next actions
 
-Open questions 15.1–15.6 and 15.11–15.12 were decided on 2026-08-19 by Jamie Hill (PRD Build Directive v1). The following remain as active build work for Stage 0–1:
+Open questions 15.1–15.6 and 15.11–15.12 were decided on 2026-08-19 by Jamie Hill (PRD Build Directive v1). The following remain as active build or evidence work for Stage 0–1:
 
 - [ ] Build the Storyworld Kit GitHub template repo (PRD §7.1).
-- [ ] Normalize the capsule Issue label contract across API, MCP server, and ingestion pipeline (Task #71).
-- [ ] Fix the canon acceptance state bug — accepting a proposal must not set path to `published-alternate` (Task #70).
-- [ ] Implement proposal restriction, withdrawal, and archive lifecycle (Task #72).
-- [ ] Design the per-action consent ladder and baseline moderation tooling (Task #73).
+- [x] Normalize the capsule Issue label contract across API, MCP server, and ingestion pipeline (Task #71, merged).
+- [x] Fix the canon acceptance state bug — accepting a proposal must not set path to `published-alternate` (Task #70, merged).
+- [x] Implement proposal restriction, withdrawal, and archive lifecycle (Task #72, merged).
+- [x] Design the per-action consent ladder and baseline moderation tooling (Task #73, merged; enforcement remains unapproved).
 - [ ] Migrate platform GitHub integration from PAT to GitHub App (PRD §7.9).
 - [ ] Add Vitest + MSW tests for proposal state transitions and sync job idempotency.
+- [ ] Record production deployment identity and run external route smoke tests for the configured reader, writer, API, and mobile surfaces.
+- [ ] Build the Stage 0/1 traceability matrix and dated capability inventory required by the attainable roadmap.

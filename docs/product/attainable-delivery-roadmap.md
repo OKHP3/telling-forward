@@ -2,7 +2,7 @@
 
 ## Status
 
-**Draft sequencing plan derived from the dream platform specification.**
+**Draft sequencing plan derived from the dream platform specification and reconciled with the 2026-08-20 equilibrium review.**
 
 This roadmap does not assume every dream requirement will be funded or desired. A stage earns the next one only when it delivers standalone value, has evidence of use, and has resolved the decisions it depends on.
 
@@ -217,7 +217,7 @@ These are intentionally small enough to plan next, while still building Stage 1 
 6. Define the scene file format and metadata required to render full story text.
 7. Build a static reader edition for one seeded or pilot world.
 8. Add a documented, repeatable way to create a new world from the template.
-9. Build the Stage 0/1 traceability matrix and dated capability inventory; resolve every unmapped requirement as implemented, deferred, or not planned.
+9. Build the Stage 0/1 traceability matrix and dated capability inventory; resolve every unmapped requirement as implemented, deferred, or not planned. The equilibrium review identified this as still outstanding.
 10. Test the entire workbench-to-reader flow with one worldbuilder before adding contributor submission UI.
 
 This produces a deployable product in its own right: a worldbuilder can spawn and publish a governed storyworld. The next work then completes one careful contributor loop on top of it.

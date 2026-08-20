@@ -1,0 +1,109 @@
+{
+  "schema_version": "1.0",
+  "review_protocol": "equilibrium-v1",
+  "review_mode": "conditional-five-role",
+  "evaluation_status": "analytical",
+  "artifact": {
+    "path": "docs/reviews/2026-08-20-telling-forward-equilibrium-review.md",
+    "sha256": "8324f79a8978ab5f37b10d5a4dfe0caaa29aac38d82b8227220e3cd6ac3112df",
+    "version": "675478eb39ee6b485b76801552180181944b5edd"
+  },
+  "decision_question": "Does the documented Telling Forward vision accurately describe the implemented and demonstrably deployed product, and are the current project tasks sufficient to close material gaps without overstating readiness?",
+  "acceptance_criteria": [
+    "Material claims have evidence IDs, status, consequence, and next test.",
+    "Checkout, workflow, and production evidence are separated.",
+    "Implemented capability is not treated as deployed behavior.",
+    "Consent, attribution, moderation, provenance, and human-steward boundaries remain intact.",
+    "Merged, active, pending, and proposed tasks are mapped to actual gaps.",
+    "The decision names approved, limited, deferred, and rejected scope."
+  ],
+  "independence": {
+    "reviewer_contexts_separated": false,
+    "shared_model_or_source_limits": [
+      "Evidence, outcome, and safety-portability roles were analytical passes in one agent context.",
+      "No external agent, protected holdout, production environment, or specialist review was available."
+    ]
+  },
+  "initial_reviews": [
+    {
+      "role": "evidence-reviewer",
+      "result": "The checkout contains substantive product implementation while several requirements paragraphs retain pre-implementation scaffold claims.",
+      "status": "analytical",
+      "material_claims": ["CLM-04", "CLM-08", "CLM-09", "CLM-11"]
+    },
+    {
+      "role": "outcome-reviewer",
+      "result": "The implementation plausibly supports a bounded Stage 0-1 private pilot, but no external participant or production evidence establishes the complete promised loop.",
+      "status": "analytical",
+      "material_claims": ["CLM-02", "CLM-05", "CLM-07", "CLM-13"]
+    },
+    {
+      "role": "safety-portability-reviewer",
+      "result": "Proposal-state and provenance controls align with the mission, while consent/moderation enforcement, GitHub App migration, recovery, and deployment evidence remain incomplete.",
+      "status": "analytical",
+      "material_claims": ["CLM-03", "CLM-06", "CLM-10", "CLM-13"]
+    }
+  ],
+  "concordance": "material-agreement",
+  "disruptor": {
+    "triggered": true,
+    "authority": "exploratory",
+    "falsification_hypotheses": [
+      "Workspace service success proves production route availability.",
+      "Proposal tests prove GitHub side-effect safety.",
+      "Documentation correction proves user usefulness.",
+      "Consent and moderation design documents equal enforcement."
+    ],
+    "test_results": [
+      {
+        "hypothesis": "Workspace service success proves production route availability.",
+        "result": "failed-falsification; production evidence is absent and several configured workspace surfaces had port-start failures."
+      },
+      {
+        "hypothesis": "Proposal tests prove GitHub side-effect safety.",
+        "result": "surviving objection; state logic is tested, but live GitHub side effects are not."
+      },
+      {
+        "hypothesis": "Documentation correction proves user usefulness.",
+        "result": "surviving objection; no participant or external acceptance evidence exists."
+      },
+      {
+        "hypothesis": "Consent and moderation design documents equal enforcement.",
+        "result": "surviving objection; both documents explicitly defer enforcement."
+      }
+    ]
+  },
+  "negotiator": {
+    "triggered": true,
+    "decision": "approve-with-limits",
+    "decisive_evidence": [
+      "Substantive API, web, mobile, sync, proposal, provenance, and test implementation exists in checkout.",
+      "Requirements contain material stale claims about scaffold state, mobile, architecture, and backlog completion.",
+      "Workspace live observations do not establish production behavior.",
+      "Consent and moderation enforcement are explicitly unapproved.",
+      "The task queue covers many implementation gaps but not one unified truthfulness/deployment evidence gate."
+    ],
+    "unresolved_items": [
+      "Production URL, revision, health checks, and route smoke tests.",
+      "Live GitHub repository rebuild and side-effect acceptance.",
+      "External participant and device acceptance evidence.",
+      "GitHub App migration.",
+      "Consent and moderation enforcement.",
+      "Owner decisions for open questions 15.7, 15.10, and 15.13."
+    ]
+  },
+  "release_decision": "approve-with-limits",
+  "limitations": [
+    "Analytical review in one agent context with correlated role evidence.",
+    "No protected or unseen holdout.",
+    "No production deployment evidence or specialist legal, privacy, or security review.",
+    "Workspace workflow failures are operational observations, not production conclusions."
+  ],
+  "follow_up": [
+    "Correct stale requirements and roadmap claims while preserving evidence labels.",
+    "Verify published artifact routes against a recorded deployment revision.",
+    "Run restart, lockout, password-reset, session, and offline recovery acceptance tasks.",
+    "Add GitHub rebuild and side-effect fixtures.",
+    "Keep public contribution blocked pending consent and moderation enforcement."
+  ]
+}

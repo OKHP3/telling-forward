@@ -18,7 +18,7 @@ Telling Forward is designed to move those barriers into the background while kee
 - Agents can help transcribe, organize, revise, check continuity, and prepare a readable draft.
 - People remain the originators and approvers of their contributions.
 - Stories can develop as personal works, shared worlds, alternate paths, or proposed canon.
-- GitHub provides version history and review infrastructure behind a simpler storytelling experience. Whether that means GitHub's native pull-request and Actions flow *is* the backend, or a custom API and database sit in front of it, is an open architecture question. See [docs/adr/0003-github-native-fast-path-vs-custom-backend.md](docs/adr/0003-github-native-fast-path-vs-custom-backend.md).
+- GitHub remains the durable source for story content, authorship, editorial review, and canon decisions. The custom Express/PostgreSQL layer provides trusted actions, account-aware permissions, and a reader-friendly projection while keeping PostgreSQL rebuildable from GitHub-native identifiers. See [docs/adr/0003-github-native-fast-path-vs-custom-backend.md](docs/adr/0003-github-native-fast-path-vs-custom-backend.md).
 
 ## The experience we are exploring
 
