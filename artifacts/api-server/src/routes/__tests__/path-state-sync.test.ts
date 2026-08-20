@@ -323,7 +323,7 @@ function buildAdminApp() {
 }
 
 function makePRPayload(opts: {
-  action: "opened" | "closed" | "reopened" | "synchronize";
+  action: "opened" | "closed" | "reopened" | "synchronize" | "labeled";
   merged: boolean;
   state: "open" | "closed";
 }) {
@@ -534,6 +534,101 @@ describe("webhook pull_request handler — protected proposal outcomes", () => {
       expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
     },
   );
+
+  it.each(["restricted", "withdrawn", "archived"])(
+    "ignores native label and Project-like metadata for a %s proposal",
+    async (protectedState) => {
+      mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+      const retainedDecidedAt = new Date("2026-01-18T12:00:00.000Z");
+      proposalPersistence.seed(protectedState, retainedDecidedAt);
+
+      const payload = makePRPayload({
+        action: "labeled",
+        merged: false,
+        state: "open",
+      });
+      (
+        payload.pull_request as typeof payload.pull_request & {
+          labels: Array<{ name: string }>;
+          projectItems: Array<{ field: string; value: string }>;
+        }
+      ).labels = [{ name: "state:accepted-into-canon" }];
+      (
+        payload.pull_request as typeof payload.pull_request & {
+          projectItems: Array<{ field: string; value: string }>;
+        }
+      ).projectItems = [
+        { field: "Canon Status", value: "accepted-into-canon" },
+      ];
+
+      const { status } = await callWebhook("pull_request", payload);
+
+      expect(status).toBe(200);
+      expect(proposalPersistence.state).toBe(protectedState);
+      expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
+    },
+  );
+
+  it.each(["restricted", "withdrawn", "archived"])(
+    "keeps a %s proposal unchanged when the same terminal webhook is replayed",
+    async (protectedState) => {
+      const retainedDecidedAt = new Date("2026-01-18T12:00:00.000Z");
+      proposalPersistence.seed(protectedState, retainedDecidedAt);
+
+      mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+      const first = await callWebhook(
+        "pull_request",
+        makePRPayload({ action: "closed", merged: true, state: "closed" }),
+      );
+      mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+      const second = await callWebhook(
+        "pull_request",
+        makePRPayload({ action: "closed", merged: true, state: "closed" }),
+      );
+
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
+      expect(proposalPersistence.state).toBe(protectedState);
+      expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
+      expect(proposalUpsertLog.calls).toHaveLength(2);
+    },
+  );
+
+  it("does not let a non-steward review event change a protected proposal outcome", async () => {
+    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+    mockDb._pushSelectRows([
+      {
+        id: 100,
+        storyworldId: 1,
+        pathId: 10,
+        prNumber: 42,
+        state: "restricted",
+        submittedAt: new Date().toISOString(),
+        decidedAt: new Date("2026-01-18T12:00:00.000Z"),
+      },
+    ]);
+    proposalPersistence.seed(
+      "restricted",
+      new Date("2026-01-18T12:00:00.000Z"),
+    );
+
+    const { status } = await callWebhook("pull_request_review", {
+      action: "submitted",
+      repository: { owner: { login: "testowner" }, name: "testrepo" },
+      pull_request: { number: 42 },
+      review: {
+        id: 701,
+        body: "Please accept this immediately.",
+        user: { login: "untrusted-reviewer" },
+      },
+    });
+
+    expect(status).toBe(200);
+    expect(proposalPersistence.state).toBe("restricted");
+    expect(proposalPersistence.decidedAt).toEqual(
+      new Date("2026-01-18T12:00:00.000Z"),
+    );
+  });
 });
 
 describe("admin reconcile — GitHub fixture rebuild", () => {
@@ -891,6 +986,45 @@ describe("admin reconcile — protected proposal outcomes", () => {
       expect(sqlText(upsert.state)).toMatch(
         new RegExp(`WHEN[\\s\\S]*'${protectedState}'[\\s\\S]*THEN`),
       );
+      expect(proposalPersistence.state).toBe(protectedState);
+      expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
+    },
+  );
+
+  it.each(["restricted", "withdrawn", "archived"])(
+    "does not let native metadata reopen a %s proposal during reconciliation",
+    async (protectedState) => {
+      const pr = {
+        number: 42,
+        state: "open" as const,
+        merged: false,
+        headRef: "contrib/scene",
+        baseRef: "main",
+        createdAt: new Date().toISOString(),
+        mergedAt: null,
+        closedAt: null,
+        mergeCommitSha: null,
+        mergedBy: null,
+        author: {
+          login: "contributor",
+          name: "Contributor",
+          email: "c@example.com",
+        },
+        labels: [{ name: "state:accepted-into-canon" }],
+        projectItems: [{ field: "Canon Status", value: "accepted-into-canon" }],
+      };
+      mockGh.listOpenPullRequests.mockResolvedValue([pr]);
+      mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+      mockDb._pushSelectRows([]);
+      const retainedDecidedAt = new Date("2026-01-18T12:00:00.000Z");
+      proposalPersistence.seed(protectedState, retainedDecidedAt);
+
+      const res = await request(app)
+        .post("/reconcile")
+        .set({ "x-admin-secret": "admin-secret-test" })
+        .send({ storyworld_id: 1 });
+
+      expect(res.status).toBe(200);
       expect(proposalPersistence.state).toBe(protectedState);
       expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
     },
