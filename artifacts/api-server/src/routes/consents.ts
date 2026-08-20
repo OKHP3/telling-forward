@@ -155,7 +155,9 @@ router.post("/:id/revoke", requireAuth, async (req, res) => {
     res.status(401).json({ error: "Authentication required" });
     return;
   }
-  const recordId = req.params.id;
+  const recordId = Array.isArray(req.params.id)
+    ? req.params.id[0]
+    : req.params.id;
   try {
     const [record] = await db
       .select()

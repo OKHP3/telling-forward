@@ -10,3 +10,4 @@
 - [Authentication rate-limit availability](auth-rate-limit-availability.md) — production must fail closed when shared limiter Redis is absent or fails, while local development may use in-memory counters.
 - [Reader 404 recovery](reader-404-recovery.md) — route queries must stop retries for confirmed 404s so absent records never look like empty worlds.
 - [Contributor activity source](contributor-activity-source.md) — mobile activity uses durable narration records; proposal status needs an explicit contributor link before joining.
+- [Consent control plane](consent-control-plane.md) — permissions are private append-only records; revocation is prospective and never erases Git history.

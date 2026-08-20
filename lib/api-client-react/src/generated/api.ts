@@ -22,6 +22,8 @@ import type {
   BadRequestResponse,
   Capsule,
   CapsuleProposalResponse,
+  ConsentInput,
+  ConsentRecord,
   Contribution,
   ContributionInput,
   CreateCapsuleBody,
@@ -529,6 +531,259 @@ export function useListMyContributions<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List the current user's active consent choices
+ */
+export const getListConsentRecordsUrl = () => {
+  return `/api/consents`;
+};
+
+export const listConsentRecords = async (
+  options?: RequestInit,
+): Promise<ConsentRecord[]> => {
+  return customFetch<ConsentRecord[]>(getListConsentRecordsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListConsentRecordsQueryKey = () => {
+  return [`/api/consents`] as const;
+};
+
+export const getListConsentRecordsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listConsentRecords>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listConsentRecords>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListConsentRecordsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listConsentRecords>>
+  > = ({ signal }) => listConsentRecords({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listConsentRecords>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListConsentRecordsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listConsentRecords>>
+>;
+export type ListConsentRecordsQueryError = ErrorType<UnauthorizedResponse>;
+
+/**
+ * @summary List the current user's active consent choices
+ */
+
+export function useListConsentRecords<
+  TData = Awaited<ReturnType<typeof listConsentRecords>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listConsentRecords>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListConsentRecordsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Grant one versioned consent choice
+ */
+export const getGrantConsentUrl = () => {
+  return `/api/consents`;
+};
+
+export const grantConsent = async (
+  consentInput: ConsentInput,
+  options?: RequestInit,
+): Promise<ConsentRecord> => {
+  return customFetch<ConsentRecord>(getGrantConsentUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(consentInput),
+  });
+};
+
+export const getGrantConsentMutationOptions = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | void | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof grantConsent>>,
+    TError,
+    { data: BodyType<ConsentInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof grantConsent>>,
+  TError,
+  { data: BodyType<ConsentInput> },
+  TContext
+> => {
+  const mutationKey = ["grantConsent"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof grantConsent>>,
+    { data: BodyType<ConsentInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return grantConsent(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GrantConsentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof grantConsent>>
+>;
+export type GrantConsentMutationBody = BodyType<ConsentInput>;
+export type GrantConsentMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | void | NotFoundResponse
+>;
+
+/**
+ * @summary Grant one versioned consent choice
+ */
+export const useGrantConsent = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | void | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof grantConsent>>,
+    TError,
+    { data: BodyType<ConsentInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof grantConsent>>,
+  TError,
+  { data: BodyType<ConsentInput> },
+  TContext
+> => {
+  return useMutation(getGrantConsentMutationOptions(options));
+};
+
+/**
+ * @summary Revoke one active consent prospectively
+ */
+export const getRevokeConsentUrl = (id: string) => {
+  return `/api/consents/${id}/revoke`;
+};
+
+export const revokeConsent = async (
+  id: string,
+  options?: RequestInit,
+): Promise<ConsentRecord> => {
+  return customFetch<ConsentRecord>(getRevokeConsentUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRevokeConsentMutationOptions = <
+  TError = ErrorType<UnauthorizedResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeConsent>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revokeConsent>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["revokeConsent"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revokeConsent>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return revokeConsent(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevokeConsentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revokeConsent>>
+>;
+
+export type RevokeConsentMutationError = ErrorType<
+  UnauthorizedResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Revoke one active consent prospectively
+ */
+export const useRevokeConsent = <
+  TError = ErrorType<UnauthorizedResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeConsent>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof revokeConsent>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getRevokeConsentMutationOptions(options));
+};
 
 /**
  * Redirects to GitHub's OAuth authorization page. The user must already be logged in. GitHub account linking is optional — contributors do not need a GitHub account to participate.

@@ -4,6 +4,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetMe,
   getGetMeQueryKey,
+  useListConsentRecords,
+  getListConsentRecordsQueryKey,
+  useGrantConsent,
+  useRevokeConsent,
 } from "@workspace/api-client-react";
 import { apiUrl } from "@/lib/api-url";
 import {
@@ -130,6 +134,13 @@ export function Settings() {
 
   const user = meData?.user;
   const github = meData?.github ?? null;
+  const consentQuery = useListConsentRecords({
+    query: { retry: false, queryKey: getListConsentRecordsQueryKey() },
+  });
+  const grantConsent = useGrantConsent();
+  const revokeConsent = useRevokeConsent();
+  const [consentWorldId, setConsentWorldId] = useState("");
+  const [consentError, setConsentError] = useState<string | null>(null);
 
   /* Profile form state */
   const [displayName, setDisplayName] = useState("");
@@ -180,6 +191,39 @@ export function Settings() {
     localStorage.setItem("tf-social-website", website);
     localStorage.setItem("tf-social-twitter", twitter);
     toast({ title: "Social links saved" });
+  }
+
+  async function handleGrantConsent(actionType: "submit-branch" | "ai-assisted-draft") {
+    const storyworldId = Number(consentWorldId);
+    if (!Number.isSafeInteger(storyworldId) || storyworldId <= 0) {
+      setConsentError("Enter a valid storyworld ID before granting permission.");
+      return;
+    }
+    setConsentError(null);
+    try {
+      await grantConsent.mutateAsync({
+        data: { actionType, storyworldId, scopeKind: "storyworld" },
+      });
+      setConsentWorldId("");
+      await qc.invalidateQueries({ queryKey: getListConsentRecordsQueryKey() });
+      toast({ title: "Permission recorded" });
+    } catch {
+      setConsentError("Permission could not be recorded. Please try again.");
+    }
+  }
+
+  async function handleRevokeConsent(id: string) {
+    setConsentError(null);
+    try {
+      await revokeConsent.mutateAsync({ id });
+      await qc.invalidateQueries({ queryKey: getListConsentRecordsQueryKey() });
+      toast({
+        title: "Permission revoked",
+        description: "This stops future use; it does not erase Git history or completed canon decisions.",
+      });
+    } catch {
+      setConsentError("Permission could not be revoked. Please try again.");
+    }
   }
 
   if (isLoading) {
@@ -345,6 +389,82 @@ export function Settings() {
               Save links
             </button>
           </div>
+        </div>
+      </Section>
+
+      <Section
+        title="Sharing permissions"
+        description="Separate, storyworld-scoped choices for contribution actions"
+      >
+        <p className="text-sm text-muted-foreground">
+          These permissions are versioned and can be withdrawn prospectively. Revoking
+          consent does not erase Git history, completed canon decisions, or required audit records.
+        </p>
+        <div className="space-y-3">
+          {consentQuery.data?.map((record) => (
+            <div
+              key={record.id}
+              className="flex flex-col gap-3 rounded-lg border border-border/60 bg-background/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {record.actionType === "submit-branch"
+                    ? "Submit branch material"
+                    : record.actionType === "ai-assisted-draft"
+                      ? "Use AI-assisted drafting"
+                      : record.actionType}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Storyworld {record.storyworldId} · {record.scopeKind} · policy {record.policyVersion}
+                </p>
+              </div>
+              <button
+                onClick={() => void handleRevokeConsent(record.id)}
+                disabled={revokeConsent.isPending}
+                className="shrink-0 rounded-md border border-destructive/40 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
+              >
+                Revoke
+              </button>
+            </div>
+          ))}
+          {!consentQuery.isLoading && !consentQuery.data?.length && (
+            <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+              You have not granted any active sharing permissions.
+            </p>
+          )}
+        </div>
+        <div className="space-y-3 border-t border-border/40 pt-5">
+          <label className="block text-sm font-medium text-foreground">
+            Storyworld ID
+            <input
+              value={consentWorldId}
+              onChange={(e) => setConsentWorldId(e.target.value)}
+              inputMode="numeric"
+              placeholder="e.g. 12"
+              className="mt-1 block h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => void handleGrantConsent("submit-branch")}
+              disabled={grantConsent.isPending}
+              className="rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-50"
+            >
+              Allow branch submissions
+            </button>
+            <button
+              onClick={() => void handleGrantConsent("ai-assisted-draft")}
+              disabled={grantConsent.isPending}
+              className="rounded-md border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-accent disabled:opacity-50"
+            >
+              Allow AI-assisted drafting
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            CIE/PIE derivative consent is not available. These choices do not grant display,
+            canon-review, adaptation, or training rights.
+          </p>
+          {consentError && <p className="text-sm text-destructive">{consentError}</p>}
         </div>
       </Section>
 

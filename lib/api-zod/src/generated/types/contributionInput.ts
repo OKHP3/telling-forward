@@ -25,4 +25,8 @@ export interface ContributionInput {
   /** True when the scene was drafted with agent assistance. The disclosure is shown to readers alongside the contribution.
    */
   agentAssisted?: boolean;
+  /** Active submit-branch consent for this storyworld. */
+  consentRecordId?: string;
+  /** Active ai-assisted-draft consent when agentAssisted is true. */
+  aiAssistedConsentRecordId?: string;
 }

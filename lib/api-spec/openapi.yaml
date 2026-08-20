@@ -163,6 +163,12 @@ paths:
       operationId: grantConsent
       tags: [auth]
       summary: Grant one versioned consent choice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConsentInput"
       responses:
         "201":
           description: Recorded consent
@@ -1377,6 +1383,64 @@ components:
             when their durable Git-backed record is created; submitted and
             under-review PRs are pending, while returned PRs are returned.
 
+    ConsentRecord:
+      type: object
+      required:
+        - id
+        - storyworldId
+        - actionType
+        - scopeKind
+        - status
+        - policyDocumentRef
+        - policyVersion
+        - recordedAt
+        - effectiveAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        storyworldId:
+          type: integer
+        actionType:
+          type: string
+        scopeKind:
+          type: string
+        scopeReference:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [granted, revoked]
+        policyDocumentRef:
+          type: string
+        policyVersion:
+          type: string
+        recordedAt:
+          type: string
+          format: date-time
+        effectiveAt:
+          type: string
+          format: date-time
+        revokedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ConsentInput:
+      type: object
+      required: [actionType, storyworldId]
+      properties:
+        actionType:
+          type: string
+        storyworldId:
+          type: integer
+        scopeKind:
+          type: string
+          default: storyworld
+        scopeReference:
+          type: string
+          nullable: true
+
     ContributionInput:
       type: object
       description: A narration submitted by the authenticated contributor.
@@ -1399,6 +1463,14 @@ components:
           description: >
             True when the scene was drafted with agent assistance. The disclosure is
             shown to readers alongside the contribution.
+        consentRecordId:
+          type: string
+          format: uuid
+          description: Active submit-branch consent for this storyworld.
+        aiAssistedConsentRecordId:
+          type: string
+          format: uuid
+          description: Active ai-assisted-draft consent when agentAssisted is true.
       required: [title, content, submissionId]
 
     StoryProvenance:

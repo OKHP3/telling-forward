@@ -101,6 +101,59 @@ export const ListMyContributionsResponse = zod.array(
 );
 
 /**
+ * @summary List the current user's active consent choices
+ */
+export const ListConsentRecordsResponseItem = zod.object({
+  id: zod.string().uuid(),
+  storyworldId: zod.number(),
+  actionType: zod.string(),
+  scopeKind: zod.string(),
+  scopeReference: zod.string().nullish(),
+  status: zod.enum(["granted", "revoked"]),
+  policyDocumentRef: zod.string(),
+  policyVersion: zod.string(),
+  recordedAt: zod.coerce.date(),
+  effectiveAt: zod.coerce.date(),
+  revokedAt: zod.coerce.date().nullish(),
+});
+export const ListConsentRecordsResponse = zod.array(
+  ListConsentRecordsResponseItem,
+);
+
+/**
+ * @summary Grant one versioned consent choice
+ */
+export const grantConsentBodyScopeKindDefault = `storyworld`;
+
+export const GrantConsentBody = zod.object({
+  actionType: zod.string(),
+  storyworldId: zod.number(),
+  scopeKind: zod.string().default(grantConsentBodyScopeKindDefault),
+  scopeReference: zod.string().nullish(),
+});
+
+/**
+ * @summary Revoke one active consent prospectively
+ */
+export const RevokeConsentParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const RevokeConsentResponse = zod.object({
+  id: zod.string().uuid(),
+  storyworldId: zod.number(),
+  actionType: zod.string(),
+  scopeKind: zod.string(),
+  scopeReference: zod.string().nullish(),
+  status: zod.enum(["granted", "revoked"]),
+  policyDocumentRef: zod.string(),
+  policyVersion: zod.string(),
+  recordedAt: zod.coerce.date(),
+  effectiveAt: zod.coerce.date(),
+  revokedAt: zod.coerce.date().nullish(),
+});
+
+/**
  * GitHub redirects here after the user authorizes the app. Links the GitHub account to the current platform account and redirects to the frontend.
 
  * @summary GitHub OAuth callback
@@ -325,6 +378,16 @@ export const CreateContributionBody = zod
       .describe(
         "True when the scene was drafted with agent assistance. The disclosure is shown to readers alongside the contribution.\n",
       ),
+    consentRecordId: zod
+      .string()
+      .uuid()
+      .optional()
+      .describe("Active submit-branch consent for this storyworld."),
+    aiAssistedConsentRecordId: zod
+      .string()
+      .uuid()
+      .optional()
+      .describe("Active ai-assisted-draft consent when agentAssisted is true."),
   })
   .describe("A narration submitted by the authenticated contributor.");
 

@@ -171,6 +171,35 @@ export interface MyContribution {
   status: MyContributionStatus;
 }
 
+export type ConsentRecordStatus =
+  (typeof ConsentRecordStatus)[keyof typeof ConsentRecordStatus];
+
+export const ConsentRecordStatus = {
+  granted: "granted",
+  revoked: "revoked",
+} as const;
+
+export interface ConsentRecord {
+  id: string;
+  storyworldId: number;
+  actionType: string;
+  scopeKind: string;
+  scopeReference?: string | null;
+  status: ConsentRecordStatus;
+  policyDocumentRef: string;
+  policyVersion: string;
+  recordedAt: string;
+  effectiveAt: string;
+  revokedAt?: string | null;
+}
+
+export interface ConsentInput {
+  actionType: string;
+  storyworldId: number;
+  scopeKind?: string;
+  scopeReference?: string | null;
+}
+
 /**
  * A narration submitted by the authenticated contributor.
  */
@@ -190,6 +219,10 @@ export interface ContributionInput {
   /** True when the scene was drafted with agent assistance. The disclosure is shown to readers alongside the contribution.
    */
   agentAssisted?: boolean;
+  /** Active submit-branch consent for this storyworld. */
+  consentRecordId?: string;
+  /** Active ai-assisted-draft consent when agentAssisted is true. */
+  aiAssistedConsentRecordId?: string;
 }
 
 /**

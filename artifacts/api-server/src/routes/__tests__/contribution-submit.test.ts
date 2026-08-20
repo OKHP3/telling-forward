@@ -48,15 +48,28 @@ const tables = vi.hoisted(() => ({
     displayName: "contributors.display_name",
     platformIdentity: "contributors.platform_identity",
   },
+  consentRecordsTable: {
+    id: "consent_records.id",
+    subjectUserId: "consent_records.subject_user_id",
+    storyworldId: "consent_records.storyworld_id",
+    actionType: "consent_records.action_type",
+    status: "consent_records.status",
+  },
   usersTable: { id: "users.id", displayName: "users.display_name", email: "users.email" },
 }));
 
 vi.mock("@workspace/db", () => {
   const db = {
     select: vi.fn(() => ({
-      from: vi.fn(() => ({
+      from: vi.fn((table) => ({
         where: vi.fn(() => ({
-          limit: vi.fn(() => Promise.resolve(state.selectResults.shift() ?? [])),
+          limit: vi.fn(() =>
+            Promise.resolve(
+              table === tables.consentRecordsTable
+                ? [{ id: "00000000-0000-0000-0000-000000000001" }]
+                : state.selectResults.shift() ?? [],
+            ),
+          ),
         })),
       })),
     })),
@@ -92,6 +105,7 @@ vi.mock("@workspace/db", () => {
     contributionsTable: tables.contributionsTable,
     contributionPathMembershipsTable: tables.contributionPathMembershipsTable,
     contributorsTable: tables.contributorsTable,
+    consentRecordsTable: tables.consentRecordsTable,
     usersTable: tables.usersTable,
     proposalsTable: {},
     provenanceRecordsTable: {},
@@ -130,6 +144,9 @@ vi.mock("@workspace/api-zod", () => ({
         content: value.content,
         submissionId: value.submissionId,
         agentAssisted: value.agentAssisted ?? false,
+        consentRecordId: value.consentRecordId ?? "00000000-0000-0000-0000-000000000001",
+        aiAssistedConsentRecordId:
+          value.aiAssistedConsentRecordId ?? "00000000-0000-0000-0000-000000000002",
       },
     }),
   },
@@ -140,6 +157,9 @@ vi.mock("@workspace/api-zod", () => ({
 }));
 
 vi.mock("@workspace/integrations-openai-ai-server", () => ({ openai: {} }));
+vi.mock("../consents", () => ({
+  hasActiveConsent: vi.fn().mockResolvedValue(true),
+}));
 
 import storyworldsRouter from "../storyworlds";
 
