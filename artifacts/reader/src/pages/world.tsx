@@ -1,4 +1,4 @@
-import { useGetStoryworld, getGetStoryworldQueryKey, useListStoryPaths, getListStoryPathsQueryKey, isCanonState, isAlternateState, isDevelopmentState } from "@workspace/api-client-react";
+import { useGetStoryworld, getGetStoryworldQueryKey, useListStoryPaths, getListStoryPathsQueryKey } from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
 import { ReaderLayout, resolveReaderTheme } from "@/components/layout";
 import { ArrowLeft } from "lucide-react";
@@ -8,6 +8,7 @@ import {
   retryReaderRouteQuery,
   shouldShowWorldNotFound,
 } from "@/lib/recovery-state";
+import { groupReaderPaths } from "@/lib/world-path-groups";
 
 export default function WorldLandingPage() {
   const params = useParams();
@@ -31,9 +32,7 @@ export default function WorldLandingPage() {
   });
   const theme = resolveReaderTheme(world?.readerTheme);
 
-  const canonPaths = paths?.filter(p => isCanonState(p.state)) || [];
-  const alternatePaths = paths?.filter(p => isAlternateState(p.state)) || [];
-  const otherPaths = paths?.filter(p => isDevelopmentState(p.state)) || [];
+  const { canonPaths, alternatePaths, otherPaths } = groupReaderPaths(paths);
   const showWorldNotFound = shouldShowWorldNotFound({
     hasValidWorldId,
     hasWorld: Boolean(world),
