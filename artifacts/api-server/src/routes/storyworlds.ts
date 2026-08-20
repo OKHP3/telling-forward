@@ -39,6 +39,24 @@ const CAPSULE_TYPE_LABELS = {
   event:     { name: "capsule:event",     color: "d4c5f9", description: "Event capsule" },
 } as const;
 
+// GitHub only supports exact label filtering, while the canonical contract
+// recognizes capsule types from every supported creation path, not just types
+// the Author App can create directly.
+const CANONICAL_CAPSULE_LABELS = [
+  "capsule:character",
+  "capsule:arc",
+  "capsule:event",
+  "capsule:arc-beat",
+  "capsule:planned-event",
+  "capsule:motif",
+] as const;
+
+const CAPSULE_LABEL = {
+  name: "capsule",
+  color: "5319e7",
+  description: "Storyworld capsule",
+} as const;
+
 type CapsuleType = keyof typeof CAPSULE_TYPE_LABELS;
 const CAPSULE_PREFIX = "capsule:";
 const ROLE_PREFIX    = "role:";
@@ -689,17 +707,29 @@ router.get("/:id/capsules", requireAuth, requireStewardForStoryworld, async (req
 
   try {
     const gh = getGitHubClient();
-    // Fetch all open issues and filter by capsule:* label in code.
-    // GitHub's label API requires exact label names; we can't filter by prefix.
-    const issues = await gh.listIssues({
-      owner: world.repoOwner,
-      repo:  world.repoName,
-      state: "open",
-    });
-    const capsuleIssues = issues.filter(i =>
-      i.labels.some(l => l.startsWith(CAPSULE_PREFIX)),
+    // GitHub cannot query a label prefix, so request each canonical capsule
+    // label directly. This retains MCP- and ingestion-created capsules without
+    // fetching unrelated repository issues or relying on the optional bare
+    // "capsule" grouping label.
+    const issueLists = await Promise.all(
+      CANONICAL_CAPSULE_LABELS.map((label) =>
+        gh.listIssues({
+          owner: world.repoOwner,
+          repo: world.repoName,
+          labels: [label],
+          state: "open",
+        }),
+      ),
     );
-    res.json(capsuleIssues.map(i => mapIssueToCapsule(i, id)));
+    const seenIssueNumbers = new Set<number>();
+    const issues = issueLists
+      .flat()
+      .filter((issue) => {
+        if (seenIssueNumbers.has(issue.number)) return false;
+        seenIssueNumbers.add(issue.number);
+        return true;
+      });
+    res.json(issues.map(i => mapIssueToCapsule(i, id)));
   } catch (err) {
     req.log.error({ err }, "listCapsules GitHub error");
     res.status(502).json({ error: "Failed to load capsules from GitHub" });
@@ -728,8 +758,11 @@ router.post("/:id/capsules", requireAuth, requireStewardForStoryworld, async (re
   try {
     const gh = getGitHubClient();
 
-    // Ensure type labels exist on the repo (idempotent)
-    const labelsToEnsure: EnsureLabelsEntry[] = Object.values(CAPSULE_TYPE_LABELS).map(l => ({
+    // Ensure the parent and type labels exist on the repo (idempotent).
+    const labelsToEnsure: EnsureLabelsEntry[] = [
+      CAPSULE_LABEL,
+      ...Object.values(CAPSULE_TYPE_LABELS),
+    ].map(l => ({
       name: l.name as string, color: l.color as string, description: l.description,
     }));
     if (roleTag && typeof roleTag === "string" && roleTag.trim()) {
@@ -741,7 +774,7 @@ router.post("/:id/capsules", requireAuth, requireStewardForStoryworld, async (re
     }
     await gh.ensureLabels(world.repoOwner, world.repoName, labelsToEnsure);
 
-    const labels: string[] = [typeLabel.name];
+    const labels: string[] = [CAPSULE_LABEL.name, typeLabel.name];
     if (roleTag && typeof roleTag === "string" && roleTag.trim()) {
       labels.push(`${ROLE_PREFIX}${roleTag.trim()}`);
     }

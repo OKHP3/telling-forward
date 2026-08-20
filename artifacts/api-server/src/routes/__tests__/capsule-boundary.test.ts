@@ -105,7 +105,7 @@ const CHARACTER_CAPSULE = {
   title: "The Wandering Cartographer",
   body: "A hero who maps unmapped worlds.",
   state: "open" as const,
-  labels: ["capsule:character", "role:protagonist"],
+  labels: ["capsule", "capsule:character", "role:protagonist"],
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
@@ -113,31 +113,31 @@ const CHARACTER_CAPSULE = {
 const ARC_CAPSULE = {
   ...CHARACTER_CAPSULE,
   number: 43,
-  labels: ["capsule:arc", "state:draft"],
+  labels: ["capsule", "capsule:arc", "state:draft"],
 };
 
 const EVENT_CAPSULE = {
   ...CHARACTER_CAPSULE,
   number: 44,
-  labels: ["capsule:event", "state:draft"],
+  labels: ["capsule", "capsule:event", "state:draft"],
 };
 
-const LEGACY_KIND_CAPSULE = {
+const ARC_BEAT_CAPSULE = {
   ...CHARACTER_CAPSULE,
   number: 45,
-  labels: ["capsule", "kind:character", "state:draft"],
+  labels: ["capsule:arc-beat", "state:draft"],
 };
 
-const KIND_ONLY_ISSUE = {
+const PLANNED_EVENT_CAPSULE = {
   ...CHARACTER_CAPSULE,
   number: 46,
-  labels: ["kind:character"],
+  labels: ["capsule:planned-event", "state:draft"],
 };
 
-const BARE_CAPSULE_ISSUE = {
+const MOTIF_CAPSULE = {
   ...CHARACTER_CAPSULE,
   number: 47,
-  labels: ["capsule"],
+  labels: ["capsule:motif", "state:draft"],
 };
 
 // ---------------------------------------------------------------------------
@@ -233,37 +233,121 @@ describe("GET /storyworlds/1/capsules — steward access control", () => {
   });
 
   it("returns 200 and capsule list for an authenticated steward", async () => {
-    mockGh.listIssues.mockResolvedValue([CHARACTER_CAPSULE]);
+    mockGh.listIssues.mockImplementation(({ labels }: { labels?: string[] }) =>
+      Promise.resolve(
+        labels?.[0] === "capsule:character" ? [CHARACTER_CAPSULE] : [],
+      ),
+    );
 
     const res = await request(app).get("/1/capsules");
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
     expect(res.body[0].type).toBe("character");
+    expect(mockGh.listIssues).toHaveBeenCalledTimes(6);
+    for (const label of [
+      "capsule:character",
+      "capsule:arc",
+      "capsule:event",
+      "capsule:arc-beat",
+      "capsule:planned-event",
+      "capsule:motif",
+    ]) {
+      expect(mockGh.listIssues).toHaveBeenCalledWith({
+        owner: "testowner",
+        repo: "testrepo",
+        labels: [label],
+        state: "open",
+      });
+    }
+    expect(mockGh.listIssues).not.toHaveBeenCalledWith(
+      expect.objectContaining({ labels: ["capsule"] }),
+    );
   });
 
-  it("includes API, MCP, and ingestion capsules through the shared capsule:* filter only", async () => {
-    // The API writer creates capsule:character, while both MCP and ingestion
-    // writers create the same typed contract for arc and event capsules.
-    mockGh.listIssues.mockResolvedValue([
-      CHARACTER_CAPSULE,
-      ARC_CAPSULE,
-      EVENT_CAPSULE,
-      LEGACY_KIND_CAPSULE,
-      KIND_ONLY_ISSUE,
-      BARE_CAPSULE_ISSUE,
-      NON_CAPSULE_ISSUE,
-    ]);
+  it("includes API, MCP, and ingestion capsules through exact GitHub label filters", async () => {
+    const issuesByLabel: Record<string, object[]> = {
+      "capsule:character": [CHARACTER_CAPSULE],
+      "capsule:arc": [ARC_CAPSULE],
+      "capsule:event": [EVENT_CAPSULE],
+      "capsule:arc-beat": [ARC_BEAT_CAPSULE],
+      "capsule:planned-event": [PLANNED_EVENT_CAPSULE],
+      "capsule:motif": [MOTIF_CAPSULE],
+    };
+    mockGh.listIssues.mockImplementation(({ labels }: { labels?: string[] }) =>
+      Promise.resolve(issuesByLabel[labels?.[0] ?? ""] ?? []),
+    );
 
     const res = await request(app).get("/1/capsules");
 
     expect(res.status).toBe(200);
-    expect(res.body.map((capsule: { id: number }) => capsule.id)).toEqual([42, 43, 44]);
-    expect(res.body.map((capsule: { type: string }) => capsule.type)).toEqual([
-      "character",
-      "arc",
-      "event",
+    expect(res.body.map((capsule: { id: number }) => capsule.id)).toEqual([
+      42, 43, 44, 45, 46, 47,
     ]);
+  });
+
+  it("returns a canonical issue once when it has multiple type labels", async () => {
+    const multiTypedCapsule = {
+      ...CHARACTER_CAPSULE,
+      labels: ["capsule:character", "capsule:arc"],
+    };
+    mockGh.listIssues.mockImplementation(({ labels }: { labels?: string[] }) =>
+      Promise.resolve(
+        labels?.[0] === "capsule:character" || labels?.[0] === "capsule:arc"
+          ? [multiTypedCapsule]
+          : [],
+      ),
+    );
+
+    const res = await request(app).get("/1/capsules");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].id).toBe(42);
+  });
+});
+
+describe("POST /storyworlds/1/capsules — capsule labels", () => {
+  let app: Express;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGh.ensureLabels.mockResolvedValue(undefined);
+    mockGh.createIssue.mockResolvedValue({
+      ...CHARACTER_CAPSULE,
+      title: "A New Capsule",
+      labels: ["capsule", "capsule:character", "role:protagonist"],
+    });
+    app = buildApp();
+  });
+
+  it("ensures and applies the parent capsule label with the type label", async () => {
+    const res = await request(app)
+      .post("/1/capsules")
+      .send({
+        title: "A New Capsule",
+        type: "character",
+        roleTag: "protagonist",
+      });
+
+    expect(res.status).toBe(201);
+    expect(mockGh.ensureLabels).toHaveBeenCalledWith(
+      "testowner",
+      "testrepo",
+      expect.arrayContaining([
+        expect.objectContaining({ name: "capsule" }),
+        expect.objectContaining({ name: "capsule:character" }),
+        expect.objectContaining({ name: "capsule:arc" }),
+        expect.objectContaining({ name: "capsule:event" }),
+      ]),
+    );
+    expect(mockGh.createIssue).toHaveBeenCalledWith({
+      owner: "testowner",
+      repo: "testrepo",
+      title: "A New Capsule",
+      body: undefined,
+      labels: ["capsule", "capsule:character", "role:protagonist"],
+    });
   });
 });
 
