@@ -60,6 +60,9 @@ export default function NarrateScreen() {
   const [selectedPathId, setSelectedPathId] = useState<number | null>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   const draftRestored = useRef(false);
+  // A ref guard closes the tap race before React has a chance to propagate
+  // submitMutation.isPending to the disabled button after a re-render.
+  const submissionInFlight = useRef(false);
 
   const { data: storyworlds, isLoading: storyworldsLoading } = useListStoryworlds({
     query: { enabled: showSubmitSheet, queryKey: getListStoryworldsQueryKey() },
@@ -178,6 +181,9 @@ export default function NarrateScreen() {
   }, [submissionId, persistDraft]);
 
   const handleSubmit = useCallback(() => {
+    if (submissionInFlight.current) {
+      return;
+    }
     if (
       selectedStoryworldId === null ||
       selectedPathId === null ||
@@ -192,6 +198,7 @@ export default function NarrateScreen() {
     const submittedPathId = selectedPathId;
     const submittedPath = paths?.find((path) => path.id === submittedPathId);
 
+    submissionInFlight.current = true;
     submitMutation.mutate(
       {
         id: submittedStoryworldId,
@@ -204,6 +211,7 @@ export default function NarrateScreen() {
       },
       {
         onSuccess: async () => {
+          submissionInFlight.current = false;
           await AsyncStorage.removeItem(DRAFT_KEY);
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           await queryClient.invalidateQueries({
@@ -238,6 +246,9 @@ export default function NarrateScreen() {
               { text: 'Done', style: 'cancel' },
             ],
           );
+        },
+        onError: () => {
+          submissionInFlight.current = false;
         },
       },
     );

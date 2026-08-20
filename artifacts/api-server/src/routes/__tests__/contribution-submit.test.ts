@@ -325,6 +325,45 @@ describe("POST /storyworlds/:id/paths/:pathId/contributions", () => {
     expect(state.createCommit).toHaveBeenCalledTimes(1);
   });
 
+  it("deduplicates a retry using the same submission id instead of creating another commit", async () => {
+    const submissionId = "660e8400-e29b-41d4-a716-446655440007";
+    const committed = {
+      sha: "same-submission-sha",
+      message: [
+        "Add narration",
+        "",
+        "Telling-Forward-Narration: v1",
+        `Submission-Id: ${submissionId}`,
+        "Platform-Attribution: platform:42",
+        `Title-B64: ${Buffer.from("One scene").toString("base64url")}`,
+        `Display-Name-B64: ${Buffer.from("River Writer").toString("base64url")}`,
+      ].join("\n"),
+      authorName: "Telling Forward",
+      authorEmail: "noreply@telling-forward.app",
+      authorLogin: null,
+      timestamp: "2026-08-19T12:00:00.000Z",
+    };
+    state.listCommitsForBranch.mockResolvedValue([committed]);
+    state.getFileContent.mockResolvedValue("# One scene\n\nSame scene.\n");
+
+    const first = await request(buildApp())
+      .post("/1/paths/7/contributions")
+      .send({ title: "One scene", content: "Same scene.", submissionId });
+    state.selectResults = [
+      [{ repoOwner: "telling-forward", repoName: "world" }],
+      [{ id: 7, storyworldId: 1, branchRef: "path/opening", state: "open" }],
+      [{ displayName: "River Writer" }],
+    ];
+    const second = await request(buildApp())
+      .post("/1/paths/7/contributions")
+      .send({ title: "One scene", content: "Same scene.", submissionId });
+
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    expect(state.createCommit).not.toHaveBeenCalled();
+    expect(state.listCommitsForBranch).toHaveBeenCalledTimes(2);
+  });
+
   it("rejects altered text when a submission id already has a committed narration", async () => {
     const submissionId = "660e8400-e29b-41d4-a716-446655440004";
     state.listCommitsForBranch.mockResolvedValue([
