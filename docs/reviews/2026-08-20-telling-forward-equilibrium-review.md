@@ -3,7 +3,7 @@
 ## Review identity
 
 - **Review date:** 2026-08-20
-- **Frozen checkout:** `675478eb39ee6b485b76801552180181944b5edd`
+- **Frozen checkout:** `50c60252b4a25db808634c65c427d40983c88356`
 - **Review protocol:** `equilibrium-v1`
 - **Review mode:** conditional five-role review, executed analytically in one agent context
 - **Decision question:** Does the documented Telling Forward vision accurately describe the implemented and demonstrably deployed product, and are the current project tasks sufficient to close the material gaps without overstating readiness?
@@ -46,7 +46,8 @@ The review passes only if:
 | E-09 | Current workspace logs: API, web, and mobile were serving; reader, archive, signal-noise, broadsheet, and scriptorium failed to start because their ports were already in use | live | Workspace process observation only; not production evidence |
 | E-10 | Project task snapshot on 2026-08-20: merged #28/#29, active #33/#89, pending security/performance/product tests, proposed #87 | live/analytical | Task state is coordination evidence, not runtime evidence |
 | E-11 | `git status` and revision inspection | live | Local checkout only; at freeze local `main` was one commit ahead of fetched GitHub ref |
-| E-12 | No production URL, deployment revision, production log, or external holdout was supplied in the review context | not-run | Production claims must remain deferred |
+| E-12 | Deployment service query on 2026-08-20 returned `success=true`, `isDeployed=false`, empty `primaryUrl`, empty `deploymentType`, `hasSuccessfulBuild=false`, and empty `visibility` | live | No published revision or production URL exists to smoke-test |
+| E-13 | Local-only smoke checks on 2026-08-20: `GET /api/healthz` → 200 `{"status":"ok"}`, Author App `/` → 200, Expo `/status` → 200 `packager-status:running` | live | Workspace evidence only; local success does not establish production availability |
 
 ## Capability matrix
 
@@ -64,6 +65,59 @@ The review passes only if:
 | Moderation baseline | Safety should precede public contribution | Design only in `moderation-tooling-design.md` | No private case/event system or queue | **Intentionally deferred** |
 | GitHub App service identity | Stage 1 decision, PAT is temporary pilot debt | Current code still uses the existing PAT-backed workspace pattern; no verified GitHub App implementation | No deployment evidence | **Open implementation gap** |
 | Durable reader/offline recovery | Readers should return and preserve readable work | Mobile cache and recovery code, related pending #83 | No restart/reconnect acceptance run in this review | **Pending evidence** |
+
+## Deployment identity and route smoke-test record
+
+### Deployment lookup
+
+The Replit deployment service was queried on **2026-08-20** rather than deriving
+a URL from workspace environment variables:
+
+| Field | Recorded value |
+|---|---|
+| `success` | `true` |
+| `isDeployed` | `false` |
+| `primaryUrl` | empty — no production URL |
+| `additionalUrls` | empty |
+| `deploymentType` | empty |
+| `hasSuccessfulBuild` | `false` |
+| `visibility` | empty |
+
+Therefore there is no published revision, public route, production log, or
+external URL to record for any configured artifact. This is classified as a
+**deployment failure/absence**, not an application-route failure: the
+deployment service answered authoritatively, but no deployment exists.
+
+### Configured artifact inventory
+
+The checkout contains nine registered artifacts with deployment manifests:
+
+| Artifact | Intended production route | Published revision | Production smoke result | Classification |
+|---|---|---|---|---|
+| API Server | `/api` | none | not run — no deployment URL | deployment absent |
+| Telling Forward | `/` | none | not run — no deployment URL | deployment absent |
+| Telling Forward Reader | `/reader/` | none | not run — no deployment URL | deployment absent |
+| Telling Forward Archive | `/archive/` | none | not run — no deployment URL | deployment absent |
+| Telling Forward Broadsheet | `/broadsheet/` | none | not run — no deployment URL | deployment absent |
+| Telling Forward Signal/Noise | `/signal-noise/` | none | not run — no deployment URL | deployment absent |
+| Telling Forward Scriptorium | `/scriptorium/` | none | not run — no deployment URL | deployment absent |
+| Telling Forward Mobile | `/mobile/` | none | not run — no deployment URL | deployment absent |
+| Canvas / mockup sandbox | `/__mockup` | none | not run — design-only service | deployment absent / design-only |
+
+### Local control checks
+
+These checks are retained only as workspace controls and are not promoted to
+production evidence:
+
+| Check | Result | Classification |
+|---|---|---|
+| `http://127.0.0.1:8080/api/healthz` | 200, `{"status":"ok"}` | local workflow healthy |
+| `http://127.0.0.1:22333/` | 200, Vite document | local workflow healthy |
+| `http://127.0.0.1:18115/status` | 200, `packager-status:running` | local workflow healthy |
+
+Representative contributor, steward, reader, and protected API route smoke
+tests remain **not-run in production** because no published URL exists. They
+must not be inferred from the local checks above.
 
 ## Claim and evidence ledger
 
@@ -166,8 +220,9 @@ triggered with these falsifiable objections:
 3. Workspace services provide live evidence for API, web, mobile, and mockup
    processes, but several configured reader surfaces failed to start because
    their ports were already occupied.
-4. No production URL, deployment revision, external smoke test, or live GitHub
-   repository exercise is in the frozen evidence set.
+4. The deployment service currently reports no published deployment, so no
+   production URL, revision, or external route smoke test exists; local API,
+   web, and mobile control checks do not close that gap.
 5. The current task queue contains useful implementation and regression work,
    but does not itself close documentation drift or establish production
    readiness.
@@ -220,8 +275,8 @@ triggered with these falsifiable objections:
 2. Run #83 for offline restart/reconnect behavior.
 3. Add a fixture-based GitHub-to-index rebuild and a mocked GitHub side-effect
    acceptance path for canon decisions.
-4. Obtain a real deployment revision and run protected route smoke tests against
-   the published surfaces.
+4. Publish a real revision, record its URL and build identity, and run protected
+   route smoke tests against the published surfaces.
 
 ### Priority 2: capability completion
 
@@ -262,8 +317,10 @@ evidence that is currently absent.
 - This is an analytical review performed by one agent context. The three
   initial roles share source context and are correlated evidence.
 - No protected or unseen holdout was available.
-- No production URL, deployment revision, external reader, device participant,
-  legal review, privacy review, or security specialist review was available.
+- The deployment service reported no active production deployment on
+  2026-08-20, so no production URL, revision, external reader, device
+  participant, legal review, privacy review, or security specialist review was
+  available.
 - Workspace workflow failures caused by occupied ports are a live operational
   observation, not a conclusion that the corresponding production artifacts
   are broken.
@@ -286,8 +343,11 @@ evidence that is currently absent.
 
 Telling Forward is directionally aligned with its mission and has a substantive
 Stage 0–1 implementation, especially around storyworld discovery, attribution,
-proposal review, canon safeguards, and reader/contributor surfaces. The project
-is not yet evidenced as a production-ready public contribution platform.
+proposal review, canon safeguards, and reader/contributor surfaces. The local
+API, web, and mobile control checks are healthy, but the deployment service
+currently reports no published deployment. The project is therefore not
+evidenced as a production-ready public contribution platform, and no public
+route claim should be made until a revision is published and externally tested.
 
 The strongest surviving objection is not a single broken feature. It is the
 combination of stale requirements, incomplete deployment evidence, and explicit

@@ -5,8 +5,8 @@
   "evaluation_status": "analytical",
   "artifact": {
     "path": "docs/reviews/2026-08-20-telling-forward-equilibrium-review.md",
-    "sha256": "8324f79a8978ab5f37b10d5a4dfe0caaa29aac38d82b8227220e3cd6ac3112df",
-    "version": "675478eb39ee6b485b76801552180181944b5edd"
+    "sha256": "dd65d9931b2f91fe593b5b8bec5030bfb6e5a7a0a99392aec1bc155416fbfd17",
+    "version": "50c60252b4a25db808634c65c427d40983c88356"
   },
   "decision_question": "Does the documented Telling Forward vision accurately describe the implemented and demonstrably deployed product, and are the current project tasks sufficient to close material gaps without overstating readiness?",
   "acceptance_criteria": [
@@ -79,12 +79,12 @@
     "decisive_evidence": [
       "Substantive API, web, mobile, sync, proposal, provenance, and test implementation exists in checkout.",
       "Requirements contain material stale claims about scaffold state, mobile, architecture, and backlog completion.",
-      "Workspace live observations do not establish production behavior.",
+      "The deployment service reports no published deployment; workspace live observations do not establish production behavior.",
       "Consent and moderation enforcement are explicitly unapproved.",
       "The task queue covers many implementation gaps but not one unified truthfulness/deployment evidence gate."
     ],
     "unresolved_items": [
-      "Production URL, revision, health checks, and route smoke tests.",
+      "A published production URL, revision, health checks, and route smoke tests.",
       "Live GitHub repository rebuild and side-effect acceptance.",
       "External participant and device acceptance evidence.",
       "GitHub App migration.",
@@ -96,7 +96,7 @@
   "limitations": [
     "Analytical review in one agent context with correlated role evidence.",
     "No protected or unseen holdout.",
-    "No production deployment evidence or specialist legal, privacy, or security review.",
+    "No production deployment exists; specialist legal, privacy, or security review is also absent.",
     "Workspace workflow failures are operational observations, not production conclusions."
   ],
   "follow_up": [
