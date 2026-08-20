@@ -303,6 +303,7 @@ export const CreateContributionParams = zod.object({
 });
 
 export const createContributionBodyAgentAssistedDefault = false;
+
 export const CreateContributionBody = zod
   .object({
     title: zod.string().min(1).describe("Human-facing title for the scene."),
@@ -369,7 +370,14 @@ export const ListCapsulesResponseItem = zod
       ),
     storyworldId: zod.number(),
     title: zod.string().describe("Capsule name as entered by the author."),
-    type: zod.enum(["character", "arc", "event"]),
+    type: zod.enum([
+      "character",
+      "arc",
+      "event",
+      "arc-beat",
+      "planned-event",
+      "motif",
+    ]),
     roleTag: zod
       .string()
       .nullish()
@@ -392,7 +400,7 @@ export const ListCapsulesResponseItem = zod
       ),
   })
   .describe(
-    "A concept capsule — an atomic story idea (character, arc, or planned event) backed by a GitHub Issue in the storyworld's repo.\n",
+    "A concept capsule backed by a GitHub Issue. The type preserves the producer's supported vocabulary across the Author App, MCP, and manuscript ingestion.\n",
   );
 export const ListCapsulesResponse = zod.array(ListCapsulesResponseItem);
 
@@ -459,7 +467,14 @@ export const UpdateCapsuleResponse = zod
       ),
     storyworldId: zod.number(),
     title: zod.string().describe("Capsule name as entered by the author."),
-    type: zod.enum(["character", "arc", "event"]),
+    type: zod.enum([
+      "character",
+      "arc",
+      "event",
+      "arc-beat",
+      "planned-event",
+      "motif",
+    ]),
     roleTag: zod
       .string()
       .nullish()
@@ -482,7 +497,7 @@ export const UpdateCapsuleResponse = zod
       ),
   })
   .describe(
-    "A concept capsule — an atomic story idea (character, arc, or planned event) backed by a GitHub Issue in the storyworld's repo.\n",
+    "A concept capsule backed by a GitHub Issue. The type preserves the producer's supported vocabulary across the Author App, MCP, and manuscript ingestion.\n",
   );
 
 /**

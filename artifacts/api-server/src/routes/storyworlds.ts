@@ -63,7 +63,13 @@ const CAPSULE_LABEL = {
   description: "Storyworld capsule",
 } as const;
 
-type CapsuleType = keyof typeof CAPSULE_TYPE_LABELS;
+type CapsuleType =
+  | "character"
+  | "arc"
+  | "event"
+  | "arc-beat"
+  | "planned-event"
+  | "motif";
 const CAPSULE_PREFIX = "capsule:";
 const ROLE_PREFIX    = "role:";
 const ROLE_COLOR     = "f9d0c4";
@@ -73,7 +79,14 @@ const RUNG_COLOR     = "566272";
 function mapIssueToCapsule(issue: GitHubIssue, storyworldId: number) {
   const typeRaw = issue.labels.find(l => l.startsWith(CAPSULE_PREFIX))
     ?.slice(CAPSULE_PREFIX.length) ?? "character";
-  const type: CapsuleType = (["character", "arc", "event"] as const).includes(typeRaw as CapsuleType)
+  const type: CapsuleType = ([
+    "character",
+    "arc",
+    "event",
+    "arc-beat",
+    "planned-event",
+    "motif",
+  ] as const).includes(typeRaw as CapsuleType)
     ? (typeRaw as CapsuleType)
     : "character";
   const roleRaw = issue.labels.find(l => l.startsWith(ROLE_PREFIX));

@@ -7,6 +7,7 @@
     "hello": "tsx ./src/hello.ts",
     "test:reader-recovery": "tsx --test ./src/reader-recovery.test.ts",
     "test:reader-world-paths": "tsx --test ./src/reader-world-paths.test.ts",
+    "test:concept-board-capsule-labels": "tsx --test ./src/concept-board-capsule-labels.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

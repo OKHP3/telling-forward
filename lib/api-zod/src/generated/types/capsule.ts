@@ -8,7 +8,7 @@
 import type { CapsuleType } from "./capsuleType";
 
 /**
- * A concept capsule — an atomic story idea (character, arc, or planned event) backed by a GitHub Issue in the storyworld's repo.
+ * A concept capsule backed by a GitHub Issue. The type preserves the producer's supported vocabulary across the Author App, MCP, and manuscript ingestion.
 
  */
 export interface Capsule {

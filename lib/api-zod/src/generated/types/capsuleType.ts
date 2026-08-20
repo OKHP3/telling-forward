@@ -12,4 +12,7 @@ export const CapsuleType = {
   character: "character",
   arc: "arc",
   event: "event",
+  "arc-beat": "arc-beat",
+  "planned-event": "planned-event",
+  motif: "motif",
 } as const;

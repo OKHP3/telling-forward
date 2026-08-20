@@ -325,6 +325,14 @@ describe("GET /storyworlds/1/capsules — authenticated contributor access", () 
     expect(res.body.map((capsule: { id: number }) => capsule.id)).toEqual([
       42, 43, 44, 45, 46, 47,
     ]);
+    expect(res.body.map((capsule: { type: string }) => capsule.type)).toEqual([
+      "character",
+      "arc",
+      "event",
+      "arc-beat",
+      "planned-event",
+      "motif",
+    ]);
   });
 
   it("returns a canonical issue once when it has multiple type labels", async () => {

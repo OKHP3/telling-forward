@@ -44,6 +44,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import {
+  CAPSULE_TYPE_LABELS,
+  type ConceptBoardCapsuleType,
+} from "@/lib/capsule-type-labels";
 
 // ---------------------------------------------------------------------------
 // Type metadata
@@ -52,33 +56,55 @@ import { useToast } from "@/hooks/use-toast";
 const TYPE_META = {
   character: {
     icon:  User,
-    label: "Character",
+    label: CAPSULE_TYPE_LABELS.character,
     card:  "border-l-blue-400 dark:border-l-blue-500",
     badge: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-300 dark:bg-blue-950/40 dark:border-blue-800",
     dot:   "bg-blue-400",
   },
   arc: {
     icon:  Flag,
-    label: "Arc",
+    label: CAPSULE_TYPE_LABELS.arc,
     card:  "border-l-amber-400 dark:border-l-amber-500",
     badge: "text-amber-800 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-950/40 dark:border-amber-800",
     dot:   "bg-amber-400",
   },
   event: {
     icon:  Zap,
-    label: "Event",
+    label: CAPSULE_TYPE_LABELS.event,
     card:  "border-l-purple-400 dark:border-l-purple-500",
     badge: "text-purple-700 bg-purple-50 border-purple-200 dark:text-purple-400 dark:bg-purple-950/40 dark:border-purple-800",
     dot:   "bg-purple-400",
   },
+  "arc-beat": {
+    icon:  Flag,
+    label: CAPSULE_TYPE_LABELS["arc-beat"],
+    card:  "border-l-orange-400 dark:border-l-orange-500",
+    badge: "text-orange-800 bg-orange-50 border-orange-200 dark:text-orange-300 dark:bg-orange-950/40 dark:border-orange-800",
+    dot:   "bg-orange-400",
+  },
+  "planned-event": {
+    icon:  Zap,
+    label: CAPSULE_TYPE_LABELS["planned-event"],
+    card:  "border-l-violet-400 dark:border-l-violet-500",
+    badge: "text-violet-800 bg-violet-50 border-violet-200 dark:text-violet-300 dark:bg-violet-950/40 dark:border-violet-800",
+    dot:   "bg-violet-400",
+  },
+  motif: {
+    icon:  Sparkles,
+    label: CAPSULE_TYPE_LABELS.motif,
+    card:  "border-l-emerald-400 dark:border-l-emerald-500",
+    badge: "text-emerald-800 bg-emerald-50 border-emerald-200 dark:text-emerald-300 dark:bg-emerald-950/40 dark:border-emerald-800",
+    dot:   "bg-emerald-400",
+  },
 } as const;
 
-type CapsuleType = keyof typeof TYPE_META;
+type CapsuleType = ConceptBoardCapsuleType;
+type CreatableCapsuleType = "character" | "arc" | "event";
 
 // Proposal returned by Invert / Disrupt before the author accepts it to the board
 interface CapsuleProposal {
   title:        string;
-  type:         CapsuleType;
+  type:         CreatableCapsuleType;
   epiphanyNote: string;
 }
 
@@ -652,7 +678,7 @@ function CreateCapsuleCard({
   const { toast } = useToast();
   const qc        = useQueryClient();
   const [title,   setTitle]   = useState("");
-  const [type,    setType]    = useState<CapsuleType>("character");
+  const [type,    setType]    = useState<CreatableCapsuleType>("character");
   const [roleTag, setRoleTag] = useState("");
   const [note,    setNote]    = useState("");
 
@@ -719,7 +745,7 @@ function CreateCapsuleCard({
             Type <span className="text-destructive">*</span>
           </label>
           <div className="grid grid-cols-3 gap-1.5">
-            {(["character", "arc", "event"] as CapsuleType[]).map(t => {
+            {(["character", "arc", "event"] as CreatableCapsuleType[]).map(t => {
               const m    = TYPE_META[t];
               const Icon = m.icon;
               return (
@@ -872,6 +898,9 @@ export function ConceptBoard({
     character: capsules.filter(c => c.type === "character").length,
     arc:       capsules.filter(c => c.type === "arc").length,
     event:     capsules.filter(c => c.type === "event").length,
+    "arc-beat": capsules.filter(c => c.type === "arc-beat").length,
+    "planned-event": capsules.filter(c => c.type === "planned-event").length,
+    motif: capsules.filter(c => c.type === "motif").length,
   };
 
   function handleToggle(id: number) {
@@ -919,7 +948,7 @@ export function ConceptBoard({
         <FilterPill active={filterType === "all"} onClick={() => setFilterType("all")}>
           All ({counts.all})
         </FilterPill>
-        {(["character", "arc", "event"] as CapsuleType[]).map(t => (
+        {(Object.keys(TYPE_META) as CapsuleType[]).map(t => (
           <FilterPill key={t} active={filterType === t} onClick={() => setFilterType(t)}>
             {TYPE_META[t].label} ({counts[t]})
           </FilterPill>

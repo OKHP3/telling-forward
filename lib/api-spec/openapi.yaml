@@ -1396,8 +1396,9 @@ components:
     Capsule:
       type: object
       description: >
-        A concept capsule — an atomic story idea (character, arc, or planned event)
-        backed by a GitHub Issue in the storyworld's repo.
+        A concept capsule backed by a GitHub Issue. The type preserves the
+        producer's supported vocabulary across the Author App, MCP, and
+        manuscript ingestion.
       properties:
         id:
           type: integer
@@ -1409,7 +1410,7 @@ components:
           description: Capsule name as entered by the author.
         type:
           type: string
-          enum: [character, arc, event]
+          enum: [character, arc, event, arc-beat, planned-event, motif]
         roleTag:
           type: string
           nullable: true
