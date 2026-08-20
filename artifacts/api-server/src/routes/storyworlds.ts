@@ -330,8 +330,8 @@ router.post(
     }
 
     const { id: storyworldId, pathId } = params.data;
-    const { title, content, submissionId } = body.data;
 
+    const { title, content, submissionId, agentAssisted = false } = body.data;
     try {
       const [world] = await db
         .select({
@@ -494,7 +494,7 @@ router.post(
             contributorId: contributor.id,
             title,
             summary: content,
-            agentAssisted: false,
+            agentAssisted,
           })
           .onConflictDoUpdate({
             target: [
@@ -505,7 +505,7 @@ router.post(
               contributorId: contributor.id,
               title,
               summary: content,
-              agentAssisted: false,
+              agentAssisted,
             },
           })
           .returning();

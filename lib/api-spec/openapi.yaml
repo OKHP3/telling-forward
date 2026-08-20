@@ -1327,6 +1327,12 @@ components:
           type: string
           format: uuid
           description: Client-generated idempotency key retained while retrying this narration.
+        agentAssisted:
+          type: boolean
+          default: false
+          description: >
+            True when the scene was drafted with agent assistance. The disclosure is
+            shown to readers alongside the contribution.
       required: [title, content, submissionId]
 
     StoryProvenance:

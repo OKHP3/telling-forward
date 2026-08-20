@@ -302,6 +302,7 @@ export const CreateContributionParams = zod.object({
   pathId: zod.coerce.number(),
 });
 
+export const createContributionBodyAgentAssistedDefault = false;
 export const CreateContributionBody = zod
   .object({
     title: zod.string().min(1).describe("Human-facing title for the scene."),
@@ -311,6 +312,12 @@ export const CreateContributionBody = zod
       .uuid()
       .describe(
         "Client-generated idempotency key retained while retrying this narration.",
+      ),
+    agentAssisted: zod
+      .boolean()
+      .default(createContributionBodyAgentAssistedDefault)
+      .describe(
+        "True when the scene was drafted with agent assistance. The disclosure is shown to readers alongside the contribution.\n",
       ),
   })
   .describe("A narration submitted by the authenticated contributor.");

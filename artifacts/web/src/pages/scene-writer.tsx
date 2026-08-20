@@ -2,17 +2,28 @@
  * Scene Writer — /worlds/:worldId/scene-writer/:capsuleId
  *
  * Maturation (PME): streams an agent-assisted scene draft from a capsule via SSE,
- * then lets the author shape the prose before copying it into a contribution.
+ * then lets the author shape the prose before submitting it as a contribution.
  */
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  type ChangeEvent,
+} from "react";
 import { Link, useParams } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useListCapsules,
   getListCapsulesQueryKey,
   useGetStoryworld,
   getGetStoryworldQueryKey,
+  useListStoryPaths,
+  getListStoryPathsQueryKey,
+  useCreateContribution,
+  getListContributionsQueryKey,
+  getListStoryworldProposalsQueryKey,
 } from "@workspace/api-client-react";
 import { apiUrl } from "@/lib/api-url";
 import {
@@ -25,6 +36,8 @@ import {
   Flag,
   Zap,
   StopCircle,
+  Send,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,19 +47,22 @@ import { cn } from "@/lib/utils";
 
 const TYPE_META = {
   character: {
-    icon:  User,
+    icon: User,
     label: "Character",
-    badge: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-300 dark:bg-blue-950/40 dark:border-blue-800",
+    badge:
+      "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-300 dark:bg-blue-950/40 dark:border-blue-800",
   },
   arc: {
-    icon:  Flag,
+    icon: Flag,
     label: "Arc",
-    badge: "text-amber-800 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-950/40 dark:border-amber-800",
+    badge:
+      "text-amber-800 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-950/40 dark:border-amber-800",
   },
   event: {
-    icon:  Zap,
+    icon: Zap,
     label: "Event",
-    badge: "text-purple-700 bg-purple-50 border-purple-200 dark:text-purple-400 dark:bg-purple-950/40 dark:border-purple-800",
+    badge:
+      "text-purple-700 bg-purple-50 border-purple-200 dark:text-purple-400 dark:bg-purple-950/40 dark:border-purple-800",
   },
 } as const;
 
@@ -68,22 +84,29 @@ function MaturityRung({ value }: { value: number | null | undefined }) {
 // ---------------------------------------------------------------------------
 
 export function SceneWriter() {
-  const params   = useParams();
-  const worldId  = parseInt(params.worldId  ?? "0", 10);
+  const params = useParams();
+  const worldId = parseInt(params.worldId ?? "0", 10);
   const capsuleId = parseInt(params.capsuleId ?? "0", 10);
 
   const { data: world } = useGetStoryworld(worldId, {
-    query: { enabled: !!worldId, queryKey: getGetStoryworldQueryKey(worldId) },
-  });
-
-  const { data: capsules, isLoading: isLoadingCapsules } = useListCapsules(worldId, {
     query: {
       enabled: !!worldId,
-      queryKey: getListCapsulesQueryKey(worldId),
-      staleTime: 30_000,
+      queryKey: getGetStoryworldQueryKey(worldId),
     },
   });
-  const capsule = capsules?.find(c => c.id === capsuleId) ?? null;
+
+  const { data: capsules, isLoading: isLoadingCapsules } = useListCapsules(
+    worldId,
+    {
+      query: {
+        enabled: !!worldId,
+        queryKey: getListCapsulesQueryKey(worldId),
+        staleTime: 30_000,
+      },
+    },
+  );
+  const capsule = capsules?.find((item) => item.id === capsuleId) ?? null;
+
   const capsuleAccessQuery = useQuery({
     queryKey: ["storyworld-capsule-access", worldId],
     enabled: !!worldId,
@@ -104,12 +127,33 @@ export function SceneWriter() {
   });
   const isSteward = capsuleAccessQuery.data?.isSteward === true;
 
+  const { data: paths, isLoading: isLoadingPaths } = useListStoryPaths(
+    worldId,
+    {
+      query: {
+        enabled: !!worldId,
+        queryKey: getListStoryPathsQueryKey(worldId),
+        staleTime: 30_000,
+      },
+    },
+  );
+
   const [sceneTitle, setSceneTitle] = useState("");
-  const [draft, setDraft]               = useState("");
+  const [draft, setDraft] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
-  const [copied, setCopied]             = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [selectedPathId, setSelectedPathId] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submittedContributionId, setSubmittedContributionId] = useState<
+    number | null
+  >(null);
   const abortRef = useRef<AbortController | null>(null);
+  const submissionIdRef = useRef<string | null>(null);
+  const queryClient = useQueryClient();
+  const createContribution = useCreateContribution();
+
+  const openPaths = paths?.filter((path) => path.state === "open") ?? [];
 
   useEffect(() => {
     if (!capsule) return;
@@ -118,37 +162,44 @@ export function SceneWriter() {
         ? new URLSearchParams(window.location.search).get("title")
         : null;
     setSceneTitle(requestedTitle?.trim() || capsule.title);
-  }, [capsule?.id]);
+  }, [capsule?.id, capsule?.title]);
 
   const handleGenerate = useCallback(async () => {
-    if (!capsule || isGenerating) return;
+    if (!capsule || !isSteward || isGenerating) return;
     setIsGenerating(true);
     setGenerateError(null);
     setDraft("");
+    setSubmitError(null);
+    setSubmittedContributionId(null);
+    submissionIdRef.current = null;
 
     abortRef.current?.abort();
     abortRef.current = new AbortController();
 
     try {
-      const res = await fetch(apiUrl(`/api/storyworlds/${worldId}/capsules/${capsuleId}/promote`), {
-        method: "POST",
-        credentials: "include",
-        signal: abortRef.current.signal,
-      });
+      const response = await fetch(
+        apiUrl(
+          `/api/storyworlds/${worldId}/capsules/${capsuleId}/promote`,
+        ),
+        {
+          method: "POST",
+          credentials: "include",
+          signal: abortRef.current.signal,
+        },
+      );
 
-      if (!res.ok || !res.body) {
+      if (!response.ok || !response.body) {
         setGenerateError(
-          res.status === 403
+          response.status === 403
             ? "You need steward access to use the Scene Writer."
             : "Generation failed — the AI layer may be unavailable. Try again.",
         );
-        setIsGenerating(false);
         return;
       }
 
-      const reader  = res.body.getReader();
+      const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let buffer    = "";
+      let buffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -166,20 +217,22 @@ export function SceneWriter() {
               done?: boolean;
               error?: string;
             };
-            if (data.content) setDraft(prev => prev + data.content);
-            if (data.done)    setIsGenerating(false);
-            if (data.error)   setGenerateError(data.error);
-          } catch { /* ignore malformed SSE */ }
+            if (data.content) setDraft((previous) => previous + data.content);
+            if (data.done) setIsGenerating(false);
+            if (data.error) setGenerateError(data.error);
+          } catch {
+            // Ignore malformed SSE messages.
+          }
         }
       }
-    } catch (err) {
-      if ((err as Error).name !== "AbortError") {
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
         setGenerateError("Generation was interrupted. Please try again.");
       }
     } finally {
       setIsGenerating(false);
     }
-  }, [capsule, capsuleId, isGenerating, worldId]);
+  }, [capsule, capsuleId, isGenerating, isSteward, worldId]);
 
   function handleStop() {
     abortRef.current?.abort();
@@ -193,7 +246,69 @@ export function SceneWriter() {
     });
   }
 
-  // ── Loading / not-found guards ───────────────────────────────────────────
+  function resetSubmissionState() {
+    setSubmitError(null);
+    setSubmittedContributionId(null);
+    submissionIdRef.current = null;
+  }
+
+  function handleDraftChange(event: ChangeEvent<HTMLTextAreaElement>) {
+    setDraft(event.target.value);
+    resetSubmissionState();
+  }
+
+  function handleSceneTitleChange(event: ChangeEvent<HTMLInputElement>) {
+    setSceneTitle(event.target.value);
+    resetSubmissionState();
+  }
+
+  async function handleSubmitContribution() {
+    const content = draft.trim();
+    const pathId = Number(selectedPathId);
+    if (
+      !isSteward ||
+      !content ||
+      !capsule ||
+      !Number.isSafeInteger(pathId) ||
+      pathId <= 0 ||
+      createContribution.isPending ||
+      submittedContributionId !== null
+    ) {
+      return;
+    }
+
+    setSubmitError(null);
+    submissionIdRef.current ??= crypto.randomUUID();
+
+    try {
+      const contribution = await createContribution.mutateAsync({
+        id: worldId,
+        pathId,
+        data: {
+          title: sceneTitle.trim() || capsule.title,
+          content,
+          submissionId: submissionIdRef.current,
+          agentAssisted: true,
+        },
+      });
+      setSubmittedContributionId(contribution.id);
+      void queryClient.invalidateQueries({
+        queryKey: getListContributionsQueryKey(worldId, pathId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: getListStoryworldProposalsQueryKey(worldId),
+      });
+    } catch (error) {
+      const status = (error as { status?: number }).status;
+      setSubmitError(
+        status === 409
+          ? "That path is no longer open for contributions. Choose another path and try again."
+          : status === 401
+            ? "You need to be signed in to submit this scene."
+            : "Couldn't submit this scene. Please try again.",
+      );
+    }
+  }
 
   if (isLoadingCapsules) {
     return (
@@ -218,12 +333,12 @@ export function SceneWriter() {
     );
   }
 
-  const meta     = TYPE_META[capsule.type as keyof typeof TYPE_META] ?? TYPE_META.character;
+  const meta =
+    TYPE_META[capsule.type as keyof typeof TYPE_META] ?? TYPE_META.character;
   const TypeIcon = meta.icon;
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
-      {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link
           href={`/worlds/${worldId}`}
@@ -239,14 +354,17 @@ export function SceneWriter() {
           Concept Board
         </Link>
         <span aria-hidden>/</span>
-        <span className="text-foreground truncate max-w-[16rem]">{capsule.title}</span>
+        <span className="text-foreground truncate max-w-[16rem]">
+          {capsule.title}
+        </span>
       </nav>
 
-      {/* Header */}
       <header className="space-y-1.5">
         <div className="flex items-center gap-2.5">
           <Sparkles className="h-6 w-6 text-primary shrink-0" />
-          <h1 className="font-serif text-3xl font-medium text-foreground">Scene Writer</h1>
+          <h1 className="font-serif text-3xl font-medium text-foreground">
+            Scene Writer
+          </h1>
         </div>
         <p className="text-sm text-muted-foreground">
           {isSteward
@@ -265,24 +383,23 @@ export function SceneWriter() {
         <input
           id="scene-title"
           value={sceneTitle}
-          onChange={e => setSceneTitle(e.target.value)}
+          onChange={handleSceneTitleChange}
           placeholder="Give this scene a title"
           className="w-full h-11 rounded-lg border border-input bg-background px-3.5 text-base font-serif text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring"
           data-testid="input-scene-title"
         />
       </div>
 
-      {/* Body — two-column on large screens */}
       <div className="grid lg:grid-cols-[280px_1fr] gap-6">
-
-        {/* ── Capsule reference card ──────────────────────────────────── */}
         <aside className="space-y-4">
           <div className="rounded-xl border border-border/60 bg-card p-4 space-y-3.5">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className={cn(
-                "inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-md border font-medium",
-                meta.badge,
-              )}>
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-md border font-medium",
+                  meta.badge,
+                )}
+              >
                 <TypeIcon className="h-3.5 w-3.5" />
                 {meta.label}
               </span>
@@ -324,9 +441,7 @@ export function SceneWriter() {
           </Link>
         </aside>
 
-        {/* ── Draft area ──────────────────────────────────────────────── */}
         <div className="space-y-3">
-          {/* Toolbar */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2">
               {!isGenerating ? (
@@ -380,16 +495,17 @@ export function SceneWriter() {
             <p className="text-sm text-destructive">{generateError}</p>
           )}
 
-          {/* Draft textarea */}
           <div className="relative">
             <textarea
               value={draft}
-              onChange={e => setDraft(e.target.value)}
-              placeholder={isGenerating
-                ? ""
-                : isSteward
-                  ? 'Click "Generate draft" to get an agent-assisted opening scene, then shape it into your own prose.'
-                  : "Write the opening scene inspired by this prompt."}
+              onChange={handleDraftChange}
+              placeholder={
+                isGenerating
+                  ? ""
+                  : isSteward
+                    ? 'Click "Generate draft" to get an agent-assisted opening scene, then shape it into your own prose.'
+                    : "Write the opening scene inspired by this prompt."
+              }
               className={cn(
                 "w-full min-h-[480px] rounded-xl border border-input bg-background px-5 py-4",
                 "text-sm text-foreground leading-relaxed font-serif",
@@ -397,7 +513,7 @@ export function SceneWriter() {
                 "resize-y transition-colors",
                 isGenerating && "border-primary/30 bg-primary/[0.02]",
               )}
-              readOnly={isGenerating}
+              readOnly={isGenerating || createContribution.isPending}
             />
             {isGenerating && (
               <span className="absolute bottom-4 right-4 text-xs text-primary/50 animate-pulse select-none">
@@ -408,9 +524,112 @@ export function SceneWriter() {
 
           <p className="text-xs text-muted-foreground">
             {isSteward
-              ? "This draft is raw material — edit it freely. When you're ready to submit prose as a path contribution, use the submission action below."
+              ? "This draft is raw material — edit it freely before sharing it with a story path."
               : "This scene is your draft. Keep shaping it here, then use the submission flow when you're ready."}
           </p>
+
+          {isSteward && draft.trim() && (
+            <section className="rounded-xl border border-primary/20 bg-primary/[0.035] p-5 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 rounded-full bg-primary/10 p-2 text-primary">
+                  {submittedContributionId !== null ? (
+                    <CheckCircle2 className="h-4 w-4" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <h2 className="font-serif text-lg font-medium text-foreground">
+                    {submittedContributionId !== null
+                      ? "Contribution submitted"
+                      : "Ready to share this scene?"}
+                  </h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {submittedContributionId !== null
+                      ? "The scene is now indexed on the selected story path and available in the steward panel."
+                      : "Choose an open story path. Your edited prose will be saved there as a contribution."}
+                  </p>
+                </div>
+              </div>
+
+              {submittedContributionId !== null ? (
+                <Link
+                  href={`/worlds/${worldId}/steward`}
+                  className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+                  data-testid="link-view-submitted-contribution"
+                >
+                  View in Steward Panel
+                  <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
+                </Link>
+              ) : (
+                <div className="space-y-4">
+                  <label className="space-y-1.5 text-sm block">
+                    <span className="font-medium text-foreground">
+                      Story path
+                    </span>
+                    <select
+                      value={selectedPathId}
+                      onChange={(event) => setSelectedPathId(event.target.value)}
+                      disabled={isLoadingPaths || openPaths.length === 0}
+                      className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                      data-testid="select-contribution-path"
+                    >
+                      <option value="">
+                        {isLoadingPaths
+                          ? "Loading open paths…"
+                          : "Choose an open story path"}
+                      </option>
+                      {openPaths.map((path) => (
+                        <option key={path.id} value={path.id}>
+                          {path.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">
+                      {openPaths.length === 0 && !isLoadingPaths
+                        ? "There are no open story paths available for this scene yet."
+                        : "AI assistance will be disclosed with this contribution."}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleSubmitContribution}
+                      disabled={
+                        isGenerating ||
+                        isLoadingPaths ||
+                        !selectedPathId ||
+                        openPaths.length === 0 ||
+                        createContribution.isPending
+                      }
+                      className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                      data-testid="btn-submit-contribution"
+                    >
+                      {createContribution.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Send className="h-3.5 w-3.5" />
+                      )}
+                      {createContribution.isPending
+                        ? "Submitting…"
+                        : "Submit as contribution"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {submitError && (
+                <p
+                  className="text-sm text-destructive"
+                  role="alert"
+                  data-testid="text-submit-error"
+                >
+                  {submitError}
+                </p>
+              )}
+            </section>
+          )}
         </div>
       </div>
     </div>

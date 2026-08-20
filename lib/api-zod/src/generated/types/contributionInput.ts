@@ -22,4 +22,7 @@ export interface ContributionInput {
   content: string;
   /** Client-generated idempotency key retained while retrying this narration. */
   submissionId: string;
+  /** True when the scene was drafted with agent assistance. The disclosure is shown to readers alongside the contribution.
+   */
+  agentAssisted?: boolean;
 }

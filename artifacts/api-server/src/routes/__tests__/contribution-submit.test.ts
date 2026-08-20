@@ -20,6 +20,7 @@ const state = vi.hoisted(() => ({
   listCommitsForBranch: vi.fn(),
   getFileContent: vi.fn(),
   transaction: vi.fn(),
+  insertValues: [] as Array<{ table: unknown; values: unknown }>,
 }));
 
 const tables = vi.hoisted(() => ({
@@ -70,11 +71,14 @@ vi.mock("@workspace/db", () => {
         ),
       );
       return {
-        values: vi.fn(() => ({
-          returning,
-          onConflictDoNothing: vi.fn(() => Promise.resolve()),
-          onConflictDoUpdate: vi.fn(() => ({ returning })),
-        })),
+        values: vi.fn((values) => {
+          state.insertValues.push({ table, values });
+          return {
+            returning,
+            onConflictDoNothing: vi.fn(() => Promise.resolve()),
+            onConflictDoUpdate: vi.fn(() => ({ returning })),
+          };
+        }),
       };
     }),
     transaction: state.transaction,
@@ -125,6 +129,7 @@ vi.mock("@workspace/api-zod", () => ({
         title: value.title,
         content: value.content,
         submissionId: value.submissionId,
+        agentAssisted: value.agentAssisted ?? false,
       },
     }),
   },
@@ -162,6 +167,7 @@ describe("POST /storyworlds/:id/paths/:pathId/contributions", () => {
     state.listCommitsForBranch.mockReset();
     state.getFileContent.mockReset();
     state.transaction.mockReset();
+    state.insertValues = [];
     state.createBranch.mockResolvedValue(undefined);
     state.createCommit.mockResolvedValue("abc123");
     state.listCommitsForBranch.mockResolvedValue([]);
@@ -216,6 +222,25 @@ describe("POST /storyworlds/:id/paths/:pathId/contributions", () => {
       summary: "The door opened.",
       contributorDisplayName: "River Writer",
     });
+  });
+
+  it("preserves the agent-assistance disclosure in the indexed contribution", async () => {
+    const response = await request(buildApp())
+      .post("/1/paths/7/contributions")
+      .send({
+        title: "A drafted scene",
+        content: "The lantern answered first.",
+        submissionId: "660e8400-e29b-41d4-a716-446655440006",
+        agentAssisted: true,
+      });
+
+    expect(response.status).toBe(201);
+    expect(state.insertValues).toContainEqual(
+      expect.objectContaining({
+        table: tables.contributionsTable,
+        values: expect.objectContaining({ agentAssisted: true }),
+      }),
+    );
   });
 
   it("rejects a path that is not open before touching GitHub", async () => {
