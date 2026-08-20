@@ -324,6 +324,7 @@ Directly answering the "Vite, Tailwind, TypeScript, Playwright" question: here's
 
 - **Confirmed:** Replit autoscale deployment (`.replit`), Node 24, `pnpm store prune` as a post-build step, ports 8080 (app) and 8081→80 (external).
 - **Confirmed:** GitHub sync is currently one-directional (workspace → GitHub via post-commit hook). The read/write GitHub integration in Section 6 is new infrastructure, not an extension of that hook.
+- **Confirmed:** `.github/workflows/deploy-pages.yml` builds and publishes `artifacts/web` to `https://okhp3.github.io/telling-forward/` with a Vite subpath base and SPA fallback. GitHub Pages hosts the client artifact only; API-backed behavior remains dependent on the optional `TELLING_FORWARD_API_BASE_URL` repository variable.
 - **Recommended, optional:** if the public discovery SPA (Section 5, 9) gets built, deploy it independently via GitHub Actions to GitHub Pages, following `okhp3-vite-github-pages` exactly — client-only, no secrets in the build, base-path and router basename handled per that skill's contract. Keep it decoupled from the Replit-hosted API/DB deployment; it should degrade to "browse cached public data" if the main platform is down.
 
 ---

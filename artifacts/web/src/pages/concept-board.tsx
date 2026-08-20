@@ -23,6 +23,7 @@ import {
   useUpdateCapsule,
   useDeleteCapsule,
 } from "@workspace/api-client-react";
+import { apiUrl } from "@/lib/api-url";
 import type { Capsule } from "@workspace/api-client-react";
 import {
   ArrowLeft,
@@ -262,7 +263,7 @@ function CapsuleCard({
     setActionError(null);
     setPendingProposal(null);
     try {
-      const res = await fetch(`/api/storyworlds/${worldId}/capsules/${capsule.id}/invert`, {
+      const res = await fetch(apiUrl(`/api/storyworlds/${worldId}/capsules/${capsule.id}/invert`), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -286,7 +287,7 @@ function CapsuleCard({
     setActionError(null);
     setPendingProposal(null);
     try {
-      const res = await fetch(`/api/storyworlds/${worldId}/capsules/${capsule.id}/disrupt`, {
+      const res = await fetch(apiUrl(`/api/storyworlds/${worldId}/capsules/${capsule.id}/disrupt`), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
