@@ -1,7 +1,8 @@
 /**
  * Concept Board — /worlds/:worldId/board
  *
- * Steward-only planning surface: capsules (characters, arcs, events) as index cards.
+ * Shared capsule surface: contributors browse creative prompts, while stewards
+ * can plan and shape them as index cards.
  *
  * Creative actions on each capsule:
  *   • Promote to Scene Writer   — Maturation (PME): hand capsule to agent-assisted drafting
@@ -12,8 +13,8 @@
  */
 
 import { useState } from "react";
-import { Link, useParams, useLocation } from "wouter";
-import { useQueryClient } from "@tanstack/react-query";
+import { Link, useParams, useLocation, type RouteComponentProps } from "wouter";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useGetStoryworld,
   getGetStoryworldQueryKey,
@@ -171,12 +172,14 @@ function CapsuleCard({
   isExpanded,
   onToggle,
   onDeleted,
+  readOnly,
 }: {
   capsule:    Capsule;
   worldId:    number;
   isExpanded: boolean;
   onToggle:   () => void;
   onDeleted:  () => void;
+  readOnly:   boolean;
 }) {
   const { toast } = useToast();
   const qc        = useQueryClient();
@@ -550,7 +553,7 @@ function CapsuleCard({
           </div>
 
           {/* Right: action buttons */}
-          {!editing && (
+          {!readOnly && !editing && (
             <div className="flex md:flex-col gap-2 shrink-0">
               {/* Promote to Scene Writer */}
               <button
@@ -801,12 +804,33 @@ function FilterPill({
 // Page
 // ---------------------------------------------------------------------------
 
-export function ConceptBoard() {
+export function ConceptBoard({
+  readOnly: readOnlyOverride,
+}: RouteComponentProps & { readOnly?: boolean }) {
   const params  = useParams();
   const worldId = params.worldId ? parseInt(params.worldId, 10) : 0;
 
   const { data: world } = useGetStoryworld(worldId, {
     query: { enabled: !!worldId, queryKey: getGetStoryworldQueryKey(worldId) },
+  });
+
+  const capsuleAccessQuery = useQuery({
+    queryKey: ["storyworld-capsule-access", worldId],
+    enabled: !!worldId && readOnlyOverride === undefined,
+    retry: false,
+    queryFn: async (): Promise<{ isSteward: boolean }> => {
+      const response = await fetch(
+        apiUrl(`/api/storyworlds/${worldId}/capsules/access`),
+        { credentials: "include" },
+      );
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          return { isSteward: false };
+        }
+        throw new Error("Could not check capsule access");
+      }
+      return response.json() as Promise<{ isSteward: boolean }>;
+    },
   });
 
   const { data: capsules = [], isLoading, error } = useListCapsules(worldId, {
@@ -820,6 +844,7 @@ export function ConceptBoard() {
   const [filterType,  setFilterType]  = useState<CapsuleType | "all">("all");
   const [expandedId,  setExpandedId]  = useState<number | null>(null);
   const [creating,    setCreating]    = useState(false);
+  const readOnly = readOnlyOverride ?? !capsuleAccessQuery.data?.isSteward;
 
   const filtered = filterType === "all"
     ? capsules
@@ -851,20 +876,24 @@ export function ConceptBoard() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="font-serif text-3xl font-medium text-foreground">
-              Concept Board
+              {readOnly ? "Concept Board: story prompts" : "Concept Board"}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Sketch the shape of your storyworld — characters, arcs, and events as index cards
+              {readOnly
+                ? "Browse the characters, arcs, and events the steward has sketched to spark your next scene."
+                : "Sketch the shape of your storyworld — characters, arcs, and events as index cards."}
             </p>
           </div>
-          <button
-            onClick={() => { setCreating(true); setExpandedId(null); }}
-            className="flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shrink-0"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">New capsule</span>
-            <span className="sm:hidden">New</span>
-          </button>
+          {!readOnly && (
+            <button
+              onClick={() => { setCreating(true); setExpandedId(null); }}
+              className="flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shrink-0"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">New capsule</span>
+              <span className="sm:hidden">New</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -887,14 +916,14 @@ export function ConceptBoard() {
             <div key={i} className="h-32 rounded-xl border border-border/40 bg-secondary/20 animate-pulse" />
           ))}
         </div>
-      ) : error && (error as { status?: number }).status === 403 ? (
+      ) : error && (error as { status?: number }).status === 401 ? (
         <div className="p-16 text-center rounded-xl border border-dashed border-border/40">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-secondary/50">
             <User className="h-6 w-6 text-muted-foreground" />
           </div>
-          <h3 className="font-serif text-lg font-medium mb-2">Stewards only</h3>
+          <h3 className="font-serif text-lg font-medium mb-2">Sign in to browse the board</h3>
           <p className="text-sm text-muted-foreground">
-            The concept board is a private planning space for this storyworld's steward.
+            Concept capsules are shared with signed-in contributors as creative prompts.
           </p>
         </div>
       ) : error ? (
@@ -906,7 +935,7 @@ export function ConceptBoard() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Creation form card (always spans full width) */}
-          {creating && (
+          {creating && !readOnly && (
             <CreateCapsuleCard
               worldId={worldId}
               onDone={() => setCreating(false)}
@@ -914,7 +943,7 @@ export function ConceptBoard() {
           )}
 
           {/* Capsule cards */}
-          {filtered.length === 0 && !creating ? (
+          {filtered.length === 0 && (!creating || readOnly) ? (
             <div className="col-span-full p-16 text-center rounded-xl border border-dashed border-border/40">
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-secondary/50">
                 <Sparkles className="h-6 w-6 text-muted-foreground" />
@@ -923,17 +952,23 @@ export function ConceptBoard() {
                 {filterType === "all" ? "The board is blank" : `No ${filterType} capsules yet`}
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                {filterType === "all"
+                {readOnly
+                  ? filterType === "all"
+                    ? "The steward has not shared any concept capsules yet."
+                    : `No ${filterType} prompts have been shared yet.`
+                  : filterType === "all"
                   ? "Sketch your first idea — a character, arc, or event that wants to exist in this world."
                   : `Add a ${filterType} to start filling out this type.`}
               </p>
-              <button
-                onClick={() => setCreating(true)}
-                className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-              >
-                <Plus className="h-4 w-4" />
-                Sketch a capsule
-              </button>
+              {!readOnly && (
+                <button
+                  onClick={() => setCreating(true)}
+                  className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                >
+                  <Plus className="h-4 w-4" />
+                  Sketch a capsule
+                </button>
+              )}
             </div>
           ) : (
             filtered.map(capsule => (
@@ -944,6 +979,7 @@ export function ConceptBoard() {
                 isExpanded={expandedId === capsule.id}
                 onToggle={() => handleToggle(capsule.id)}
                 onDeleted={() => setExpandedId(null)}
+                readOnly={readOnly}
               />
             ))
           )}

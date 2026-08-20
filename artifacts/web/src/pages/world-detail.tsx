@@ -106,15 +106,16 @@ export function WorldDetail() {
             <span className="w-1 h-1 rounded-full bg-border" />
             <span>Since {format(new Date(world.createdAt), "MMM yyyy")}</span>
           </div>
-          {/* Quick links — API enforces auth/steward gates; show for any logged-in user */}
-          <div className="pt-2 flex items-center gap-4">
+          {/* Story prompts are read-only for contributors; editing remains steward-gated. */}
+          <div className="pt-3 flex flex-wrap items-center gap-3">
             <Link
               href={`/worlds/${worldId}/board`}
-              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+              className="group inline-flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/5 px-3.5 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10 hover:border-primary/40"
               data-testid="link-concept-board"
             >
-              <Lightbulb className="h-3.5 w-3.5" />
-              Concept Board
+              <Lightbulb className="h-4 w-4" />
+              Browse Concept Board
+              <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <Link
               href={`/worlds/${worldId}/steward`}

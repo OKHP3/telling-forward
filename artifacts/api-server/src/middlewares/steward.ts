@@ -19,14 +19,10 @@ import { logger } from "../lib/logger";
  * Checks that req.session.userId is a steward of the given storyworld.
  * Responds 403 if not; calls next() if yes.
  */
-export async function requireStewardFor(
-  req: Request,
-  res: Response,
-  next: NextFunction,
+export async function isStewardForStoryworld(
   storyworldId: number,
-): Promise<void> {
-  const userId = req.session.userId!; // requireAuth must run first
-
+  userId: number,
+): Promise<boolean> {
   const rows = await db
     .select({ id: stewardsTable.id })
     .from(stewardsTable)
@@ -38,7 +34,18 @@ export async function requireStewardFor(
     )
     .limit(1);
 
-  if (!rows.length) {
+  return rows.length > 0;
+}
+
+export async function requireStewardFor(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  storyworldId: number,
+): Promise<void> {
+  const userId = req.session.userId!; // requireAuth must run first
+
+  if (!(await isStewardForStoryworld(storyworldId, userId))) {
     logger.warn(
       { userId, storyworldId },
       "Steward check failed: user is not a steward of this storyworld",

@@ -29,6 +29,8 @@ const mockRequireSteward = vi.hoisted(() =>
   vi.fn((_req: any, _res: any, next: any) => next()),
 );
 
+const mockIsStewardForStoryworld = vi.hoisted(() => vi.fn());
+
 vi.mock("@workspace/db", () => {
   // Returns a minimal Drizzle-style chain: the storyworld lookup always
   // resolves to a single world with owner=testowner, repo=testrepo.
@@ -65,6 +67,7 @@ vi.mock("../../middlewares/auth", () => ({
 }));
 
 vi.mock("../../middlewares/steward", () => ({
+  isStewardForStoryworld:         mockIsStewardForStoryworld,
   requireStewardForStoryworld: mockRequireSteward,
   requireStewardFor:           (_req: any, _res: any, next: any, _id: any) => next(),
   requireStewardForProposal:   (_req: any, _res: any, next: any) => next(),
@@ -165,6 +168,7 @@ describe("PATCH /storyworlds/1/capsules/:capsuleId — capsule identity boundary
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsStewardForStoryworld.mockResolvedValue(true);
     mockGh.ensureLabels.mockResolvedValue(undefined);
     app = buildApp();
   });
@@ -209,7 +213,7 @@ describe("PATCH /storyworlds/1/capsules/:capsuleId — capsule identity boundary
   });
 });
 
-describe("GET /storyworlds/1/capsules — steward access control", () => {
+describe("GET /storyworlds/1/capsules/access — board capability", () => {
   let app: Express;
 
   beforeEach(() => {
@@ -217,22 +221,51 @@ describe("GET /storyworlds/1/capsules — steward access control", () => {
     app = buildApp();
   });
 
-  it("returns 403 and does NOT return capsule data when the user is not a steward", async () => {
-    // Override the steward middleware to reject for this test
-    mockRequireSteward.mockImplementationOnce(
-      (_req: any, res: any, _next: any): Promise<void> => {
-        res.status(403).json({ error: "Not a steward for this storyworld" });
-        return Promise.resolve();
-      }
+  it("reports steward capability from the authoritative membership check", async () => {
+    // The membership helper owns the user-to-steward-record mapping; the
+    // route deliberately never compares a public user ID to stewardId.
+    mockIsStewardForStoryworld.mockResolvedValueOnce(true);
+
+    const res = await request(app).get("/1/capsules/access");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ isSteward: true });
+    expect(mockIsStewardForStoryworld).toHaveBeenCalledWith(1, 1);
+  });
+
+  it("reports a read-only capability for an authenticated non-steward", async () => {
+    mockIsStewardForStoryworld.mockResolvedValueOnce(false);
+
+    const res = await request(app).get("/1/capsules/access");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ isSteward: false });
+  });
+});
+
+describe("GET /storyworlds/1/capsules — authenticated contributor access", () => {
+  let app: Express;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    app = buildApp();
+  });
+
+  it("returns capsule data without invoking the steward guard", async () => {
+    mockGh.listIssues.mockImplementation(({ labels }: { labels?: string[] }) =>
+      Promise.resolve(
+        labels?.[0] === "capsule:character" ? [CHARACTER_CAPSULE] : [],
+      ),
     );
 
     const res = await request(app).get("/1/capsules");
 
-    expect(res.status).toBe(403);
-    expect(mockGh.listIssues).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(mockRequireSteward).not.toHaveBeenCalled();
   });
 
-  it("returns 200 and capsule list for an authenticated steward", async () => {
+  it("returns 200 and capsule list for an authenticated user", async () => {
     mockGh.listIssues.mockImplementation(({ labels }: { labels?: string[] }) =>
       Promise.resolve(
         labels?.[0] === "capsule:character" ? [CHARACTER_CAPSULE] : [],

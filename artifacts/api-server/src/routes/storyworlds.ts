@@ -21,7 +21,10 @@ import {
   CreateContributionParams,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
-import { requireStewardForStoryworld } from "../middlewares/steward";
+import {
+  isStewardForStoryworld,
+  requireStewardForStoryworld,
+} from "../middlewares/steward";
 import { getGitHubClient, type GitHubIssue, type EnsureLabelsEntry } from "../lib/github";
 import {
   buildNarrationCommitMessage,
@@ -695,10 +698,26 @@ router.get(
 // Capsule routes
 // ---------------------------------------------------------------------------
 
+// GET /api/storyworlds/:id/capsules/access
+// Reports the current user's board-management capability using the same
+// steward-membership predicate that protects every capsule mutation.
+router.get("/:id/capsules/access", requireAuth, async (req, res) => {
+  const id = parseInt(parseParam(req.params["id"]), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid storyworld id" }); return; }
+
+  try {
+    const isSteward = await isStewardForStoryworld(id, req.session.userId!);
+    res.json({ isSteward });
+  } catch (err) {
+    req.log.error({ err }, "capsule access check DB error");
+    res.status(500).json({ error: "Failed to check capsule access" });
+  }
+});
+
 // GET /api/storyworlds/:id/capsules
-// requireStewardForStoryworld guards draft capsule content — Task #41 will
-// add an explicit contributor read policy when contributor access is designed.
-router.get("/:id/capsules", requireAuth, requireStewardForStoryworld, async (req, res) => {
+// Capsules are shared creative prompts. Any signed-in contributor may browse
+// them, while every mutation route below remains steward-only.
+router.get("/:id/capsules", requireAuth, async (req, res) => {
   const id = parseInt(parseParam(req.params["id"]), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid storyworld id" }); return; }
 
