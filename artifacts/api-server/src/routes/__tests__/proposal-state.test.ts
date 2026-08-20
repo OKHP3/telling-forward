@@ -75,10 +75,11 @@ vi.mock("@workspace/db", () => {
 
   function makeSelectChain(rows: unknown[]) {
     const limit = () => Promise.resolve(rows);
-    const where = () => ({ limit, returning: limit });
+    const orderBy = () => Promise.resolve(rows);
+    const where = () => ({ limit, returning: limit, orderBy });
     const innerJoin = () => ({ where });
     return {
-      from: () => ({ where, innerJoin, limit }),
+      from: () => ({ where, innerJoin, limit, orderBy }),
     };
   }
 
@@ -231,6 +232,7 @@ vi.mock("@workspace/api-zod", () => {
   const through = (v: any) => v;
   return {
     GetProposalParams: pass,
+    GetProposalResponse: { parse: through },
     ListProposalsResponse: { parse: through },
     MarkProposalUnderReviewParams: pass,
     MarkProposalUnderReviewResponse: { parse: through },
@@ -333,6 +335,47 @@ function buildApp(): Express {
   app.use("/", proposalsRouter);
   return app;
 }
+
+// ---------------------------------------------------------------------------
+// Tests: GET /:id — proposal detail with chronological editor questions
+// ---------------------------------------------------------------------------
+
+describe("GET /:id — proposal detail", () => {
+  let app: Express;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capture.reset();
+    mockDb.__reset();
+    app = buildApp();
+  });
+
+  it("includes editor questions in chronological order", async () => {
+    const firstQuestion = {
+      id: 4,
+      proposalId: 100,
+      reviewCommentId: 101,
+      body: "What changes when the bell rings?",
+      resolved: false,
+      createdAt: new Date("2026-08-18T09:00:00.000Z").toISOString(),
+    };
+    const secondQuestion = {
+      id: 8,
+      proposalId: 100,
+      reviewCommentId: 102,
+      body: "Can you show the reader why the witness stays?",
+      resolved: false,
+      createdAt: new Date("2026-08-19T11:30:00.000Z").toISOString(),
+    };
+    mockDb.__pushSelectRows([makeProposal("returned-with-notes")]);
+    mockDb.__pushSelectRows([firstQuestion, secondQuestion]);
+
+    const res = await request(app).get("/100");
+
+    expect(res.status).toBe(200);
+    expect(res.body.editorQuestions).toEqual([firstQuestion, secondQuestion]);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Tests: submitted → under-review

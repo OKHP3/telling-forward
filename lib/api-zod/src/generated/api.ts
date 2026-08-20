@@ -564,26 +564,45 @@ export const GetProposalParams = zod.object({
   id: zod.coerce.number(),
 });
 
-export const GetProposalResponse = zod.object({
-  id: zod.number(),
-  storyworldId: zod.number(),
-  pathId: zod.number(),
-  prNumber: zod.number(),
-  state: zod.enum([
-    "draft",
-    "submitted",
-    "under-review",
-    "returned-with-notes",
-    "accepted-into-canon",
-    "published-alternate",
-    "restricted",
-    "withdrawn",
-    "archived",
-  ]),
-  submittedAt: zod.coerce.date(),
-  decidedAt: zod.coerce.date().nullish(),
-  decisionReason: zod.string().nullish(),
-});
+export const GetProposalResponse = zod
+  .object({
+    id: zod.number(),
+    storyworldId: zod.number(),
+    pathId: zod.number(),
+    prNumber: zod.number(),
+    state: zod.enum([
+      "draft",
+      "submitted",
+      "under-review",
+      "returned-with-notes",
+      "accepted-into-canon",
+      "published-alternate",
+      "restricted",
+      "withdrawn",
+      "archived",
+    ]),
+    submittedAt: zod.coerce.date(),
+    decidedAt: zod.coerce.date().nullish(),
+    decisionReason: zod.string().nullish(),
+  })
+  .and(
+    zod.object({
+      editorQuestions: zod
+        .array(
+          zod.object({
+            id: zod.number(),
+            proposalId: zod.number(),
+            reviewCommentId: zod.number().describe("GitHub review comment ID."),
+            body: zod.string(),
+            resolved: zod.boolean(),
+            createdAt: zod.coerce.date(),
+          }),
+        )
+        .describe(
+          "Editor questions returned to the contributor, ordered chronologically.",
+        ),
+    }),
+  );
 
 /**
  * Transitions a submitted proposal to the "under-review" state, signalling to the contributor that a steward has begun reading it. Requires authentication and steward role for the proposal's storyworld.

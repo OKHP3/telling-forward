@@ -366,10 +366,28 @@ export function ProposalView() {
               <h2 className="font-serif font-medium text-lg">Editor Questions</h2>
             </div>
             <div className="p-6">
-              <p className="text-rose-800/80 dark:text-rose-300/80 text-sm">
-                The World Steward has reviewed this submission and left notes for revision. 
-                Please check the associated discussion thread for detailed feedback.
+              <p className="text-rose-800/80 dark:text-rose-300/80 text-sm mb-4">
+                The World Steward has reviewed this submission and left the following
+                questions for revision:
               </p>
+              <div className="space-y-3">
+                {proposal.editorQuestions.map((question) => (
+                  <div
+                    key={question.id}
+                    className="rounded-lg border border-rose-200/70 dark:border-rose-900/50 bg-background/60 p-4"
+                    data-testid={`editor-question-${question.id}`}
+                  >
+                    <p className="text-sm text-rose-950 dark:text-rose-100 whitespace-pre-wrap leading-relaxed">
+                      {question.body}
+                    </p>
+                  </div>
+                ))}
+                {!proposal.editorQuestions.length && (
+                  <p className="text-sm text-rose-800/70 dark:text-rose-300/70">
+                    No editor question is available yet. Please check back shortly.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         )}

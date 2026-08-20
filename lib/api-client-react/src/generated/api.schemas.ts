@@ -313,6 +313,21 @@ export interface AcceptProposalResponse {
   provenanceRecordId: number;
 }
 
+export interface EditorQuestion {
+  id: number;
+  proposalId: number;
+  /** GitHub review comment ID. */
+  reviewCommentId: number;
+  body: string;
+  resolved: boolean;
+  createdAt: string;
+}
+
+export type ProposalDetail = Proposal & {
+  /** Editor questions returned to the contributor, ordered chronologically. */
+  editorQuestions: EditorQuestion[];
+};
+
 export interface RestrictProposalBody {
   /** @maxLength 2000 */
   reason?: string;

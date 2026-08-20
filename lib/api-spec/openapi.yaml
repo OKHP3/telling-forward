@@ -697,7 +697,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Proposal"
+                $ref: "#/components/schemas/ProposalDetail"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -1465,6 +1465,44 @@ components:
         - prNumber
         - state
         - submittedAt
+
+    ProposalDetail:
+      allOf:
+        - $ref: "#/components/schemas/Proposal"
+        - type: object
+          properties:
+            editorQuestions:
+              type: array
+              description: Editor questions returned to the contributor, ordered chronologically.
+              items:
+                $ref: "#/components/schemas/EditorQuestion"
+          required:
+            - editorQuestions
+
+    EditorQuestion:
+      type: object
+      properties:
+        id:
+          type: integer
+        proposalId:
+          type: integer
+        reviewCommentId:
+          type: integer
+          description: GitHub review comment ID.
+        body:
+          type: string
+        resolved:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - proposalId
+        - reviewCommentId
+        - body
+        - resolved
+        - createdAt
 
     RestrictProposalBody:
       type: object

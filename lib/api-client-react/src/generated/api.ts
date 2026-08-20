@@ -34,6 +34,7 @@ import type {
   MeResponse,
   NotFoundResponse,
   Proposal,
+  ProposalDetail,
   RegisterRequest,
   RestrictProposalBody,
   ReturnProposalBody,
@@ -2069,8 +2070,8 @@ export const getGetProposalUrl = (id: number) => {
 export const getProposal = async (
   id: number,
   options?: RequestInit,
-): Promise<Proposal> => {
-  return customFetch<Proposal>(getGetProposalUrl(id), {
+): Promise<ProposalDetail> => {
+  return customFetch<ProposalDetail>(getGetProposalUrl(id), {
     ...options,
     method: "GET",
   });

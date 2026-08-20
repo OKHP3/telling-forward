@@ -15,7 +15,7 @@
 
 import { randomUUID } from "node:crypto";
 import { Router, type IRouter } from "express";
-import { eq, and, inArray, desc } from "drizzle-orm";
+import { eq, and, inArray, desc, asc } from "drizzle-orm";
 import {
   db,
   proposalsTable,
@@ -27,6 +27,7 @@ import {
 } from "@workspace/db";
 import {
   GetProposalParams,
+  GetProposalResponse,
   ListProposalsResponse,
   MarkProposalUnderReviewParams,
   MarkProposalUnderReviewResponse,
@@ -145,11 +146,19 @@ router.get("/:id", async (req, res) => {
       .from(proposalsTable)
       .where(eq(proposalsTable.id, params.data.id))
       .limit(1);
-    if (!rows.length) {
+    const proposal = rows[0];
+    if (!proposal) {
       res.status(404).json({ error: "Proposal not found" });
       return;
     }
-    res.json(rows[0]);
+
+    const editorQuestions = await db
+      .select()
+      .from(editorQuestionsTable)
+      .where(eq(editorQuestionsTable.proposalId, proposal.id))
+      .orderBy(asc(editorQuestionsTable.createdAt), asc(editorQuestionsTable.id));
+
+    res.json(GetProposalResponse.parse({ ...proposal, editorQuestions }));
   } catch (err) {
     req.log.error({ err }, "getProposal DB error");
     res.status(500).json({ error: "Failed to load proposal" });
