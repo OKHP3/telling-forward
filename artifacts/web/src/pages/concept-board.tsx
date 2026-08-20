@@ -555,7 +555,7 @@ function CapsuleCard({
           {/* Right: action buttons */}
           {!readOnly && !editing && (
             <div className="flex md:flex-col gap-2 shrink-0">
-              {/* Promote to Scene Writer */}
+              {/* Steward-only agent drafting */}
               <button
                 onClick={e => {
                   e.stopPropagation();
@@ -612,6 +612,23 @@ function CapsuleCard({
               >
                 {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Archive className="h-3.5 w-3.5 shrink-0" />}
                 Archive
+              </button>
+            </div>
+          )}
+          {readOnly && !editing && (
+            <div className="flex gap-2 shrink-0">
+              <button
+                onClick={e => {
+                  e.stopPropagation();
+                  navigate(
+                    `/worlds/${worldId}/scene-writer/${capsule.id}?title=${encodeURIComponent(capsule.title)}`,
+                  );
+                }}
+                className="flex items-center gap-2 h-9 px-3 rounded-lg border border-primary/40 bg-primary/5 text-primary text-sm font-medium hover:bg-primary/10 transition-colors whitespace-nowrap"
+                data-testid={`button-write-scene-${capsule.id}`}
+              >
+                <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                Write this scene
               </button>
             </div>
           )}

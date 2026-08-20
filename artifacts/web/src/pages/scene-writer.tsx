@@ -5,8 +5,9 @@
  * then lets the author shape the prose before copying it into a contribution.
  */
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Link, useParams } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import {
   useListCapsules,
   getListCapsulesQueryKey,
@@ -83,12 +84,41 @@ export function SceneWriter() {
     },
   });
   const capsule = capsules?.find(c => c.id === capsuleId) ?? null;
+  const capsuleAccessQuery = useQuery({
+    queryKey: ["storyworld-capsule-access", worldId],
+    enabled: !!worldId,
+    retry: false,
+    queryFn: async (): Promise<{ isSteward: boolean }> => {
+      const response = await fetch(
+        apiUrl(`/api/storyworlds/${worldId}/capsules/access`),
+        { credentials: "include" },
+      );
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          return { isSteward: false };
+        }
+        throw new Error("Could not check capsule access");
+      }
+      return response.json() as Promise<{ isSteward: boolean }>;
+    },
+  });
+  const isSteward = capsuleAccessQuery.data?.isSteward === true;
 
+  const [sceneTitle, setSceneTitle] = useState("");
   const [draft, setDraft]               = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [copied, setCopied]             = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!capsule) return;
+    const requestedTitle =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("title")
+        : null;
+    setSceneTitle(requestedTitle?.trim() || capsule.title);
+  }, [capsule?.id]);
 
   const handleGenerate = useCallback(async () => {
     if (!capsule || isGenerating) return;
@@ -219,9 +249,28 @@ export function SceneWriter() {
           <h1 className="font-serif text-3xl font-medium text-foreground">Scene Writer</h1>
         </div>
         <p className="text-sm text-muted-foreground">
-          Generate an agent-assisted opening scene from this capsule, then shape it into your own prose.
+          {isSteward
+            ? "Generate an agent-assisted opening scene from this capsule, then shape it into your own prose."
+            : "Use this prompt as a starting point, then write the scene in your own words."}
         </p>
       </header>
+
+      <div className="max-w-2xl space-y-2">
+        <label
+          htmlFor="scene-title"
+          className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+        >
+          Scene title
+        </label>
+        <input
+          id="scene-title"
+          value={sceneTitle}
+          onChange={e => setSceneTitle(e.target.value)}
+          placeholder="Give this scene a title"
+          className="w-full h-11 rounded-lg border border-input bg-background px-3.5 text-base font-serif text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring"
+          data-testid="input-scene-title"
+        />
+      </div>
 
       {/* Body — two-column on large screens */}
       <div className="grid lg:grid-cols-[280px_1fr] gap-6">
@@ -281,13 +330,15 @@ export function SceneWriter() {
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2">
               {!isGenerating ? (
-                <button
-                  onClick={handleGenerate}
-                  className="flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {draft ? "Regenerate" : "Generate draft"}
-                </button>
+                isSteward && (
+                  <button
+                    onClick={handleGenerate}
+                    className="flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {draft ? "Regenerate" : "Generate draft"}
+                  </button>
+                )
               ) : (
                 <button
                   onClick={handleStop}
@@ -334,11 +385,11 @@ export function SceneWriter() {
             <textarea
               value={draft}
               onChange={e => setDraft(e.target.value)}
-              placeholder={
-                isGenerating
-                  ? ""
-                  : 'Click "Generate draft" to get an agent-assisted opening scene, then shape it into your own prose.'
-              }
+              placeholder={isGenerating
+                ? ""
+                : isSteward
+                  ? 'Click "Generate draft" to get an agent-assisted opening scene, then shape it into your own prose.'
+                  : "Write the opening scene inspired by this prompt."}
               className={cn(
                 "w-full min-h-[480px] rounded-xl border border-input bg-background px-5 py-4",
                 "text-sm text-foreground leading-relaxed font-serif",
@@ -356,8 +407,9 @@ export function SceneWriter() {
           </div>
 
           <p className="text-xs text-muted-foreground">
-            This draft is raw material — edit it freely. When you're ready to submit prose as a path
-            contribution, copy the text and use the submissions flow.
+            {isSteward
+              ? "This draft is raw material — edit it freely. When you're ready to submit prose as a path contribution, use the submission action below."
+              : "This scene is your draft. Keep shaping it here, then use the submission flow when you're ready."}
           </p>
         </div>
       </div>
