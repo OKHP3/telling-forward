@@ -76,6 +76,7 @@
   },
   "dependencies": {
     "@clerk/react": "^6.14.3",
-    "@clerk/themes": "^2.4.57"
+    "@clerk/themes": "^2.4.57",
+    "mermaid": "^11.17.0"
   }
 }

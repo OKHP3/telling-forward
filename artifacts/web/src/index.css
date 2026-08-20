@@ -209,6 +209,23 @@
 }
 
 @layer utilities {
+  .story-mermaid .story-graph-node {
+    cursor: pointer;
+  }
+
+  .story-mermaid .story-graph-node:focus {
+    outline: none;
+  }
+
+  .story-mermaid .story-graph-node:focus-visible,
+  .story-mermaid .story-graph-node[data-selected='true'],
+  .story-mermaid .story-graph-node:focus-visible circle,
+  .story-mermaid .story-graph-node:focus-visible rect,
+  .story-mermaid .story-graph-node[data-selected='true'] circle,
+  .story-mermaid .story-graph-node[data-selected='true'] rect {
+    filter: drop-shadow(0 0 5px hsl(var(--primary) / 0.6));
+  }
+
   input[type='search']::-webkit-search-cancel-button {
     @apply hidden;
   }

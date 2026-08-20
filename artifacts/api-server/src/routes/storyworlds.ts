@@ -841,7 +841,7 @@ router.post("/:id/capsules", requireAuth, requireStewardForStoryworld, async (re
   const world = await getStoryworldRepo(id);
   if (!world) { res.status(404).json({ error: "Storyworld not found" }); return; }
 
-  const capsuleType = String(type) as CapsuleType;
+  const capsuleType = String(type) as keyof typeof CAPSULE_TYPE_LABELS;
   const typeLabel = CAPSULE_TYPE_LABELS[capsuleType];
 
   try {

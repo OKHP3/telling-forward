@@ -31,6 +31,7 @@ import {
   type GitHubCommit,
 } from "../lib/github";
 import { logger } from "../lib/logger";
+import { proposalSyncConflictSet } from "../lib/proposal-state-sync";
 import {
   contributorAttributionsForPath,
   indexNarrationCommit,
@@ -336,26 +337,8 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
         ? await resolveContributor(pr.author)
         : null;
 
-      const protectedTerminalStates =
-        "'accepted-into-canon', 'restricted', 'withdrawn', 'archived'";
-      const protectedNonTerminalStates =
-        "'under-review', 'returned-with-notes', 'accepted-into-canon', " +
-        "'restricted', 'withdrawn', 'archived'";
-      const preservedStates = isTerminalEvent
-        ? protectedTerminalStates
-        : protectedNonTerminalStates;
-      const proposalStateSet = drizzleSql`
-        CASE
-          WHEN ${proposalsTable.state} IN (${drizzleSql.raw(preservedStates)})
-          THEN ${proposalsTable.state}
-          ELSE excluded.state
-        END`;
-      const decidedAtSet = drizzleSql`
-        CASE
-          WHEN ${proposalsTable.state} IN (${drizzleSql.raw(preservedStates)})
-          THEN ${proposalsTable.decidedAt}
-          ELSE excluded.decided_at
-        END`;
+      const { state: proposalStateSet, decidedAt: decidedAtSet } =
+        proposalSyncConflictSet(isTerminalEvent);
 
       // Upsert proposal while preserving product-level terminal decisions and
       // active editorial review states during non-terminal synchronization.

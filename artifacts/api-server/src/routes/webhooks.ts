@@ -30,6 +30,7 @@ import {
 } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { getGitHubClient } from "../lib/github";
+import { proposalSyncConflictSet } from "../lib/proposal-state-sync";
 import {
   contributorAttributionsForPath,
   indexSavedMoment,
@@ -480,26 +481,8 @@ async function handlePullRequest(payload: PullRequestPayload): Promise<void> {
   //   - a terminal outcome that a prior event already established ("accepted-into-canon")
   // Preserve decidedAt alongside every preserved state; otherwise use the
   // repository event timestamp.
-  const protectedTerminalStates =
-    "'accepted-into-canon', 'restricted', 'withdrawn', 'archived'";
-  const protectedNonTerminalStates =
-    "'under-review', 'returned-with-notes', 'accepted-into-canon', " +
-    "'restricted', 'withdrawn', 'archived'";
-  const preservedStates = isTerminalEvent
-    ? protectedTerminalStates
-    : protectedNonTerminalStates;
-  const stateSet = drizzleSql`
-    CASE
-      WHEN ${proposalsTable.state} IN (${drizzleSql.raw(preservedStates)})
-      THEN ${proposalsTable.state}
-      ELSE excluded.state
-    END`;
-  const decidedAtSet = drizzleSql`
-    CASE
-      WHEN ${proposalsTable.state} IN (${drizzleSql.raw(preservedStates)})
-      THEN ${proposalsTable.decidedAt}
-      ELSE excluded.decided_at
-    END`;
+  const { state: stateSet, decidedAt: decidedAtSet } =
+    proposalSyncConflictSet(isTerminalEvent);
 
   const [proposal] = await db
     .insert(proposalsTable)

@@ -45,6 +45,24 @@ const insertLog = vi.hoisted(() => ({
   },
 }));
 
+const proposalUpsertLog = vi.hoisted(() => ({
+  calls: [] as Array<{ state: unknown; decidedAt: unknown }>,
+  reset() { this.calls = []; },
+}));
+
+const proposalPersistence = vi.hoisted(() => ({
+  state: null as string | null,
+  decidedAt: null as Date | null,
+  seed(state: string, decidedAt: Date) {
+    this.state = state;
+    this.decidedAt = decidedAt;
+  },
+  reset() {
+    this.state = null;
+    this.decidedAt = null;
+  },
+}));
+
 // ---------------------------------------------------------------------------
 // DB mock
 // ---------------------------------------------------------------------------
@@ -71,6 +89,24 @@ vi.mock("@workspace/db", () => {
 
   /** Select queue: populated per test */
   const selectQueue: unknown[][] = [];
+
+  function sqlText(value: unknown): string {
+    if (!value || typeof value !== "object") return "";
+    const candidate = value as { value?: unknown; queryChunks?: unknown[] };
+    if (Array.isArray(candidate.value)) {
+      return candidate.value
+        .filter((chunk): chunk is string => typeof chunk === "string")
+        .join("");
+    }
+    return (candidate.queryChunks ?? []).map(sqlText).join("");
+  }
+
+  function preservesExistingState(expression: unknown, existingState: string): boolean {
+    const escapedState = existingState.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`WHEN[\\s\\S]*'${escapedState}'[\\s\\S]*THEN`).test(
+      sqlText(expression),
+    );
+  }
 
   function selectChain(rows: unknown[]) {
     const end = () => Promise.resolve(rows);
@@ -111,14 +147,36 @@ vi.mock("@workspace/db", () => {
       values: (v: Record<string, unknown>) => {
         insertLog.calls.push({ branchRef: v["branchRef"] as string, state: v["state"] as string });
         return {
-          onConflictDoUpdate: () => ({
-            returning: () => {
-              // Return an appropriate row depending on what was inserted
-              if (v["branchRef"]) return Promise.resolve([{ ...PATH_ROW, branchRef: v["branchRef"], state: v["state"] }]);
-              if (v["prNumber"]) return Promise.resolve([{ ...PROPOSAL_ROW, state: v["state"] }]);
-              return Promise.resolve([]);
-            },
-          }),
+          onConflictDoUpdate: (config: { set?: Record<string, unknown> }) => {
+            if (v["prNumber"]) {
+              proposalUpsertLog.calls.push({
+                state: config.set?.["state"],
+                decidedAt: config.set?.["decidedAt"],
+              });
+              const existingState = proposalPersistence.state;
+              const preservesState =
+                existingState !== null &&
+                preservesExistingState(config.set?.["state"], existingState);
+              if (!preservesState) {
+                proposalPersistence.state = v["state"] as string;
+                proposalPersistence.decidedAt = v["decidedAt"] as Date | null;
+              }
+            }
+            return {
+              returning: () => {
+                // Return an appropriate row depending on what was inserted
+                if (v["branchRef"]) return Promise.resolve([{ ...PATH_ROW, branchRef: v["branchRef"], state: v["state"] }]);
+                if (v["prNumber"]) {
+                  return Promise.resolve([{
+                    ...PROPOSAL_ROW,
+                    state: proposalPersistence.state ?? v["state"],
+                    decidedAt: proposalPersistence.decidedAt ?? v["decidedAt"],
+                  }]);
+                }
+                return Promise.resolve([]);
+              },
+            };
+          },
         };
       },
     }),
@@ -286,6 +344,18 @@ function makePRPayload(opts: {
   };
 }
 
+function sqlText(value: unknown): string {
+  if (!value || typeof value !== "object") return "";
+  const candidate = value as {
+    value?: unknown;
+    queryChunks?: unknown[];
+  };
+  if (Array.isArray(candidate.value)) {
+    return candidate.value.filter((chunk): chunk is string => typeof chunk === "string").join("");
+  }
+  return (candidate.queryChunks ?? []).map(sqlText).join("");
+}
+
 // ---------------------------------------------------------------------------
 // 1. Structural / unit tests for the prToPathState logic
 //    These mirror the fixed logic and serve as the canonical regression guard.
@@ -403,7 +473,69 @@ describe("webhook pull_request handler — path state from PR outcome", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. Admin reconcile — path state for PR-derived upserts
+// 3. Proposal lifecycle preservation — GitHub may sync its own PR outcome,
+//    but it must never reopen a restricted, withdrawn, or archived proposal.
+// ---------------------------------------------------------------------------
+
+describe("webhook pull_request handler — protected proposal outcomes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    insertLog.reset();
+    proposalUpsertLog.reset();
+    proposalPersistence.reset();
+    mockDb._resetSelectQueue();
+    process.env["GITHUB_WEBHOOK_SECRET"] = WEBHOOK_SECRET;
+  });
+
+  it.each(["restricted", "withdrawn", "archived"])(
+    "keeps a %s proposal closed when GitHub sends a terminal event",
+    async (protectedState) => {
+      mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+      const retainedDecidedAt = new Date("2026-01-18T12:00:00.000Z");
+      proposalPersistence.seed(protectedState, retainedDecidedAt);
+
+      const { status } = await callWebhook(
+        "pull_request",
+        makePRPayload({ action: "closed", merged: true, state: "closed" }),
+      );
+
+      expect(status).toBe(200);
+      expect(proposalUpsertLog.calls).toHaveLength(1);
+      const upsert = proposalUpsertLog.calls[0]!;
+      expect(sqlText(upsert.state)).toMatch(
+        new RegExp(`WHEN[\\s\\S]*'${protectedState}'[\\s\\S]*THEN`),
+      );
+      expect(proposalPersistence.state).toBe(protectedState);
+      expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
+    },
+  );
+
+  it.each(["restricted", "withdrawn", "archived"])(
+    "keeps a %s proposal closed when GitHub sends a non-terminal event",
+    async (protectedState) => {
+      mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+      const retainedDecidedAt = new Date("2026-01-18T12:00:00.000Z");
+      proposalPersistence.seed(protectedState, retainedDecidedAt);
+
+      const { status } = await callWebhook(
+        "pull_request",
+        makePRPayload({ action: "synchronize", merged: false, state: "open" }),
+      );
+
+      expect(status).toBe(200);
+      expect(proposalUpsertLog.calls).toHaveLength(1);
+      const upsert = proposalUpsertLog.calls[0]!;
+      expect(sqlText(upsert.state)).toMatch(
+        new RegExp(`WHEN[\\s\\S]*'${protectedState}'[\\s\\S]*THEN`),
+      );
+      expect(proposalPersistence.state).toBe(protectedState);
+      expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
+    },
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 4. Admin reconcile — path state for PR-derived upserts
 // ---------------------------------------------------------------------------
 
 describe("admin reconcile — path state from PR outcome", () => {
@@ -556,4 +688,69 @@ describe("admin reconcile — path state from PR outcome", () => {
 
     expect(res.status).toBe(401);
   });
+});
+
+describe("admin reconcile — protected proposal outcomes", () => {
+  let app: ReturnType<typeof buildAdminApp>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    insertLog.reset();
+    proposalUpsertLog.reset();
+    proposalPersistence.reset();
+    mockDb._resetSelectQueue();
+    process.env["ADMIN_SECRET"] = "admin-secret-test";
+    mockGh.listBranches.mockResolvedValue([]);
+    mockGh.listCommitsForBranch.mockResolvedValue([]);
+    mockGh.listCommitsBetween.mockResolvedValue([]);
+    mockGh.listPullRequestReviews.mockResolvedValue([]);
+    mockGh.listPullRequestComments.mockResolvedValue([]);
+    mockGh.getPullRequest.mockResolvedValue(null);
+    mockGh.getFileContent.mockResolvedValue("");
+    mockProvenance.parseNarrationCommit.mockReturnValue(null);
+    mockProvenance.indexNarrationCommit.mockResolvedValue(null);
+    app = buildAdminApp();
+  });
+
+  it.each([
+    ["restricted", "closed", true],
+    ["withdrawn", "open", false],
+    ["archived", "closed", false],
+  ] as const)(
+    "keeps a %s proposal closed during a %s GitHub reconciliation",
+    async (protectedState, state, merged) => {
+      const pr = {
+        number: 42,
+        state,
+        merged,
+        headRef: "contrib/scene",
+        baseRef: "main",
+        createdAt: new Date().toISOString(),
+        mergedAt: merged ? new Date().toISOString() : null,
+        closedAt: state === "closed" ? new Date().toISOString() : null,
+        mergeCommitSha: merged ? "mergesha001" : null,
+        mergedBy: null,
+        author: { login: "contributor", name: "Contributor", email: "c@example.com" },
+      };
+      mockGh.listOpenPullRequests.mockResolvedValue([pr]);
+      mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+      mockDb._pushSelectRows([]);
+      const retainedDecidedAt = new Date("2026-01-18T12:00:00.000Z");
+      proposalPersistence.seed(protectedState, retainedDecidedAt);
+
+      const res = await request(app)
+        .post("/reconcile")
+        .set({ "x-admin-secret": "admin-secret-test" })
+        .send({ storyworld_id: 1 });
+
+      expect(res.status).toBe(200);
+      expect(proposalUpsertLog.calls).toHaveLength(1);
+      const upsert = proposalUpsertLog.calls[0]!;
+      expect(sqlText(upsert.state)).toMatch(
+        new RegExp(`WHEN[\\s\\S]*'${protectedState}'[\\s\\S]*THEN`),
+      );
+      expect(proposalPersistence.state).toBe(protectedState);
+      expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
+    },
+  );
 });

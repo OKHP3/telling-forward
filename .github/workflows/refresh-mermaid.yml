@@ -1,0 +1,54 @@
+name: Refresh Mermaid
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: refresh-mermaid
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Refresh Mermaid to the latest stable release
+        run: pnpm --filter @workspace/web update mermaid@latest --latest
+      - name: Validate the refreshed visualizer
+        run: |
+          pnpm --filter @workspace/web typecheck
+          PORT=3000 BASE_PATH=/ pnpm --filter @workspace/web build
+      - name: Open a validated refresh pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- artifacts/web/package.json pnpm-lock.yaml; then
+            exit 0
+          fi
+          branch="automation/refresh-mermaid"
+          git config user.name "telling-forward-dependency-bot"
+          git config user.email "telling-forward-dependency-bot@users.noreply.github.com"
+          git switch --create "$branch" || git switch "$branch"
+          git add artifacts/web/package.json pnpm-lock.yaml
+          git commit -m "chore(web): refresh Mermaid"
+          git push --force-with-lease origin "$branch"
+          pr_url="$(gh pr list --head "$branch" --base main --state open --json url --jq '.[0].url')"
+          if [ -z "$pr_url" ]; then
+            pr_url="$(gh pr create --base main --head "$branch" --title "chore(web): refresh Mermaid" --body "Automated daily Mermaid refresh. The workflow ran the Author App typecheck and production build before opening this pull request.")"
+          fi

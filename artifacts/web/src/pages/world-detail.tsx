@@ -2,7 +2,7 @@ import { useParams } from "wouter";
 import { useGetStoryworld, useListStoryPaths, getGetStoryworldQueryKey, getListStoryPathsQueryKey, isAlternateState } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
-import { BookOpen, Map, ArrowLeft, PenTool, Globe, ChevronRight, ShieldCheck, Lightbulb } from "lucide-react";
+import { BookOpen, Map, ArrowLeft, PenTool, Globe, ChevronRight, ShieldCheck, Lightbulb, GitBranch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   isNotFoundApiError,
@@ -115,6 +115,15 @@ export function WorldDetail() {
             >
               <Lightbulb className="h-4 w-4" />
               Browse Concept Board
+              <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+            <Link
+              href={`/worlds/${worldId}/graph`}
+              className="group inline-flex items-center gap-2 rounded-lg border border-border/70 bg-card px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-accent/50"
+              data-testid="link-story-graph"
+            >
+              <GitBranch className="h-4 w-4 text-primary" />
+              Explore Story Graph
               <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <Link
