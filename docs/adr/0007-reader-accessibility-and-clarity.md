@@ -100,3 +100,7 @@ Separately, the thread's own tool-selection pattern for its author ("primary dra
 ## Next action
 
 The project owner should give a per-item call — accept, reject, or defer — for items 1 through 5. Update this ADR's Status once that call is made.
+
+The consolidated fidelity, progressive-disclosure, outside-reader, and
+accessibility deferral boundaries are in
+`docs/decisions/provenance-fidelity-contract.md`.

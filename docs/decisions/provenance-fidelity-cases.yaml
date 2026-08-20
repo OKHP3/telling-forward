@@ -1,0 +1,153 @@
+schema: telling-forward.provenance-fidelity-cases.v1
+status: owner-review-fixtures-only
+enforcement_approved: false
+public_reader_features_approved: false
+cases:
+  - id: immutable-manuscript-source
+    kind: source
+    artifact_kind: manuscript
+    source_reference: manuscript://upload/source-digest-001
+    ingestion_tier: tier_0_rules
+    engine: none
+    rung_before: null
+    rung_after: null
+    human_edited_after: false
+    expected_result: valid-provenance-source
+    visibility: steward-and-maintainer
+    required_evidence:
+      - original-digest
+      - immutable-source-reference
+      - captured-time
+      - derived-output-links
+    unresolved:
+      - retention-period
+
+  - id: capsule-from-issue
+    kind: capsule
+    artifact_kind: capsule
+    source_reference: github:issue:42
+    ingestion_tier: tier_1_actions_phi4
+    engine: PME
+    rung_before: R1
+    rung_after: R2
+    human_edited_after: true
+    expected_result: valid-provenance-with-human-edit
+    visibility: steward-default-contributor-own-record
+    required_evidence:
+      - issue-number-and-labels
+      - ingestion-run-reference
+      - engine-and-rung
+      - human-editor-reference
+    unresolved:
+      - reader-side-car-opt-in
+
+  - id: proposed-transformation
+    kind: transformation
+    artifact_kind: scene-draft
+    source_reference: github:commit:source-sha-001
+    output_reference: github:commit:output-sha-001
+    ingestion_tier: tier_2_byo_ai
+    engine: PIE
+    rung_before: R4
+    rung_after: R4
+    human_edited_after: false
+    fidelity_note:
+      changed_material:
+        - sentence structure
+        - reading register
+      preserved_intent:
+        - plot claim
+        - named entities
+      ambiguities_flagged:
+        - pronoun-reference-in-source
+      semantic_preservation: uncertain
+      structural_simplification: described
+      audience_calibration: feedback-only
+      human_review_status: not-reviewed
+    expected_result: proposed-output-not-authorized
+    visibility: contributor-and-steward
+    unresolved:
+      - transform-specific-consent
+      - source-specific-derivative-rule
+
+  - id: contributor-edit-after-transform
+    kind: edit
+    artifact_kind: scene-draft
+    source_reference: github:commit:output-sha-001
+    output_reference: github:commit:human-edit-sha-001
+    ingestion_tier: human
+    engine: none
+    rung_before: R4
+    rung_after: R4
+    human_edited_after: true
+    expected_result: new-version-with-human-attribution
+    visibility: contributor-and-steward
+    required_evidence:
+      - source-version
+      - edited-version
+      - human-editor-reference
+      - edit-time
+    unresolved:
+      - whether-reader-sees-fidelity-history
+
+  - id: accepted-canon-with-provenance
+    kind: acceptance
+    artifact_kind: scene
+    source_reference: github:pr:42
+    output_reference: github:commit:canon-sha-001
+    ingestion_tier: tier_1_actions_phi4
+    engine: none
+    rung_before: R4
+    rung_after: R4
+    human_edited_after: true
+    expected_result: accepted-into-canon
+    visibility: reader-safe-summary-steward-full-record
+    required_evidence:
+      - source-path
+      - contributor-attribution
+      - steward-attribution
+      - decision-time
+      - canon-commit-sha
+      - accepted-provenance-marker
+    unresolved:
+      - public-process-narrative-opt-in
+
+  - id: alternate-path-with-provenance
+    kind: alternate
+    artifact_kind: scene
+    source_reference: github:pr:43
+    output_reference: github:branch:contrib-alternate
+    ingestion_tier: human
+    engine: none
+    rung_before: null
+    rung_after: null
+    human_edited_after: true
+    expected_result: published-alternate
+    visibility: steward-default-reader-only-after-public-edition
+    required_evidence:
+      - source-path
+      - contributor-attribution
+      - review-outcome
+      - alternate-path-reference
+    unresolved:
+      - read-follow-signal
+      - reader-release-approval
+
+  - id: missing-provenance-source
+    kind: missing-provenance
+    artifact_kind: scene
+    source_reference: null
+    ingestion_tier: tier_2_byo_ai
+    engine: CIE
+    rung_before: R5
+    rung_after: R6
+    human_edited_after: false
+    expected_result: incomplete-and-not-fully-proven
+    visibility: steward-only-hold
+    required_evidence:
+      - missing-source-condition
+      - unresolved-identity-or-run-reference
+      - no-acceptance-claim
+    unresolved:
+      - whether-recovery-is-possible
+      - rights-and-consent-review

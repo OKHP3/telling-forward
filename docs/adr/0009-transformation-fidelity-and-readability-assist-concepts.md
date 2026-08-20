@@ -85,3 +85,6 @@ A closer second pass over the source thread surfaced additional unique elements.
 ## Next action
 
 The project owner should give a per-item call, accept, reject, or defer, for items 1 and 2, decide whether to merge item 2 with the overlapping proposal in the `0007-reader-accessibility-and-clarity.md` file, and separately resolve the broader ADR numbering pileup across all affected files. Update this ADR's Status once that call is made.
+
+The fidelity-note output contract and its non-authorization boundary are
+consolidated in `docs/decisions/provenance-fidelity-contract.md`.

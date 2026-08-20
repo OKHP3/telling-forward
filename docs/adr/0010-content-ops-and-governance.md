@@ -103,3 +103,7 @@ TF's storyworld *content* topology is already confirmed as one repo per storywor
 ## Next action
 
 The project owner should give a per-item call — accept, adapt, or reject — for items 1 through 5, and confirm that `0009-capsule-provenance-and-term-ledger-field-schemas.md` can be removed now that this ADR carries its content forward.
+
+The starting field list in this ADR is consolidated with the source, fidelity,
+visibility, and release rules in
+`docs/decisions/provenance-fidelity-contract.md`.

@@ -51,3 +51,6 @@ The manuscript's Traceability Matrix and Terminology Incursion Ledger track, per
 ## Next action
 
 The project owner should give a per-item call — accept, reject, or defer — for items 1 and 2. Update this ADR's Status once that call is made.
+
+The consolidated ledger ownership, derivation, and release contract is
+`docs/decisions/provenance-fidelity-contract.md`.

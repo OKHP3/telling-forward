@@ -109,3 +109,7 @@ Separately, this session observed a `.git/index.lock` reappearing multiple times
 ## Next action
 
 The project owner should give a per-item call — accept, reject, or defer — for items 1 through 5. Separately: confirm this ADR's renumbering to 0011 is acceptable (it was pushed to `origin/main` at 0010 before the collision with `0010-content-ops-and-governance.md` was discovered), decide whether the `_to_delete/*.superseded` files should be committed as deletions or gitignored, and consider whether concurrent Cowork sessions against this repository should continue running at the same time given the repeated lock contention.
+
+The process narrative, canon compendium, methodology, and release-boundary
+crosswalk is consolidated in
+`docs/decisions/provenance-fidelity-contract.md`.

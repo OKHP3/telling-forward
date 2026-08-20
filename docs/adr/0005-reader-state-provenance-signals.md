@@ -176,3 +176,6 @@ from ADR-0004 with a different prompt, not a new tier.
 The project owner should give a per-item call — accept, reject, or defer —
 for items 1 through 5. Update this ADR's Status once that call is made,
 rather than leaving the decision in conversation only.
+
+The consolidated design contract for item 2 and its related reader/release
+boundaries is `docs/decisions/provenance-fidelity-contract.md`.
