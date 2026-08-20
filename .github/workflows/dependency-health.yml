@@ -1,6 +1,15 @@
 name: Dependency health
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'scripts/check-technology-updates.mjs'
+      - '.github/workflows/dependency-health.yml'
   pull_request:
     paths:
       - '**/package.json'
