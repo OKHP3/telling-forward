@@ -82,6 +82,17 @@ export interface Storyworld {
   updatedAt: string;
 }
 
+export interface StoryworldUpdate {
+  /**
+   * One short, single-line invitation for the Reader discovery page. Send null to clear the current seed sentence.
+
+   * @maxLength 120
+   * @nullable
+   * @pattern ^[^\r\n]*$
+   */
+  seed: string | null;
+}
+
 export type StoryPathState =
   (typeof StoryPathState)[keyof typeof StoryPathState];
 

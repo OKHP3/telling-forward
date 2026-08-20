@@ -203,6 +203,44 @@ paths:
                 $ref: "#/components/schemas/Storyworld"
         "404":
           $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateStoryworld
+      tags: [storyworlds]
+      summary: Update a storyworld's steward-managed details
+      description: >
+        Updates the short seed sentence surfaced on the Reader discovery page.
+        Requires authentication and steward role for the storyworld.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoryworldUpdate"
+      responses:
+        "200":
+          description: Updated storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Storyworld"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not a steward for this storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /storyworlds/{id}/paths:
     get:
@@ -1114,6 +1152,19 @@ components:
         - readerTheme
         - createdAt
         - updatedAt
+
+    StoryworldUpdate:
+      type: object
+      required:
+        - seed
+      properties:
+        seed:
+          type: ["string", "null"]
+          maxLength: 120
+          pattern: '^[^\r\n]*$'
+          description: >
+            One short, single-line invitation for the Reader discovery page.
+            Send null to clear the current seed sentence.
 
     ReaderTheme:
       type: string

@@ -42,6 +42,7 @@ import type {
   StoryPath,
   StoryProvenance,
   Storyworld,
+  StoryworldUpdate,
   TranscribeRequest,
   TranscribeResponse,
   UnauthorizedResponse,
@@ -787,6 +788,101 @@ export function useGetStoryworld<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Updates the short seed sentence surfaced on the Reader discovery page. Requires authentication and steward role for the storyworld.
+
+ * @summary Update a storyworld's steward-managed details
+ */
+export const getUpdateStoryworldUrl = (id: number) => {
+  return `/api/storyworlds/${id}`;
+};
+
+export const updateStoryworld = async (
+  id: number,
+  storyworldUpdate: StoryworldUpdate,
+  options?: RequestInit,
+): Promise<Storyworld> => {
+  return customFetch<Storyworld>(getUpdateStoryworldUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(storyworldUpdate),
+  });
+};
+
+export const getUpdateStoryworldMutationOptions = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateStoryworld>>,
+    TError,
+    { id: number; data: BodyType<StoryworldUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateStoryworld>>,
+  TError,
+  { id: number; data: BodyType<StoryworldUpdate> },
+  TContext
+> => {
+  const mutationKey = ["updateStoryworld"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateStoryworld>>,
+    { id: number; data: BodyType<StoryworldUpdate> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateStoryworld(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateStoryworldMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateStoryworld>>
+>;
+export type UpdateStoryworldMutationBody = BodyType<StoryworldUpdate>;
+export type UpdateStoryworldMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Update a storyworld's steward-managed details
+ */
+export const useUpdateStoryworld = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | ErrorResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateStoryworld>>,
+    TError,
+    { id: number; data: BodyType<StoryworldUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateStoryworld>>,
+  TError,
+  { id: number; data: BodyType<StoryworldUpdate> },
+  TContext
+> => {
+  return useMutation(getUpdateStoryworldMutationOptions(options));
+};
 
 /**
  * @summary List story paths for a storyworld

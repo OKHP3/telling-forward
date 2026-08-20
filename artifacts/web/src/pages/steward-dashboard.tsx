@@ -6,13 +6,15 @@
  * boundary (401/403) independently of the UI gate.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
 import {
   useGetStoryworld,
   getGetStoryworldQueryKey,
+  getListStoryworldsQueryKey,
   useListStoryworldProposals,
   getListStoryworldProposalsQueryKey,
+  useUpdateStoryworld,
   useMarkProposalUnderReview,
   useAcceptProposal,
   useReturnProposal,
@@ -32,6 +34,8 @@ import {
   ChevronRight,
   ShieldCheck,
   Loader2,
+  Check,
+  Save,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -446,10 +450,20 @@ export function StewardDashboard() {
   const worldId = params.worldId ? parseInt(params.worldId, 10) : 0;
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
+  const [seedDraft, setSeedDraft] = useState("");
+  const [isSeedDirty, setIsSeedDirty] = useState(false);
+  const [seedError, setSeedError] = useState<string | null>(null);
 
   const { data: world, isLoading: isLoadingWorld } = useGetStoryworld(worldId, {
     query: { enabled: !!worldId, queryKey: getGetStoryworldQueryKey(worldId) },
   });
+  const updateStoryworld = useUpdateStoryworld();
+
+  useEffect(() => {
+    if (!isSeedDirty) {
+      setSeedDraft(world?.seed ?? "");
+    }
+  }, [isSeedDirty, world?.seed]);
 
   const {
     data: proposals,
@@ -469,6 +483,33 @@ export function StewardDashboard() {
     void queryClient.invalidateQueries({
       queryKey: getListStoryworldProposalsQueryKey(worldId),
     });
+  }
+
+  async function handleSeedSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!worldId) return;
+
+    setSeedError(null);
+    const seed = seedDraft.trim();
+    try {
+      const updatedWorld = await updateStoryworld.mutateAsync({
+        id: worldId,
+        data: { seed: seed || null },
+      });
+      setSeedDraft(updatedWorld.seed ?? "");
+      setIsSeedDirty(false);
+      queryClient.setQueryData(getGetStoryworldQueryKey(worldId), updatedWorld);
+      queryClient.setQueryData(
+        getListStoryworldsQueryKey(),
+        (worlds: typeof updatedWorld[] | undefined) =>
+          worlds?.map((item) => (item.id === updatedWorld.id ? updatedWorld : item)),
+      );
+      void queryClient.invalidateQueries({
+        queryKey: getListStoryworldsQueryKey(),
+      });
+    } catch {
+      setSeedError("Couldn't save the discovery invitation. Please try again.");
+    }
   }
 
   // 401/403 from the API → not a steward, redirect home
@@ -531,6 +572,91 @@ export function StewardDashboard() {
           <span className="font-medium text-foreground">{world?.title}</span>.
         </p>
       </header>
+
+      <section
+        className="rounded-xl border border-primary/15 bg-primary/[0.025] p-5 sm:p-6"
+        aria-labelledby="discovery-invitation-heading"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h2
+              id="discovery-invitation-heading"
+              className="font-serif text-lg font-medium text-foreground"
+            >
+              Discovery invitation
+            </h2>
+            <p className="max-w-xl text-sm leading-6 text-muted-foreground">
+              Give readers one sentence that invites them into this storyworld.
+              It appears beneath the title in the Reader App.
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full border border-primary/20 bg-background px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-primary">
+            Reader
+          </span>
+        </div>
+
+        <form className="mt-5 space-y-3" onSubmit={handleSeedSave}>
+          <label
+            htmlFor="storyworld-seed"
+            className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+          >
+            Seed sentence
+          </label>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              id="storyworld-seed"
+              type="text"
+              value={seedDraft}
+              onChange={(event) => {
+                setSeedDraft(event.target.value);
+                setIsSeedDirty(true);
+                setSeedError(null);
+              }}
+              maxLength={120}
+              placeholder="A quiet world on the verge of becoming something else."
+              className="h-11 min-w-0 flex-1 rounded-lg border border-input bg-background px-3.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring"
+              data-testid="input-storyworld-seed"
+            />
+            <button
+              type="submit"
+              disabled={updateStoryworld.isPending || !isSeedDirty}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              data-testid="button-save-storyworld-seed"
+            >
+              {updateStoryworld.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isSeedDirty ? (
+                <Save className="h-4 w-4" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              {updateStoryworld.isPending
+                ? "Saving"
+                : isSeedDirty
+                  ? "Save invitation"
+                  : "Saved"}
+            </button>
+          </div>
+          <div className="flex items-center justify-between gap-3 text-xs">
+            <p className="text-muted-foreground">
+              Leave it blank and save to return to the default discovery message.
+            </p>
+            <span
+              className={cn(
+                "shrink-0 tabular-nums",
+                seedDraft.length >= 110 ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground",
+              )}
+            >
+              {seedDraft.length}/120
+            </span>
+          </div>
+          {seedError && (
+            <p className="text-sm text-destructive" role="alert">
+              {seedError}
+            </p>
+          )}
+        </form>
+      </section>
 
       {/* Open submissions */}
       <section className="space-y-4">

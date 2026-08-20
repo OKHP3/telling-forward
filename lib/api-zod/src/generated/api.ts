@@ -157,6 +157,61 @@ export const GetStoryworldResponse = zod.object({
 });
 
 /**
+ * Updates the short seed sentence surfaced on the Reader discovery page. Requires authentication and steward role for the storyworld.
+
+ * @summary Update a storyworld's steward-managed details
+ */
+export const UpdateStoryworldParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const updateStoryworldBodySeedMax = 120;
+
+export const updateStoryworldBodySeedRegExp = new RegExp("^[^\\r\\n]\*$");
+
+export const UpdateStoryworldBody = zod.object({
+  seed: zod
+    .string()
+    .max(updateStoryworldBodySeedMax)
+    .regex(updateStoryworldBodySeedRegExp)
+    .nullable()
+    .describe(
+      "One short, single-line invitation for the Reader discovery page. Send null to clear the current seed sentence.\n",
+    ),
+});
+
+export const updateStoryworldResponsePathCountMin = 0;
+
+export const updateStoryworldResponseReaderThemeDefault = `editorial`;
+
+export const UpdateStoryworldResponse = zod.object({
+  id: zod.number(),
+  repoOwner: zod.string(),
+  repoName: zod.string(),
+  title: zod.string(),
+  pathCount: zod
+    .number()
+    .min(updateStoryworldResponsePathCountMin)
+    .describe("Number of story paths in this storyworld."),
+  stewardId: zod.number().nullish(),
+  canonBranchRef: zod.string(),
+  seed: zod
+    .string()
+    .nullish()
+    .describe(
+      "A short seed sentence surfaced on the Reader discovery page. Null when the world creator has not set one yet.\n",
+    ),
+  readerTheme: zod
+    .enum(["editorial", "terminal", "archive", "dispatch", "signal"])
+    .default(updateStoryworldResponseReaderThemeDefault)
+    .describe(
+      "A finite, per-storyworld Reader theme. Every theme preserves the canonical path markers, attribution, provenance, readable type scale, and reduced-motion behavior.\n",
+    ),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
  * @summary List story paths for a storyworld
  */
 export const ListStoryPathsParams = zod.object({

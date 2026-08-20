@@ -19,6 +19,9 @@ import {
   ListStoryworldProposalsParams,
   CreateContributionBody,
   CreateContributionParams,
+  UpdateStoryworldBody,
+  UpdateStoryworldParams,
+  UpdateStoryworldResponse,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
 import {
@@ -180,6 +183,60 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to load storyworld" });
   }
 });
+
+// PATCH /api/storyworlds/:id
+// Stewards maintain the short invitation readers see on discovery cards.
+router.patch(
+  "/:id",
+  requireAuth,
+  requireStewardForStoryworld,
+  async (req, res): Promise<void> => {
+    const params = UpdateStoryworldParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid storyworld id" });
+      return;
+    }
+
+    const body = UpdateStoryworldBody.safeParse(req.body);
+    if (!body.success) {
+      res.status(400).json({ error: body.error.message });
+      return;
+    }
+
+    try {
+      const [world] = await db
+        .update(storyworldsTable)
+        .set({
+          seed: body.data.seed,
+          updatedAt: new Date(),
+        })
+        .where(eq(storyworldsTable.id, params.data.id))
+        .returning();
+
+      if (!world) {
+        res.status(404).json({ error: "Storyworld not found" });
+        return;
+      }
+
+      const [pathSummary] = await db
+        .select({
+          pathCount: count(storyPathsTable.id).mapWith(Number),
+        })
+        .from(storyPathsTable)
+        .where(eq(storyPathsTable.storyworldId, world.id));
+
+      res.json(
+        UpdateStoryworldResponse.parse({
+          ...world,
+          pathCount: pathSummary?.pathCount ?? 0,
+        }),
+      );
+    } catch (err) {
+      req.log.error({ err, storyworldId: params.data.id }, "updateStoryworld DB error");
+      res.status(500).json({ error: "Failed to update storyworld" });
+    }
+  },
+);
 
 // GET /api/storyworlds/:id/paths
 router.get("/:id/paths", async (req, res) => {
