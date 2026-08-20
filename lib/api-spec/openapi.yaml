@@ -1210,6 +1210,10 @@ components:
           type: integer
           minimum: 0
           description: Number of story paths in this storyworld.
+        savedMomentCount:
+          type: integer
+          minimum: 0
+          description: Number of distinct saved moments indexed in this storyworld.
         stewardId:
           type: integer
           nullable: true
@@ -1233,6 +1237,7 @@ components:
         - id
         - repoOwner
         - repoName
+        - savedMomentCount
         - title
         - pathCount
         - canonBranchRef

@@ -17,6 +17,11 @@ export interface Storyworld {
    * @minimum 0
    */
   pathCount: number;
+  /**
+   * Number of distinct saved moments indexed in this storyworld.
+   * @minimum 0
+   */
+  savedMomentCount: number;
   stewardId?: number | null;
   canonBranchRef: string;
   /** A short seed sentence surfaced on the Reader discovery page. Null when the world creator has not set one yet.

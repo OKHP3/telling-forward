@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, asc, count, desc, inArray, or } from "drizzle-orm";
+import { eq, and, asc, count, desc, inArray, or, sql } from "drizzle-orm";
 import {
   db,
   storyworldsTable,
@@ -142,6 +142,11 @@ router.get("/", async (req, res) => {
         createdAt: storyworldsTable.createdAt,
         updatedAt: storyworldsTable.updatedAt,
         pathCount: count(storyPathsTable.id).mapWith(Number),
+        savedMomentCount: sql<number>`(
+          SELECT COUNT(DISTINCT c.id)
+          FROM contributions c
+          WHERE c.storyworld_id = ${storyworldsTable.id}
+        )`.mapWith(Number),
       })
       .from(storyworldsTable)
       .leftJoin(
@@ -178,6 +183,11 @@ router.get("/:id", async (req, res) => {
         createdAt: storyworldsTable.createdAt,
         updatedAt: storyworldsTable.updatedAt,
         pathCount: count(storyPathsTable.id).mapWith(Number),
+        savedMomentCount: sql<number>`(
+          SELECT COUNT(DISTINCT c.id)
+          FROM contributions c
+          WHERE c.storyworld_id = ${storyworldsTable.id}
+        )`.mapWith(Number),
       })
       .from(storyworldsTable)
       .leftJoin(
@@ -235,6 +245,11 @@ router.patch(
       const [pathSummary] = await db
         .select({
           pathCount: count(storyPathsTable.id).mapWith(Number),
+          savedMomentCount: sql<number>`(
+            SELECT COUNT(DISTINCT c.id)
+            FROM contributions c
+            WHERE c.storyworld_id = ${world.id}
+          )`.mapWith(Number),
         })
         .from(storyPathsTable)
         .where(eq(storyPathsTable.storyworldId, world.id));
@@ -243,6 +258,7 @@ router.patch(
         UpdateStoryworldResponse.parse({
           ...world,
           pathCount: pathSummary?.pathCount ?? 0,
+          savedMomentCount: pathSummary?.savedMomentCount ?? 0,
         }),
       );
     } catch (err) {

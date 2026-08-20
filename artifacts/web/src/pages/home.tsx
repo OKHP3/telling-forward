@@ -1,6 +1,6 @@
 import { useListStoryworlds } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { BookOpen, UserCircle, Clock, ChevronRight, GitBranch } from "lucide-react";
+import { BookOpen, UserCircle, Clock, ChevronRight, GitBranch, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 
 export function Home() {
@@ -70,6 +70,19 @@ export function Home() {
                       {world.pathCount === 0
                         ? "No paths yet"
                         : `${world.pathCount} ${world.pathCount === 1 ? "path" : "paths"}`}
+                    </span>
+                  </div>
+                  <div
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium"
+                    data-testid={`text-saved-moment-count-${world.id}`}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>
+                      {world.savedMomentCount === 0
+                        ? world.pathCount === 0
+                          ? "No saved moments yet"
+                          : "Paths, no saved moments yet"
+                        : `${world.savedMomentCount} saved ${world.savedMomentCount === 1 ? "moment" : "moments"}`}
                     </span>
                   </div>
                 </div>

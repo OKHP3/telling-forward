@@ -169,6 +169,8 @@ export const GithubCallbackQueryParams = zod.object({
  */
 export const listStoryworldsResponsePathCountMin = 0;
 
+export const listStoryworldsResponseSavedMomentCountMin = 0;
+
 export const listStoryworldsResponseReaderThemeDefault = `editorial`;
 
 export const ListStoryworldsResponseItem = zod.object({
@@ -180,6 +182,10 @@ export const ListStoryworldsResponseItem = zod.object({
     .number()
     .min(listStoryworldsResponsePathCountMin)
     .describe("Number of story paths in this storyworld."),
+  savedMomentCount: zod
+    .number()
+    .min(listStoryworldsResponseSavedMomentCountMin)
+    .describe("Number of distinct saved moments indexed in this storyworld."),
   stewardId: zod.number().nullish(),
   canonBranchRef: zod.string(),
   seed: zod
@@ -208,6 +214,8 @@ export const GetStoryworldParams = zod.object({
 
 export const getStoryworldResponsePathCountMin = 0;
 
+export const getStoryworldResponseSavedMomentCountMin = 0;
+
 export const getStoryworldResponseReaderThemeDefault = `editorial`;
 
 export const GetStoryworldResponse = zod.object({
@@ -219,6 +227,10 @@ export const GetStoryworldResponse = zod.object({
     .number()
     .min(getStoryworldResponsePathCountMin)
     .describe("Number of story paths in this storyworld."),
+  savedMomentCount: zod
+    .number()
+    .min(getStoryworldResponseSavedMomentCountMin)
+    .describe("Number of distinct saved moments indexed in this storyworld."),
   stewardId: zod.number().nullish(),
   canonBranchRef: zod.string(),
   seed: zod
@@ -263,6 +275,8 @@ export const UpdateStoryworldBody = zod.object({
 
 export const updateStoryworldResponsePathCountMin = 0;
 
+export const updateStoryworldResponseSavedMomentCountMin = 0;
+
 export const updateStoryworldResponseReaderThemeDefault = `editorial`;
 
 export const UpdateStoryworldResponse = zod.object({
@@ -274,6 +288,10 @@ export const UpdateStoryworldResponse = zod.object({
     .number()
     .min(updateStoryworldResponsePathCountMin)
     .describe("Number of story paths in this storyworld."),
+  savedMomentCount: zod
+    .number()
+    .min(updateStoryworldResponseSavedMomentCountMin)
+    .describe("Number of distinct saved moments indexed in this storyworld."),
   stewardId: zod.number().nullish(),
   canonBranchRef: zod.string(),
   seed: zod
