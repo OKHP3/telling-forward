@@ -86,6 +86,8 @@ export const GithubCallbackQueryParams = zod.object({
 /**
  * @summary List all storyworlds
  */
+export const listStoryworldsResponsePathCountMin = 0;
+
 export const listStoryworldsResponseReaderThemeDefault = `editorial`;
 
 export const ListStoryworldsResponseItem = zod.object({
@@ -93,6 +95,10 @@ export const ListStoryworldsResponseItem = zod.object({
   repoOwner: zod.string(),
   repoName: zod.string(),
   title: zod.string(),
+  pathCount: zod
+    .number()
+    .min(listStoryworldsResponsePathCountMin)
+    .describe("Number of story paths in this storyworld."),
   stewardId: zod.number().nullish(),
   canonBranchRef: zod.string(),
   seed: zod
@@ -119,6 +125,8 @@ export const GetStoryworldParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const getStoryworldResponsePathCountMin = 0;
+
 export const getStoryworldResponseReaderThemeDefault = `editorial`;
 
 export const GetStoryworldResponse = zod.object({
@@ -126,6 +134,10 @@ export const GetStoryworldResponse = zod.object({
   repoOwner: zod.string(),
   repoName: zod.string(),
   title: zod.string(),
+  pathCount: zod
+    .number()
+    .min(getStoryworldResponsePathCountMin)
+    .describe("Number of story paths in this storyworld."),
   stewardId: zod.number().nullish(),
   canonBranchRef: zod.string(),
   seed: zod

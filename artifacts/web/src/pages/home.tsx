@@ -1,6 +1,6 @@
 import { useListStoryworlds } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { BookOpen, UserCircle, Clock, ChevronRight } from "lucide-react";
+import { BookOpen, UserCircle, Clock, ChevronRight, GitBranch } from "lucide-react";
 import { format } from "date-fns";
 
 export function Home() {
@@ -61,6 +61,17 @@ export function Home() {
                   <h2 className="text-2xl font-serif text-card-foreground font-medium group-hover:text-primary transition-colors">
                     {world.title}
                   </h2>
+                  <div
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium"
+                    data-testid={`text-path-count-${world.id}`}
+                  >
+                    <GitBranch className="h-3.5 w-3.5" />
+                    <span>
+                      {world.pathCount === 0
+                        ? "No paths yet"
+                        : `${world.pathCount} ${world.pathCount === 1 ? "path" : "paths"}`}
+                    </span>
+                  </div>
                 </div>
                 
                 <div className="flex items-center justify-between pt-4 border-t border-border/40 text-sm text-muted-foreground">

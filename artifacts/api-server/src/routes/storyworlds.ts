@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, asc, desc, inArray } from "drizzle-orm";
+import { eq, and, asc, count, desc, inArray } from "drizzle-orm";
 import {
   db,
   storyworldsTable,
@@ -92,8 +92,25 @@ const router: IRouter = Router();
 router.get("/", async (req, res) => {
   try {
     const rows = await db
-      .select()
+      .select({
+        id: storyworldsTable.id,
+        repoOwner: storyworldsTable.repoOwner,
+        repoName: storyworldsTable.repoName,
+        title: storyworldsTable.title,
+        stewardId: storyworldsTable.stewardId,
+        canonBranchRef: storyworldsTable.canonBranchRef,
+        seed: storyworldsTable.seed,
+        readerTheme: storyworldsTable.readerTheme,
+        createdAt: storyworldsTable.createdAt,
+        updatedAt: storyworldsTable.updatedAt,
+        pathCount: count(storyPathsTable.id).mapWith(Number),
+      })
       .from(storyworldsTable)
+      .leftJoin(
+        storyPathsTable,
+        eq(storyPathsTable.storyworldId, storyworldsTable.id),
+      )
+      .groupBy(storyworldsTable.id)
       .orderBy(desc(storyworldsTable.createdAt));
     res.json(rows);
   } catch (err) {
@@ -111,9 +128,26 @@ router.get("/:id", async (req, res) => {
   }
   try {
     const rows = await db
-      .select()
+      .select({
+        id: storyworldsTable.id,
+        repoOwner: storyworldsTable.repoOwner,
+        repoName: storyworldsTable.repoName,
+        title: storyworldsTable.title,
+        stewardId: storyworldsTable.stewardId,
+        canonBranchRef: storyworldsTable.canonBranchRef,
+        seed: storyworldsTable.seed,
+        readerTheme: storyworldsTable.readerTheme,
+        createdAt: storyworldsTable.createdAt,
+        updatedAt: storyworldsTable.updatedAt,
+        pathCount: count(storyPathsTable.id).mapWith(Number),
+      })
       .from(storyworldsTable)
+      .leftJoin(
+        storyPathsTable,
+        eq(storyPathsTable.storyworldId, storyworldsTable.id),
+      )
       .where(eq(storyworldsTable.id, params.data.id))
+      .groupBy(storyworldsTable.id)
       .limit(1);
     if (!rows.length) {
       res.status(404).json({ error: "Storyworld not found" });

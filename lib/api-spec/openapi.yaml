@@ -1081,6 +1081,10 @@ components:
           type: string
         title:
           type: string
+        pathCount:
+          type: integer
+          minimum: 0
+          description: Number of story paths in this storyworld.
         stewardId:
           type: integer
           nullable: true
@@ -1105,6 +1109,7 @@ components:
         - repoOwner
         - repoName
         - title
+        - pathCount
         - canonBranchRef
         - readerTheme
         - createdAt
