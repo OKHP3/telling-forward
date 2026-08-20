@@ -288,7 +288,7 @@ Directly answering the "Vite, Tailwind, TypeScript, Playwright" question: here's
 | Mobile | Expo / React Native | — | **Scaffolded and implemented in checkout; product scope and production acceptance remain open** |
 | E2E testing | **Not present** | — | **Gap.** No Playwright or Cypress browser harness is configured |
 | Unit/integration testing | **Present for API and core flows** | Vitest route and library tests under `artifacts/api-server/src/**/__tests__` | Expand coverage and keep the generated API contract aligned |
-| API mocking for tests | Mock Service Worker (`msw`) | listed in `pnpm-workspace.yaml`'s `onlyBuiltDependencies` | **Reserved but unused** — the dependency is pre-approved for pnpm's build-script allowlist, but nothing consumes it yet |
+| API mocking for tests | Mock Service Worker (`msw`) | listed in `pnpm-workspace.yaml`'s `allowBuilds` map | **Reserved but unused** — the dependency is pre-approved for pnpm's build-script allowlist, but nothing consumes it yet |
 | GitHub integration | GitHub client, webhooks, admin reconciliation, and indexed provenance | prototype layer present; GitHub App migration not complete | **Implemented in checkout; live repository and GitHub App evidence deferred** |
 | Public discovery SPA | GitHub Pages + Vite (Skillz Forge pattern) | separate configured reader surfaces exist; Pages-specific SPA remains optional | **Recommended, optional**, Section 5 and 9 |
 
