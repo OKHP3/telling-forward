@@ -5,3 +5,4 @@ export * from "./password-reset-tokens";
 export * from "./transcribe-usage";
 export * from "./telling-forward";
 export * from "./consents";
+export * from "./moderation";

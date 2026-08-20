@@ -33,6 +33,7 @@ import {
   Clock,
   ChevronRight,
   ShieldCheck,
+  ShieldAlert,
   Loader2,
   Check,
   Save,
@@ -49,6 +50,18 @@ type ProposalState =
   | "restricted"
   | "withdrawn"
   | "archived";
+
+type ModerationCase = {
+  id: string;
+  subjectKind: string;
+  subjectReference: string;
+  status: string;
+  visibilityAction: string;
+  primaryReasonCode: string;
+  contributorMessage: string | null;
+  openedAt: string;
+  events: Array<{ eventType: string; privateNote: string | null; evidenceReference: string | null; createdAt: string }>;
+};
 
 function getStateBadge(state: ProposalState) {
   switch (state) {
@@ -453,6 +466,10 @@ export function StewardDashboard() {
   const [seedDraft, setSeedDraft] = useState("");
   const [isSeedDirty, setIsSeedDirty] = useState(false);
   const [seedError, setSeedError] = useState<string | null>(null);
+  const [moderationCases, setModerationCases] = useState<ModerationCase[]>([]);
+  const [moderationError, setModerationError] = useState<string | null>(null);
+  const [reportForm, setReportForm] = useState({ subjectKind: "proposal", subjectReference: "", reason: "spam", note: "" });
+  const [controlForm, setControlForm] = useState({ subjectUserId: "", kind: "mute", appliesTo: "submission", reason: "spam" });
 
   const { data: world, isLoading: isLoadingWorld } = useGetStoryworld(worldId, {
     query: { enabled: !!worldId, queryKey: getGetStoryworldQueryKey(worldId) },
@@ -483,6 +500,59 @@ export function StewardDashboard() {
     void queryClient.invalidateQueries({
       queryKey: getListStoryworldProposalsQueryKey(worldId),
     });
+  }
+
+  async function loadModerationCases() {
+    if (!worldId) return;
+    const response = await fetch(`/api/storyworlds/${worldId}/moderation/cases`, { credentials: "include" });
+    if (!response.ok) throw new Error("Could not load moderation cases");
+    setModerationCases(await response.json());
+  }
+
+  useEffect(() => {
+    void loadModerationCases().catch(() => setModerationError("Moderation cases could not be loaded."));
+  }, [worldId]);
+
+  async function openModerationCase(event: React.FormEvent) {
+    event.preventDefault();
+    setModerationError(null);
+    const response = await fetch(`/api/storyworlds/${worldId}/moderation/cases`, {
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subjectKind: reportForm.subjectKind,
+        subjectReference: reportForm.subjectReference,
+        primaryReasonCode: reportForm.reason,
+        privateNote: reportForm.note,
+        visibilityAction: "hold",
+      }),
+    });
+    if (!response.ok) { setModerationError("The report could not be recorded."); return; }
+    setReportForm({ ...reportForm, subjectReference: "", note: "" });
+    await loadModerationCases();
+  }
+
+  async function applyCaseAction(item: ModerationCase, status: string, visibilityAction: string) {
+    const response = await fetch(`/api/moderation/cases/${item.id}/action`, {
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status, visibilityAction, reasonCode: item.primaryReasonCode }),
+    });
+    if (!response.ok) { setModerationError("That moderation action could not be applied."); return; }
+    await loadModerationCases();
+  }
+
+  async function applyControl(event: React.FormEvent) {
+    event.preventDefault();
+    const response = await fetch(`/api/storyworlds/${worldId}/moderation/controls`, {
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subjectUserId: Number(controlForm.subjectUserId),
+        controlKind: controlForm.kind,
+        appliesTo: controlForm.appliesTo,
+        reasonCode: controlForm.reason,
+      }),
+    });
+    if (!response.ok) { setModerationError("The storyworld control could not be applied."); return; }
+    setControlForm({ ...controlForm, subjectUserId: "" });
   }
 
   async function handleSeedSave(event: React.FormEvent<HTMLFormElement>) {
@@ -656,6 +726,51 @@ export function StewardDashboard() {
             </p>
           )}
         </form>
+      </section>
+
+      <section className="rounded-xl border border-red-200/70 bg-red-50/30 p-5 sm:p-6 dark:border-red-900/40 dark:bg-red-950/10" aria-labelledby="moderation-heading">
+        <div className="flex items-start gap-3">
+          <ShieldAlert className="mt-0.5 h-5 w-5 text-red-700 dark:text-red-300" />
+          <div>
+            <h2 id="moderation-heading" className="font-serif text-lg font-medium">Private moderation desk</h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Safety, spam, rights, and conduct reports stay private here. They are separate from editorial review and never become GitHub comments or labels.
+            </p>
+          </div>
+        </div>
+        <form onSubmit={openModerationCase} className="mt-4 grid gap-2 sm:grid-cols-4">
+          <select value={reportForm.subjectKind} onChange={(e) => setReportForm({ ...reportForm, subjectKind: e.target.value })} className="h-10 rounded-md border bg-background px-2 text-sm">
+            <option value="proposal">Proposal</option><option value="contribution">Contribution</option><option value="account">Account</option><option value="reaction">Reaction</option>
+          </select>
+          <input required value={reportForm.subjectReference} onChange={(e) => setReportForm({ ...reportForm, subjectReference: e.target.value })} placeholder="Subject reference" className="h-10 rounded-md border bg-background px-3 text-sm" />
+          <select value={reportForm.reason} onChange={(e) => setReportForm({ ...reportForm, reason: e.target.value })} className="h-10 rounded-md border bg-background px-2 text-sm">
+            <option value="spam">Spam</option><option value="harassment">Harassment</option><option value="nsfw">NSFW</option><option value="plagiarism-review">Plagiarism review</option><option value="rights-concern">Rights concern</option><option value="safety">Safety</option><option value="other">Other</option>
+          </select>
+          <button className="h-10 rounded-md bg-red-700 px-3 text-sm font-medium text-white hover:bg-red-800">Open private case</button>
+          <input value={reportForm.note} onChange={(e) => setReportForm({ ...reportForm, note: e.target.value })} placeholder="Private note or evidence reference (optional)" className="h-10 rounded-md border bg-background px-3 text-sm sm:col-span-4" />
+        </form>
+        {moderationCases.length > 0 && <div className="mt-5 space-y-2">
+          {moderationCases.map((item) => (
+            <div key={item.id} className="rounded-lg border border-red-200/70 bg-background p-3 text-sm dark:border-red-900/40">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-medium">{item.primaryReasonCode} · {item.subjectKind} {item.subjectReference}</span>
+                <span className="text-xs text-muted-foreground">{item.status} · {item.visibilityAction}</span>
+              </div>
+              <div className="mt-2 flex gap-2">
+                <button onClick={() => void applyCaseAction(item, "triaged", "hold")} className="rounded border px-2 py-1 text-xs">Keep on hold</button>
+                <button onClick={() => void applyCaseAction(item, "dismissed", "none")} className="rounded border px-2 py-1 text-xs">Dismiss</button>
+                <button onClick={() => void applyCaseAction(item, "resolved", "restricted")} className="rounded border border-red-300 px-2 py-1 text-xs text-red-700">Resolve + restrict</button>
+              </div>
+            </div>
+          ))}
+        </div>}
+        <form onSubmit={applyControl} className="mt-5 flex flex-wrap gap-2 border-t border-red-200/60 pt-4 dark:border-red-900/30">
+          <input required inputMode="numeric" value={controlForm.subjectUserId} onChange={(e) => setControlForm({ ...controlForm, subjectUserId: e.target.value })} placeholder="Contributor user ID" className="h-9 w-40 rounded-md border bg-background px-3 text-sm" />
+          <select value={controlForm.kind} onChange={(e) => setControlForm({ ...controlForm, kind: e.target.value })} className="h-9 rounded-md border bg-background px-2 text-sm"><option value="mute">Mute</option><option value="block">Block</option></select>
+          <select value={controlForm.appliesTo} onChange={(e) => setControlForm({ ...controlForm, appliesTo: e.target.value })} className="h-9 rounded-md border bg-background px-2 text-sm"><option value="submission">Submissions</option><option value="contact">Contact</option><option value="all-contributions">All contributions</option><option value="reaction">Reactions</option></select>
+          <button className="h-9 rounded-md border border-red-300 px-3 text-xs font-medium text-red-700">Apply storyworld control</button>
+        </form>
+        {moderationError && <p className="mt-3 text-sm text-destructive" role="alert">{moderationError}</p>}
       </section>
 
       {/* Open submissions */}

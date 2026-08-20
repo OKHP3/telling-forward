@@ -8,6 +8,7 @@ import seedRouter from "./seed";
 import adminRouter from "./admin";
 import meRouter from "./me";
 import consentsRouter from "./consents";
+import moderationRouter from "./moderation";
 
 const router: IRouter = Router();
 
@@ -19,6 +20,7 @@ router.use("/", transcribeRouter);
 router.use("/admin", adminRouter);
 router.use("/me", meRouter);
 router.use("/consents", consentsRouter);
+router.use(moderationRouter);
 
 // Dev-only seed route — not available in production
 if (process.env["NODE_ENV"] !== "production") {

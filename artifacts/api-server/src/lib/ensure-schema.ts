@@ -369,6 +369,66 @@ export async function ensureSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS consent_records_contributor_idx
       ON consent_records (contributor_id, recorded_at);
 
+    DO $$ BEGIN
+      CREATE TYPE moderation_case_status AS ENUM
+        ('open', 'triaged', 'awaiting-steward', 'resolved', 'dismissed', 'appealed');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      CREATE TYPE moderation_visibility_action AS ENUM
+        ('none', 'hold', 'restricted', 'muted', 'blocked');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      CREATE TYPE moderation_subject_kind AS ENUM
+        ('proposal', 'contribution', 'capsule', 'reaction', 'theory', 'account');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      CREATE TYPE moderation_reason_code AS ENUM
+        ('spam', 'harassment', 'nsfw', 'plagiarism-review', 'rights-concern', 'safety', 'other');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    CREATE TABLE IF NOT EXISTS moderation_cases (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      storyworld_id INTEGER NOT NULL REFERENCES storyworlds(id) ON DELETE CASCADE,
+      subject_kind moderation_subject_kind NOT NULL,
+      subject_reference TEXT NOT NULL,
+      opened_by_user_id INTEGER REFERENCES users(id),
+      assigned_steward_id INTEGER REFERENCES stewards(id),
+      status moderation_case_status NOT NULL DEFAULT 'open',
+      visibility_action moderation_visibility_action NOT NULL DEFAULT 'none',
+      primary_reason_code moderation_reason_code NOT NULL,
+      contributor_message TEXT,
+      opened_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      resolved_at TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS idx_moderation_cases_storyworld ON moderation_cases (storyworld_id);
+    CREATE INDEX IF NOT EXISTS idx_moderation_cases_status ON moderation_cases (status);
+
+    CREATE TABLE IF NOT EXISTS moderation_events (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      case_id UUID NOT NULL REFERENCES moderation_cases(id) ON DELETE CASCADE,
+      actor_user_id INTEGER REFERENCES users(id),
+      event_type TEXT NOT NULL,
+      reason_code moderation_reason_code,
+      private_note TEXT,
+      evidence_reference TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_moderation_events_case ON moderation_events (case_id);
+
+    CREATE TABLE IF NOT EXISTS storyworld_moderation_controls (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      storyworld_id INTEGER NOT NULL REFERENCES storyworlds(id) ON DELETE CASCADE,
+      subject_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      control_kind TEXT NOT NULL CHECK (control_kind IN ('mute', 'block')),
+      applies_to TEXT NOT NULL CHECK (applies_to IN ('reaction', 'theory', 'submission', 'contact', 'all-contributions')),
+      reason_code moderation_reason_code NOT NULL,
+      imposed_by_user_id INTEGER NOT NULL REFERENCES users(id),
+      starts_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ,
+      lifted_at TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS idx_moderation_controls_storyworld ON storyworld_moderation_controls (storyworld_id);
+
     CREATE INDEX IF NOT EXISTS idx_story_paths_storyworld ON story_paths (storyworld_id);
     CREATE INDEX IF NOT EXISTS idx_contributions_path ON contributions (path_id);
     CREATE INDEX IF NOT EXISTS idx_contribution_path_memberships_path ON contribution_path_memberships (path_id);
