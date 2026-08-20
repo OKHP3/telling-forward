@@ -3,7 +3,9 @@ import request from "supertest";
 import express, { type Express } from "express";
 
 const state = vi.hoisted(() => ({
-  rows: [] as unknown[],
+  narrationRows: [] as unknown[],
+  proposalRows: [] as unknown[],
+  githubLinkRows: [] as unknown[],
   where: vi.fn(),
   authenticated: true,
 }));
@@ -21,6 +23,21 @@ const tables = vi.hoisted(() => ({
     id: "contributors.id",
     platformIdentity: "contributors.platform_identity",
   },
+  proposalsTable: {
+    id: "proposals.id",
+    contributorId: "proposals.contributor_id",
+    githubUserId: "proposals.github_user_id",
+    storyworldId: "proposals.storyworld_id",
+    pathId: "proposals.path_id",
+    prNumber: "proposals.pr_number",
+    state: "proposals.state",
+    submittedAt: "proposals.submitted_at",
+  },
+  userGithubLinksTable: {
+    userId: "user_github_links.user_id",
+    githubUserId: "user_github_links.github_user_id",
+    githubUsername: "user_github_links.github_username",
+  },
   storyworldsTable: { id: "storyworlds.id", title: "storyworlds.title" },
   storyPathsTable: {
     id: "story_paths.id",
@@ -30,18 +47,37 @@ const tables = vi.hoisted(() => ({
 }));
 
 vi.mock("@workspace/db", () => {
-  const query = {
-    from: vi.fn(() => query),
-    innerJoin: vi.fn(() => query),
-    where: state.where,
-    orderBy: vi.fn(() => Promise.resolve(state.rows)),
+  const makeQuery = () => {
+    let source: unknown;
+    const query = {
+      from: vi.fn((table) => {
+        source = table;
+        return query;
+      }),
+      innerJoin: vi.fn(() => query),
+      where: vi.fn((...args) => {
+        state.where(...args);
+        return query;
+      }),
+      orderBy: vi.fn(() =>
+        Promise.resolve(
+          source === tables.contributionsTable
+            ? state.narrationRows
+            : state.proposalRows,
+        ),
+      ),
+      limit: vi.fn(() => Promise.resolve([])),
+    };
+    return query;
   };
   return {
-    db: { select: vi.fn(() => query) },
+    db: { select: vi.fn(() => makeQuery()) },
     contributionsTable: tables.contributionsTable,
     contributorsTable: tables.contributorsTable,
+    proposalsTable: tables.proposalsTable,
     storyworldsTable: tables.storyworldsTable,
     storyPathsTable: tables.storyPathsTable,
+    userGithubLinksTable: tables.userGithubLinksTable,
   };
 });
 
@@ -54,6 +90,7 @@ vi.mock("drizzle-orm", () => ({
   and: vi.fn(() => "and-condition"),
   desc: vi.fn(() => "desc-condition"),
   eq: vi.fn(() => "eq-condition"),
+  inArray: vi.fn(() => "in-array-condition"),
 }));
 
 vi.mock("../../middlewares/auth", () => ({
@@ -82,7 +119,7 @@ function buildApp(): Express {
 describe("GET /me/contributions", () => {
   beforeEach(() => {
     state.authenticated = true;
-    state.rows = [
+    state.narrationRows = [
       {
         id: 17,
         storyworldId: 2,
@@ -91,20 +128,49 @@ describe("GET /me/contributions", () => {
         pathTitle: "The Lantern Room",
         title: "A Door in the Fog",
         submittedAt: new Date("2026-08-20T10:00:00.000Z"),
-        status: "accepted",
+      },
+    ];
+    state.proposalRows = [
+      {
+        id: 21,
+        storyworldId: 2,
+        storyworldTitle: "Echoes of the Drift",
+        pathId: 9,
+        pathTitle: "The Lantern Room",
+        prNumber: 88,
+        state: "returned-with-notes",
+        submittedAt: new Date("2026-08-21T10:00:00.000Z"),
+      },
+      {
+        id: 22,
+        storyworldId: 3,
+        storyworldTitle: "City of Brass",
+        pathId: 11,
+        pathTitle: "The Archive",
+        prNumber: 89,
+        state: "under-review",
+        submittedAt: new Date("2026-08-19T10:00:00.000Z"),
       },
     ];
     state.where.mockReset();
-    state.where.mockImplementation(() => ({
-      orderBy: vi.fn(() => Promise.resolve(state.rows)),
-    }));
   });
 
-  it("returns only the authenticated contributor's narrations with navigation metadata", async () => {
+  it("returns the contributor's accepted narrations and explicitly linked pending or returned submissions", async () => {
     const response = await request(buildApp()).get("/contributions");
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual([
+      {
+        id: 21,
+        storyworldId: 2,
+        storyworldTitle: "Echoes of the Drift",
+        pathId: 9,
+        pathTitle: "The Lantern Room",
+        title: "Submission #88",
+        submittedAt: "2026-08-21T10:00:00.000Z",
+        source: "proposal",
+        status: "returned",
+      },
       {
         id: 17,
         storyworldId: 2,
@@ -113,22 +179,33 @@ describe("GET /me/contributions", () => {
         pathTitle: "The Lantern Room",
         title: "A Door in the Fog",
         submittedAt: "2026-08-20T10:00:00.000Z",
+        source: "narration",
         status: "accepted",
       },
+      {
+        id: 22,
+        storyworldId: 3,
+        storyworldTitle: "City of Brass",
+        pathId: 11,
+        pathTitle: "The Archive",
+        title: "Submission #89",
+        submittedAt: "2026-08-19T10:00:00.000Z",
+        source: "proposal",
+        status: "pending",
+      },
     ]);
-    expect(state.where).toHaveBeenCalledTimes(1);
+    expect(state.where).toHaveBeenCalledTimes(2);
   });
 
-  it("returns an empty list when the contributor has not submitted a narration", async () => {
-    state.rows = [];
-    state.where.mockImplementation(() => ({
-      orderBy: vi.fn(() => Promise.resolve([])),
-    }));
+  it("returns no proposal activity when no proposal has passed the immutable GitHub account match", async () => {
+    state.narrationRows = [];
+    state.proposalRows = [];
 
     const response = await request(buildApp()).get("/contributions");
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual([]);
+    expect(state.where).toHaveBeenCalledTimes(2);
   });
 
   it("rejects unauthenticated requests", async () => {

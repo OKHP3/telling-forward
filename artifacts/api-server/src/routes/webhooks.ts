@@ -74,6 +74,7 @@ function verifySignature(
 // ---------------------------------------------------------------------------
 
 interface GitHubUser {
+  id?: number;
   login: string;
   name?: string | null;
 }
@@ -465,6 +466,12 @@ async function handlePullRequest(payload: PullRequestPayload): Promise<void> {
     pr.merged_at ?? pr.closed_at
       ? new Date((pr.merged_at ?? pr.closed_at)!)
       : null;
+  const contributor = pr.user
+    ? await resolveContributor({
+        login: pr.user.login,
+        name: pr.user.name ?? null,
+      })
+    : null;
 
   // GitHub terminal events apply the repository outcome unless a product-level
   // terminal decision has already been recorded. All non-terminal events must
@@ -499,6 +506,8 @@ async function handlePullRequest(payload: PullRequestPayload): Promise<void> {
     .values({
       storyworldId: world.id,
       pathId: path.id,
+      contributorId: contributor?.id ?? null,
+      githubUserId: pr.user?.id ? String(pr.user.id) : null,
       prNumber: pr.number,
       state: proposalState,
       submittedAt,
@@ -506,7 +515,16 @@ async function handlePullRequest(payload: PullRequestPayload): Promise<void> {
     })
     .onConflictDoUpdate({
       target: [proposalsTable.storyworldId, proposalsTable.prNumber],
-      set: { state: stateSet, decidedAt: decidedAtSet },
+      set: {
+        state: stateSet,
+        decidedAt: decidedAtSet,
+        // Backfill a historic proposal when its author is known, without
+        // replacing an established contributor link on webhook replay.
+        contributorId: drizzleSql`COALESCE(${proposalsTable.contributorId}, excluded.contributor_id)`,
+        // GitHub account IDs, unlike usernames, survive renames and cannot be
+        // reassigned to another account. Do not replace an existing ID.
+        githubUserId: drizzleSql`COALESCE(${proposalsTable.githubUserId}, excluded.github_user_id)`,
+      },
     })
     .returning();
 

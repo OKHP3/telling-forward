@@ -73,9 +73,9 @@ export const GetMeResponse = zod.object({
 });
 
 /**
- * Returns durable narration records submitted by the authenticated contributor, including the storyworld and path names needed for the contributor activity screen.
+ * Returns durable narrations submitted by the authenticated contributor and eligible pending or returned PR submissions. A PR submission is included only through its explicit contributor record and the user's linked GitHub identity; ownership is never inferred from a story path.
 
- * @summary List the current contributor's submitted narrations
+ * @summary List the current contributor's activity
  */
 export const ListMyContributionsResponseItem = zod.object({
   id: zod.number(),
@@ -85,10 +85,15 @@ export const ListMyContributionsResponseItem = zod.object({
   pathTitle: zod.string(),
   title: zod.string(),
   submittedAt: zod.coerce.date(),
+  source: zod
+    .enum(["narration", "proposal"])
+    .describe(
+      "Whether this activity record is a saved narration or an imported PR submission.",
+    ),
   status: zod
     .enum(["pending", "accepted", "returned"])
     .describe(
-      "Current contributor-facing status. Mobile narrations are accepted when their durable Git-backed record is created.\n",
+      "Current contributor-facing status. Mobile narrations are accepted when their durable Git-backed record is created; submitted and under-review PRs are pending, while returned PRs are returned.\n",
     ),
 });
 export const ListMyContributionsResponse = zod.array(

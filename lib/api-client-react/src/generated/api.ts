@@ -454,9 +454,9 @@ export function useGetMe<
 }
 
 /**
- * Returns durable narration records submitted by the authenticated contributor, including the storyworld and path names needed for the contributor activity screen.
+ * Returns durable narrations submitted by the authenticated contributor and eligible pending or returned PR submissions. A PR submission is included only through its explicit contributor record and the user's linked GitHub identity; ownership is never inferred from a story path.
 
- * @summary List the current contributor's submitted narrations
+ * @summary List the current contributor's activity
  */
 export const getListMyContributionsUrl = () => {
   return `/api/me/contributions`;
@@ -507,7 +507,7 @@ export type ListMyContributionsQueryResult = NonNullable<
 export type ListMyContributionsQueryError = ErrorType<UnauthorizedResponse>;
 
 /**
- * @summary List the current contributor's submitted narrations
+ * @summary List the current contributor's activity
  */
 
 export function useListMyContributions<

@@ -125,7 +125,7 @@ export default function ActivityScreen() {
           My Contributions
         </Text>
         <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-          Keep track of the scenes you’ve submitted
+          Keep track of your saved scenes and submissions
         </Text>
       </View>
 
@@ -154,7 +154,7 @@ export default function ActivityScreen() {
       ) : (
         <FlatList
           data={contributions ?? []}
-          keyExtractor={(item) => String(item.id)}
+          keyExtractor={(item) => `${item.source}:${item.id}`}
           renderItem={renderItem}
           contentContainerStyle={[
             styles.content,
@@ -175,7 +175,7 @@ export default function ActivityScreen() {
             <EmptyState
               icon="feather"
               title="No contributions yet"
-              subtitle="Your submitted narrations will appear here."
+              subtitle="Your saved scenes and submissions will appear here."
             />
           }
           scrollEnabled={!!(contributions?.length)}

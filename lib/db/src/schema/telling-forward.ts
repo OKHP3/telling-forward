@@ -163,6 +163,15 @@ export const proposalsTable = pgTable("proposals", {
   pathId: integer("path_id")
     .notNull()
     .references(() => storyPathsTable.id),
+  // The PR author resolved from GitHub. Nullable for historic or otherwise
+  // unattributable imports; consumers must never infer ownership from a path.
+  contributorId: integer("contributor_id").references(
+    () => contributorsTable.id,
+  ),
+  // GitHub's immutable numeric account ID for the PR author. This is stored
+  // alongside the contributor link because a login can be renamed or reused.
+  // Null means historic ownership cannot be verified for activity visibility.
+  githubUserId: text("github_user_id"),
   prNumber: integer("pr_number").notNull(),
   state: proposalStateEnum("state").notNull(),
   submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull(),
@@ -174,6 +183,8 @@ export const proposalsTable = pgTable("proposals", {
 (t) => [
   unique("proposals_pr_unique").on(t.storyworldId, t.prNumber),
   index("idx_proposals_path").on(t.pathId),
+  index("idx_proposals_contributor").on(t.contributorId),
+  index("idx_proposals_github_user").on(t.githubUserId),
 ]);
 
 // Maps to PR review comments

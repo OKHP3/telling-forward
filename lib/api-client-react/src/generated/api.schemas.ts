@@ -133,7 +133,18 @@ export interface Contribution {
 }
 
 /**
- * Current contributor-facing status. Mobile narrations are accepted when their durable Git-backed record is created.
+ * Whether this activity record is a saved narration or an imported PR submission.
+ */
+export type MyContributionSource =
+  (typeof MyContributionSource)[keyof typeof MyContributionSource];
+
+export const MyContributionSource = {
+  narration: "narration",
+  proposal: "proposal",
+} as const;
+
+/**
+ * Current contributor-facing status. Mobile narrations are accepted when their durable Git-backed record is created; submitted and under-review PRs are pending, while returned PRs are returned.
 
  */
 export type MyContributionStatus =
@@ -153,7 +164,9 @@ export interface MyContribution {
   pathTitle: string;
   title: string;
   submittedAt: string;
-  /** Current contributor-facing status. Mobile narrations are accepted when their durable Git-backed record is created.
+  /** Whether this activity record is a saved narration or an imported PR submission. */
+  source: MyContributionSource;
+  /** Current contributor-facing status. Mobile narrations are accepted when their durable Git-backed record is created; submitted and under-review PRs are pending, while returned PRs are returned.
    */
   status: MyContributionStatus;
 }

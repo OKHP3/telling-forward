@@ -125,14 +125,15 @@ paths:
     get:
       operationId: listMyContributions
       tags: [narrate]
-      summary: List the current contributor's submitted narrations
+      summary: List the current contributor's activity
       description: >
-        Returns durable narration records submitted by the authenticated
-        contributor, including the storyworld and path names needed for the
-        contributor activity screen.
+        Returns durable narrations submitted by the authenticated contributor
+        and eligible pending or returned PR submissions. A PR submission is
+        included only through its explicit contributor record and the user's
+        linked GitHub identity; ownership is never inferred from a story path.
       responses:
         "200":
-          description: Current contributor's narrations
+          description: Current contributor's activity
           content:
             application/json:
               schema:
@@ -1287,6 +1288,7 @@ components:
         - pathTitle
         - title
         - submittedAt
+        - source
         - status
       properties:
         id:
@@ -1304,12 +1306,17 @@ components:
         submittedAt:
           type: string
           format: date-time
+        source:
+          type: string
+          enum: [narration, proposal]
+          description: Whether this activity record is a saved narration or an imported PR submission.
         status:
           type: string
           enum: [pending, accepted, returned]
           description: >
             Current contributor-facing status. Mobile narrations are accepted
-            when their durable Git-backed record is created.
+            when their durable Git-backed record is created; submitted and
+            under-review PRs are pending, while returned PRs are returned.
 
     ContributionInput:
       type: object

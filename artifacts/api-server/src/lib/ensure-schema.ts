@@ -174,6 +174,8 @@ export async function ensureSchema(): Promise<void> {
       id            SERIAL         PRIMARY KEY,
       storyworld_id INTEGER        NOT NULL REFERENCES storyworlds(id),
       path_id       INTEGER        NOT NULL REFERENCES story_paths(id),
+      contributor_id INTEGER       REFERENCES contributors(id),
+      github_user_id TEXT,
       pr_number     INTEGER        NOT NULL,
       state         proposal_state NOT NULL,
       submitted_at  TIMESTAMPTZ    NOT NULL,
@@ -183,6 +185,13 @@ export async function ensureSchema(): Promise<void> {
     );
 
     ALTER TABLE proposals ADD COLUMN IF NOT EXISTS decision_reason TEXT;
+    -- A proposal is visible in a contributor's activity only through this
+    -- explicit PR-author link. Historic proposals may remain unattributable.
+    ALTER TABLE proposals
+      ADD COLUMN IF NOT EXISTS contributor_id INTEGER REFERENCES contributors(id);
+    -- GitHub login names can change or be reassigned. Store the immutable
+    -- account ID with each imported proposal before making it user-visible.
+    ALTER TABLE proposals ADD COLUMN IF NOT EXISTS github_user_id TEXT;
 
     CREATE TABLE IF NOT EXISTS editor_questions (
       id                SERIAL      PRIMARY KEY,
@@ -340,6 +349,8 @@ export async function ensureSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_contributions_path ON contributions (path_id);
     CREATE INDEX IF NOT EXISTS idx_contribution_path_memberships_path ON contribution_path_memberships (path_id);
     CREATE INDEX IF NOT EXISTS idx_proposals_path ON proposals (path_id);
+    CREATE INDEX IF NOT EXISTS idx_proposals_contributor ON proposals (contributor_id);
+    CREATE INDEX IF NOT EXISTS idx_proposals_github_user ON proposals (github_user_id);
     CREATE INDEX IF NOT EXISTS idx_editor_questions_proposal ON editor_questions (proposal_id);
     CREATE INDEX IF NOT EXISTS idx_stewards_storyworld ON stewards (storyworld_id);
     CREATE INDEX IF NOT EXISTS idx_provenance_storyworld ON provenance_records (storyworld_id);

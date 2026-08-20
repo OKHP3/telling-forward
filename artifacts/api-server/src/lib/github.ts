@@ -32,6 +32,8 @@ export interface GitHubCommit {
 }
 
 export interface GitHubActor {
+  /** GitHub's immutable numeric user ID, represented as text for storage. */
+  id?: string | null;
   login: string;
   displayName: string | null;
 }
@@ -466,7 +468,11 @@ class OctokitGitHubClient implements GitHubClientInterface {
           closedAt: pr.closed_at ?? null,
           mergedAt: pr.merged_at ?? null,
           author: pr.user
-            ? { login: pr.user.login, displayName: pr.user.name ?? null }
+            ? {
+                id: String(pr.user.id),
+                login: pr.user.login,
+                displayName: pr.user.name ?? null,
+              }
             : null,
           mergedBy: null,
         });
@@ -500,10 +506,18 @@ class OctokitGitHubClient implements GitHubClientInterface {
         closedAt: pr.closed_at ?? null,
         mergedAt: pr.merged_at ?? null,
         author: pr.user
-          ? { login: pr.user.login, displayName: pr.user.name ?? null }
+          ? {
+              id: String(pr.user.id),
+              login: pr.user.login,
+              displayName: pr.user.name ?? null,
+            }
           : null,
         mergedBy: pr.merged_by
-          ? { login: pr.merged_by.login, displayName: pr.merged_by.name ?? null }
+          ? {
+              id: String(pr.merged_by.id),
+              login: pr.merged_by.login,
+              displayName: pr.merged_by.name ?? null,
+            }
           : null,
       };
     } catch {

@@ -332,6 +332,9 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
         pr.mergedAt ?? pr.closedAt
           ? new Date((pr.mergedAt ?? pr.closedAt)!)
           : null;
+      const contributor = pr.author
+        ? await resolveContributor(pr.author)
+        : null;
 
       const protectedTerminalStates =
         "'accepted-into-canon', 'restricted', 'withdrawn', 'archived'";
@@ -361,6 +364,8 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
         .values({
           storyworldId: world.id,
           pathId: path.id,
+          contributorId: contributor?.id ?? null,
+          githubUserId: pr.author?.id ?? null,
           prNumber: pr.number,
           state: proposalState,
           submittedAt: new Date(pr.createdAt),
@@ -368,7 +373,16 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
         })
         .onConflictDoUpdate({
           target: [proposalsTable.storyworldId, proposalsTable.prNumber],
-          set: { state: proposalStateSet, decidedAt: decidedAtSet },
+          set: {
+            state: proposalStateSet,
+            decidedAt: decidedAtSet,
+            // Reconciliation can fill historic rows once GitHub exposes an
+            // author, but must not rewrite an already recorded owner.
+            contributorId: drizzleSql`COALESCE(${proposalsTable.contributorId}, excluded.contributor_id)`,
+            // A stable account ID prevents a reused GitHub login from being
+            // treated as the former contributor during reconciliation.
+            githubUserId: drizzleSql`COALESCE(${proposalsTable.githubUserId}, excluded.github_user_id)`,
+          },
         })
         .returning();
 

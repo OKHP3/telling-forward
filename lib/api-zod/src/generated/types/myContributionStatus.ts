@@ -7,7 +7,7 @@
  */
 
 /**
- * Current contributor-facing status. Mobile narrations are accepted when their durable Git-backed record is created.
+ * Current contributor-facing status. Mobile narrations are accepted when their durable Git-backed record is created; submitted and under-review PRs are pending, while returned PRs are returned.
 
  */
 export type MyContributionStatus =
