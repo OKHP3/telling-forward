@@ -12,23 +12,40 @@ import {
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
 import { sendVerificationEmail, sendPasswordResetEmail, isEmailConfigured } from "../lib/email";
+import { createRateLimitRedisStore } from "../lib/rate-limit-redis";
 
 const router = Router();
 
 // ---------------------------------------------------------------------------
-// Rate limiters (IP-based, in-memory — first-line defence only)
+// Rate limiters (IP-based, Redis-backed when REDIS_URL is configured)
 //
 // These provide a fast early rejection for obviously abusive IPs but are NOT
-// the primary lockout mechanism because the in-memory store resets on server
-// restart and is not shared across instances.
+// the primary lockout mechanism. The primary login lockout remains account
+// based and is stored in PostgreSQL.
 //
-// The primary lockout for login brute-force is account-level, stored in the
-// database (users.failed_login_attempts / users.locked_until — see below).
-// That counter is durable across restarts and consistent across instances.
+// Every limiter has an endpoint-specific RedisStore but they all share the
+// single ioredis connection created in lib/rate-limit-redis.ts. In development
+// and tests without REDIS_URL, express-rate-limit falls back to MemoryStore;
+// production fails during bootstrap rather than silently using that fallback.
 // ---------------------------------------------------------------------------
 
+function authRateLimit(
+  prefix: string,
+  options: Parameters<typeof rateLimit>[0],
+) {
+  const store = createRateLimitRedisStore(prefix);
+
+  return rateLimit({
+    ...options,
+    ...(store ? { store } : {}),
+    // If Redis fails after startup, reject rather than silently bypassing a
+    // sign-in safeguard. The global Express error handler will surface 5xx.
+    passOnStoreError: false,
+  });
+}
+
 /** 10 login attempts per IP per 15 minutes (supplemental to account lockout) */
-const loginLimiter = rateLimit({
+const loginLimiter = authRateLimit("telling-forward:rate-limit:login:", {
   windowMs: 15 * 60 * 1000,
   max: 10,
   standardHeaders: "draft-7", // RateLimit-* + Retry-After headers (RFC 9110)
@@ -37,7 +54,7 @@ const loginLimiter = rateLimit({
 });
 
 /** 5 registration attempts per IP per hour */
-const registerLimiter = rateLimit({
+const registerLimiter = authRateLimit("telling-forward:rate-limit:register:", {
   windowMs: 60 * 60 * 1000,
   max: 5,
   standardHeaders: "draft-7",
@@ -393,7 +410,7 @@ router.get("/verify-email", async (req, res) => {
 });
 
 /** 3 resend requests per IP per hour — prevents email flooding */
-const resendLimiter = rateLimit({
+const resendLimiter = authRateLimit("telling-forward:rate-limit:resend-verification:", {
   windowMs: 60 * 60 * 1000,
   max: 3,
   standardHeaders: "draft-7",
@@ -459,7 +476,7 @@ router.post("/resend-verification", resendLimiter, requireAuth, async (req, res)
 // ---------------------------------------------------------------------------
 
 /** 5 forgot-password requests per IP per hour — limits token generation rate */
-const forgotPasswordLimiter = rateLimit({
+const forgotPasswordLimiter = authRateLimit("telling-forward:rate-limit:forgot-password:", {
   windowMs: 60 * 60 * 1000,
   max: 5,
   standardHeaders: "draft-7",
@@ -468,7 +485,7 @@ const forgotPasswordLimiter = rateLimit({
 });
 
 /** 5 reset attempts per IP per hour — limits brute-force on the token */
-const resetPasswordLimiter = rateLimit({
+const resetPasswordLimiter = authRateLimit("telling-forward:rate-limit:reset-password:", {
   windowMs: 60 * 60 * 1000,
   max: 5,
   standardHeaders: "draft-7",

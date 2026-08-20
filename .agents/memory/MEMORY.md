@@ -6,3 +6,4 @@
 - [Contributor auth compatibility](contributor-auth-compatibility.md) — the web reader's password sessions and Clerk identities must coexist at protected API boundaries.
 - [Concurrent Git merges](concurrent-git-merges.md) — task integrations can finalize a merge on a helper ref while local main still needs the same remote merge resolved and pushed.
 - [Equilibrium evidence boundary](equilibrium-review-boundaries.md) — local checkout and workflow health do not establish production availability; require revision, route, and external smoke-test evidence.
+- [Authentication rate-limit availability](auth-rate-limit-availability.md) — production must fail closed when shared limiter Redis is absent or fails, while local development may use in-memory counters.

@@ -39,6 +39,28 @@ let mockUser: MockUser | null = null;
 
 // Captures every update call so tests can assert atomicity.
 const updateCalls: Array<{ set: unknown; where: unknown }> = [];
+const rateLimitRedisMocks = vi.hoisted(() => {
+  const stores: Array<{ increment: ReturnType<typeof vi.fn> }> = [];
+
+  return {
+    stores,
+    RedisStore: vi.fn().mockImplementation(function RedisStore() {
+      const store = {
+        init: vi.fn(),
+        increment: vi.fn().mockRejectedValue(new Error("Redis unavailable")),
+        decrement: vi.fn().mockResolvedValue(undefined),
+        resetKey: vi.fn().mockResolvedValue(undefined),
+      };
+      stores.push(store);
+      return store;
+    }),
+    Redis: vi.fn().mockImplementation(() => ({
+      on: vi.fn(),
+      call: vi.fn(),
+      ping: vi.fn().mockResolvedValue("PONG"),
+    })),
+  };
+});
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks — must be declared before any import
@@ -53,6 +75,9 @@ vi.mock("bcryptjs", () => ({
     hash: vi.fn(async () => "HASHED"),
   },
 }));
+
+vi.mock("ioredis", () => ({ default: rateLimitRedisMocks.Redis }));
+vi.mock("rate-limit-redis", () => ({ RedisStore: rateLimitRedisMocks.RedisStore }));
 
 vi.mock("../../../lib/email", () => ({
   sendVerificationEmail: vi.fn(),
@@ -128,7 +153,12 @@ async function buildApp(): Promise<Express> {
 
   // Minimal session shim
   app.use((req: Request, _res: Response, next: NextFunction) => {
-    (req as any).session = { userId: undefined, destroy: (cb: () => void) => cb() };
+    (req as any).session = {
+      userId: undefined,
+      destroy: (cb: () => void) => cb(),
+      regenerate: (cb: () => void) => cb(),
+      save: (cb: () => void) => cb(),
+    };
     (req as any).log = { error: vi.fn(), info: vi.fn(), warn: vi.fn() };
     next();
   });
@@ -170,6 +200,9 @@ describe("account-level login lockout", () => {
     mockUser = null;
     updateCalls.length = 0;
     vi.clearAllMocks();
+    vi.resetModules();
+    rateLimitRedisMocks.stores.length = 0;
+    delete process.env["REDIS_URL"];
     app = await buildApp();
   });
 
@@ -299,5 +332,21 @@ describe("account-level login lockout", () => {
       .send({ email: "test@example.com", password: "anything" });
 
     expect(res.status).toBe(429);
+  });
+
+  it("fails closed when a Redis-backed login limiter cannot increment", async () => {
+    process.env["REDIS_URL"] = "redis://unavailable.example.test:6379";
+    vi.resetModules();
+    app = await buildApp();
+    mockUser = makeUser({ passwordHash: "CORRECT_HASH" });
+
+    const res = await request(app)
+      .post("/api/auth/login")
+      .send({ email: "test@example.com", password: "correct" });
+
+    expect(res.status).toBe(500);
+    expect(rateLimitRedisMocks.stores[0]?.increment).toHaveBeenCalledOnce();
+    const bcrypt = await import("bcryptjs");
+    expect(bcrypt.default.compare).not.toHaveBeenCalled();
   });
 });
