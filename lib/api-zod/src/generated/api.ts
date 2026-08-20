@@ -73,6 +73,29 @@ export const GetMeResponse = zod.object({
 });
 
 /**
+ * Returns durable narration records submitted by the authenticated contributor, including the storyworld and path names needed for the contributor activity screen.
+
+ * @summary List the current contributor's submitted narrations
+ */
+export const ListMyContributionsResponseItem = zod.object({
+  id: zod.number(),
+  storyworldId: zod.number(),
+  storyworldTitle: zod.string(),
+  pathId: zod.number(),
+  pathTitle: zod.string(),
+  title: zod.string(),
+  submittedAt: zod.coerce.date(),
+  status: zod
+    .enum(["pending", "accepted", "returned"])
+    .describe(
+      "Current contributor-facing status. Mobile narrations are accepted when their durable Git-backed record is created.\n",
+    ),
+});
+export const ListMyContributionsResponse = zod.array(
+  ListMyContributionsResponseItem,
+);
+
+/**
  * GitHub redirects here after the user authorizes the app. Links the GitHub account to the current platform account and redirects to the frontend.
 
  * @summary GitHub OAuth callback

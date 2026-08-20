@@ -133,6 +133,32 @@ export interface Contribution {
 }
 
 /**
+ * Current contributor-facing status. Mobile narrations are accepted when their durable Git-backed record is created.
+
+ */
+export type MyContributionStatus =
+  (typeof MyContributionStatus)[keyof typeof MyContributionStatus];
+
+export const MyContributionStatus = {
+  pending: "pending",
+  accepted: "accepted",
+  returned: "returned",
+} as const;
+
+export interface MyContribution {
+  id: number;
+  storyworldId: number;
+  storyworldTitle: string;
+  pathId: number;
+  pathTitle: string;
+  title: string;
+  submittedAt: string;
+  /** Current contributor-facing status. Mobile narrations are accepted when their durable Git-backed record is created.
+   */
+  status: MyContributionStatus;
+}
+
+/**
  * A narration submitted by the authenticated contributor.
  */
 export interface ContributionInput {

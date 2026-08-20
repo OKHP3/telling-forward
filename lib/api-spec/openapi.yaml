@@ -121,6 +121,27 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /me/contributions:
+    get:
+      operationId: listMyContributions
+      tags: [narrate]
+      summary: List the current contributor's submitted narrations
+      description: >
+        Returns durable narration records submitted by the authenticated
+        contributor, including the storyworld and path names needed for the
+        contributor activity screen.
+      responses:
+        "200":
+          description: Current contributor's narrations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MyContribution"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
   /auth/github/authorize:
     get:
       operationId: githubAuthorize
@@ -1255,6 +1276,40 @@ components:
         - title
         - agentAssisted
         - createdAt
+
+    MyContribution:
+      type: object
+      required:
+        - id
+        - storyworldId
+        - storyworldTitle
+        - pathId
+        - pathTitle
+        - title
+        - submittedAt
+        - status
+      properties:
+        id:
+          type: integer
+        storyworldId:
+          type: integer
+        storyworldTitle:
+          type: string
+        pathId:
+          type: integer
+        pathTitle:
+          type: string
+        title:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, accepted, returned]
+          description: >
+            Current contributor-facing status. Mobile narrations are accepted
+            when their durable Git-backed record is created.
 
     ContributionInput:
       type: object

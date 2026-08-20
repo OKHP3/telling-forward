@@ -24,6 +24,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: 'mic', selected: 'mic.fill' }} />
         <Label>Narrate</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="activity">
+        <Icon sf={{ default: 'person', selected: 'person.fill' }} />
+        <Label>Activity</Label>
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
@@ -104,6 +108,18 @@ function ClassicTabLayout() {
               <SymbolView name="mic" tintColor={color} size={24} />
             ) : (
               <Feather name="mic" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="activity"
+        options={{
+          title: 'Activity',
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="person" tintColor={color} size={24} />
+            ) : (
+              <Feather name="user" size={22} color={color} />
             ),
         }}
       />

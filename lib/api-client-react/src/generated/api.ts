@@ -32,6 +32,7 @@ import type {
   LoginRequest,
   Logout200,
   MeResponse,
+  MyContribution,
   NotFoundResponse,
   Proposal,
   ProposalDetail,
@@ -444,6 +445,83 @@ export function useGetMe<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetMeQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns durable narration records submitted by the authenticated contributor, including the storyworld and path names needed for the contributor activity screen.
+
+ * @summary List the current contributor's submitted narrations
+ */
+export const getListMyContributionsUrl = () => {
+  return `/api/me/contributions`;
+};
+
+export const listMyContributions = async (
+  options?: RequestInit,
+): Promise<MyContribution[]> => {
+  return customFetch<MyContribution[]>(getListMyContributionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListMyContributionsQueryKey = () => {
+  return [`/api/me/contributions`] as const;
+};
+
+export const getListMyContributionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMyContributions>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listMyContributions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListMyContributionsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listMyContributions>>
+  > = ({ signal }) => listMyContributions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMyContributions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListMyContributionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMyContributions>>
+>;
+export type ListMyContributionsQueryError = ErrorType<UnauthorizedResponse>;
+
+/**
+ * @summary List the current contributor's submitted narrations
+ */
+
+export function useListMyContributions<
+  TData = Awaited<ReturnType<typeof listMyContributions>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listMyContributions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListMyContributionsQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
