@@ -37,6 +37,11 @@ const testState = vi.hoisted(() => ({
   resetToken: null as MockResetToken | null,
   sentResetTokens: [] as string[],
   lastResetDeleteCondition: null as unknown,
+  concurrentDeleteBarrier: null as {
+    waiting: number;
+    promise: Promise<void>;
+    release: () => void;
+  } | null,
 }));
 
 const usersTable = {
@@ -249,6 +254,12 @@ vi.mock("@workspace/db", () => ({
           where: (condition: unknown) => ({
             returning: async () => {
               testState.lastResetDeleteCondition = condition;
+              const barrier = testState.concurrentDeleteBarrier;
+              if (barrier) {
+                barrier.waiting += 1;
+                if (barrier.waiting === 2) barrier.release();
+                await barrier.promise;
+              }
               const token = testState.resetToken;
 
               if (!token || !resetTokenMatchesWhere(token, condition)) {
@@ -331,6 +342,14 @@ function seedResetToken(rawToken: string, expiresAt: Date): void {
   };
 }
 
+function makeConcurrentDeleteBarrier() {
+  let release!: () => void;
+  const promise = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { waiting: 0, promise, release };
+}
+
 describe("password reset security", () => {
   let app: Express;
 
@@ -339,6 +358,7 @@ describe("password reset security", () => {
     testState.resetToken = null;
     testState.sentResetTokens.length = 0;
     testState.lastResetDeleteCondition = null;
+    testState.concurrentDeleteBarrier = null;
     delete process.env["REDIS_URL"];
     vi.clearAllMocks();
     vi.resetModules();
@@ -361,6 +381,32 @@ describe("password reset security", () => {
     expect(secondAttempt.body).toEqual({
       error: "Reset link is invalid or has expired",
     });
+  });
+
+  it("allows exactly one of two concurrent requests to consume the reset token", async () => {
+    const rawToken = "concurrent-reset-token";
+    seedResetToken(rawToken, new Date(Date.now() + 60 * 60 * 1000));
+    testState.concurrentDeleteBarrier = makeConcurrentDeleteBarrier();
+
+    const [firstAttempt, secondAttempt] = await Promise.all([
+      request(app)
+        .post("/api/auth/reset-password")
+        .send({ token: rawToken, newPassword: "winning-password" }),
+      request(app)
+        .post("/api/auth/reset-password")
+        .send({ token: rawToken, newPassword: "losing-password" }),
+    ]);
+
+    const attempts = [firstAttempt, secondAttempt];
+    expect(attempts.filter((response) => response.status === 200)).toHaveLength(1);
+    expect(attempts.filter((response) => response.status === 400)).toHaveLength(1);
+    expect(testState.resetToken).toBeNull();
+    expect(["hash:winning-password", "hash:losing-password"]).toContain(
+      testState.user?.passwordHash,
+    );
+    const successfulPassword =
+      firstAttempt.status === 200 ? "hash:winning-password" : "hash:losing-password";
+    expect(testState.user?.passwordHash).toBe(successfulPassword);
   });
 
   it("rejects a reset token whose expiry is in the past", async () => {
