@@ -55,13 +55,10 @@ import { logger } from "../lib/logger";
 import {
   buildAcceptanceDecisionNote,
   buildAcceptanceIntentNote,
-  acceptanceIntentForOperation,
-  acceptanceOperationIdFromCommitMessage,
   contributorAttributionsForPath,
   indexSavedMoment,
   replacePathMomentMemberships,
   resolveContributor,
-  resolveContributorIdentity,
   stewardAttribution,
   verifyAcceptanceDecisionNote,
   writeAcceptedProvenance,
@@ -262,14 +259,7 @@ router.post(
         return;
       }
 
-      // Recovery path: the webhook may have already moved the proposal to
-      // "accepted-into-canon" before a retry reaches this point (e.g. the
-      // initial request merged the PR on GitHub, then the DB transaction
-      // failed, and the closed-PR webhook arrived first). In that case we
-      // allow the retry through so it can create the missing provenance record.
-      const isRecoveryAccept = proposal.state === "accepted-into-canon";
-
-      if (!isRecoveryAccept && !ACCEPT_FROM.has(proposal.state)) {
+      if (!ACCEPT_FROM.has(proposal.state)) {
         res.status(409).json({
           error: `Cannot accept proposal from state "${proposal.state}"`,
         });
@@ -362,13 +352,6 @@ router.post(
             world.repoName,
             mergeCommitSha,
           );
-        } else if (isRecoveryAccept) {
-          // Should not happen: proposal says accepted but PR isn't merged.
-          // Treat as a transient GitHub inconsistency and let the caller retry.
-          res.status(502).json({
-            error: "Proposal is accepted but PR is not yet reflected as merged on GitHub — try again shortly",
-          });
-          return;
         } else {
           if (!prStatus) {
             throw new Error("Pull request details are unavailable");
@@ -497,41 +480,6 @@ router.post(
           world.repoName,
           proposal.prNumber,
         );
-        const recoveryOperationId = isRecoveryAccept
-          ? acceptanceOperationIdFromCommitMessage(
-              await gh.getCommitMessage(
-                world.repoOwner,
-                world.repoName,
-                mergeCommitSha,
-              ),
-            )
-          : null;
-        const recoveryIntent = recoveryOperationId
-          ? acceptanceIntentForOperation(
-              comments,
-              provenanceSigningSecret,
-              recoveryOperationId,
-              acceptedRange.headSha,
-            )
-          : null;
-        if (recoveryIntent) {
-          steward = await stewardAttribution(proposal.storyworldId, {
-            login: recoveryIntent.stewardGithubIdentity.replace(/^github:/, ""),
-            displayName: null,
-          });
-          provenanceContributors = (
-            await Promise.all(
-              recoveryIntent.contributors.map((contributor) =>
-                resolveContributorIdentity(
-                  contributor.identity,
-                  contributor.displayName,
-                ),
-              ),
-            )
-          ).filter(
-            (value): value is Exclude<typeof value, null> => value !== null,
-          );
-        }
         const note = buildAcceptanceDecisionNote({
           canonCommitSha: mergeCommitSha,
           baseCommitSha: acceptedRange.baseSha,
@@ -576,10 +524,8 @@ router.post(
       // write converge on one complete ledger record.
       const updatedProposal = await db.transaction(
         async (tx) => {
-          // State-conditional update: valid from ACCEPT_FROM states plus
-          // "accepted-into-canon" (recovery path — webhook ran first).
-          // If 0 rows returned, a concurrent return/review overwrote the state;
-          // throw to roll back the entire transaction.
+          // If 0 rows returned, a concurrent return/review/accept overwrote
+          // the state; throw to roll back the entire transaction.
           const [updatedProposal] = await tx
             .update(proposalsTable)
             .set({ state: "accepted-into-canon", decidedAt: now })
@@ -589,7 +535,6 @@ router.post(
                 inArray(proposalsTable.state, [
                   "submitted",
                   "under-review",
-                  "accepted-into-canon",
                 ] as const),
               ),
             )

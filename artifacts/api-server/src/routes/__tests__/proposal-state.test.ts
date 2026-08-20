@@ -40,10 +40,14 @@ const capture = vi.hoisted(() => ({
   proposalState: null as string | null,
   /** Restriction reason written with a steward restriction */
   decisionReason: null as string | null,
+  authenticated: true,
+  steward: true,
   reset() {
     this.pathState = null;
     this.proposalState = null;
     this.decisionReason = null;
+    this.authenticated = true;
+    this.steward = true;
   },
 }));
 
@@ -168,7 +172,8 @@ vi.mock("@workspace/db", () => {
 });
 
 // ---------------------------------------------------------------------------
-// GitHub mock — all methods present so handlers don't get "not a function"
+// GitHub mock — injected through the module's public test seam so handlers use
+// a complete fake client without making real GitHub requests.
 // ---------------------------------------------------------------------------
 
 const mockGh = vi.hoisted(() => ({
@@ -181,10 +186,6 @@ const mockGh = vi.hoisted(() => ({
   createPullRequestReview: vi.fn(),
   createPullRequestComment: vi.fn(),
   getCommitMessage: vi.fn(),
-}));
-
-vi.mock("../../lib/github", () => ({
-  getGitHubClient: () => mockGh,
 }));
 
 // ---------------------------------------------------------------------------
@@ -209,18 +210,28 @@ vi.mock("../../lib/provenance", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Auth + steward middleware mocks
+// Auth + steward middleware seams
 // ---------------------------------------------------------------------------
 
 vi.mock("../../middlewares/auth", () => ({
-  requireAuth: (req: any, _res: any, next: any) => {
+  requireAuth: (req: any, res: any, next: any) => {
+    if (!capture.authenticated) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
     req.session = { userId: 1 };
     next();
   },
 }));
 
 vi.mock("../../middlewares/steward", () => ({
-  requireStewardForProposal: (_req: any, _res: any, next: any) => next(),
+  requireStewardForProposal: (_req: any, res: any, next: any) => {
+    if (!capture.steward) {
+      res.status(403).json({ error: "Not a steward for this storyworld" });
+      return;
+    }
+    next();
+  },
 }));
 
 // ---------------------------------------------------------------------------
@@ -270,6 +281,10 @@ vi.mock("@workspace/api-zod", () => {
 
 import proposalsRouter from "../proposals";
 import { db } from "@workspace/db";
+import {
+  setGitHubClient,
+  type GitHubClientInterface,
+} from "../../lib/github";
 
 // ---------------------------------------------------------------------------
 // Typed access to the mock helpers
@@ -347,6 +362,7 @@ describe("GET /:id — proposal detail", () => {
     vi.clearAllMocks();
     capture.reset();
     mockDb.__reset();
+    setGitHubClient(mockGh as unknown as GitHubClientInterface);
     app = buildApp();
   });
 
@@ -420,6 +436,24 @@ describe("POST /:id/review — submitted → under-review", () => {
     expect(res.body.error).toMatch(/cannot mark as under review/i);
   });
 
+  it("returns 403 when the signed-in user is not a steward", async () => {
+    capture.steward = false;
+
+    const res = await request(app).post("/100/review");
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/not a steward/i);
+  });
+
+  it("returns 401 when the user is not authenticated", async () => {
+    capture.authenticated = false;
+
+    const res = await request(app).post("/100/review");
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/authentication required/i);
+  });
+
   it("returns 404 when proposal does not exist", async () => {
     mockDb.__pushSelectRows([]);
 
@@ -450,6 +484,7 @@ describe("POST /:id/review — returned-with-notes → under-review", () => {
     vi.clearAllMocks();
     capture.reset();
     mockDb.__reset();
+    setGitHubClient(mockGh as unknown as GitHubClientInterface);
     app = buildApp();
   });
 
@@ -521,6 +556,28 @@ describe("POST /:id/return — under-review → returned-with-notes", () => {
     expect(res.body.error).toMatch(/cannot return/i);
   });
 
+  it("returns 403 when the signed-in user is not a steward", async () => {
+    capture.steward = false;
+
+    const res = await request(app)
+      .post("/100/return")
+      .send({ editorQuestion: "Please expand the second scene." });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/not a steward/i);
+  });
+
+  it("returns 401 when the user is not authenticated", async () => {
+    capture.authenticated = false;
+
+    const res = await request(app)
+      .post("/100/return")
+      .send({ editorQuestion: "Please expand the second scene." });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/authentication required/i);
+  });
+
   it("reuses an existing REQUEST_CHANGES review instead of posting a duplicate", async () => {
     const question = "Expand the cave scene.";
     mockGh.listPullRequestReviews.mockResolvedValueOnce([
@@ -564,6 +621,7 @@ describe("POST /:id/accept — published-canon regression", () => {
     vi.clearAllMocks();
     capture.reset();
     mockDb.__reset();
+    setGitHubClient(mockGh as unknown as GitHubClientInterface);
     process.env["GITHUB_WEBHOOK_SECRET"] = "test-secret";
 
     // Full GitHub stub set for the accept flow
@@ -654,6 +712,35 @@ describe("POST /:id/accept — published-canon regression", () => {
 
     expect(res.status).toBe(409);
     expect(res.body.error).toMatch(/cannot accept/i);
+  });
+
+  it("returns 409 when trying to accept an already accepted proposal without touching GitHub", async () => {
+    mockDb.__pushSelectRows([makeProposal("accepted-into-canon")]);
+
+    const res = await request(app).post("/100/accept");
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/cannot accept/i);
+    expect(mockGh.getPullRequest).not.toHaveBeenCalled();
+    expect(mockGh.mergePullRequest).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when the signed-in user is not a steward", async () => {
+    capture.steward = false;
+
+    const res = await request(app).post("/100/accept");
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/not a steward/i);
+  });
+
+  it("returns 401 when the user is not authenticated", async () => {
+    capture.authenticated = false;
+
+    const res = await request(app).post("/100/accept");
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/authentication required/i);
   });
 
   it("returns 404 when proposal does not exist", async () => {
