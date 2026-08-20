@@ -3,3 +3,4 @@
 - [GitHub canonical provenance](github-canonical-provenance.md) — accepted-story attribution must be GitHub-recoverable, signed, and independent of a merge service account.
 - [GitHub write-path contract](github-write-path-contract.md) — commits use platform identity (never user email), land on the indexed path's own branch, and no synthetic SHAs.
 - [Offline story cache](offline-story-cache.md) — persist only successful story queries; rotate the cache buster when persistence selection or shape changes.
+- [Contributor auth compatibility](contributor-auth-compatibility.md) — the web reader's password sessions and Clerk identities must coexist at protected API boundaries.

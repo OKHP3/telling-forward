@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
 import bcrypt from "bcryptjs";
 import { randomBytes, createHash } from "crypto";
 import rateLimit from "express-rate-limit";
@@ -89,6 +89,31 @@ function hashResetToken(rawToken: string): string {
   return createHash("sha256").update(rawToken).digest("hex");
 }
 
+/**
+ * Rotate the anonymous session identifier before attaching an authenticated
+ * contributor. This prevents a session identifier observed before sign-in
+ * from remaining valid after a privilege change.
+ */
+function establishAuthenticatedSession(req: Request, userId: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    req.session.regenerate((regenerateError) => {
+      if (regenerateError) {
+        reject(regenerateError);
+        return;
+      }
+
+      req.session.userId = userId;
+      req.session.save((saveError) => {
+        if (saveError) {
+          reject(saveError);
+          return;
+        }
+        resolve();
+      });
+    });
+  });
+}
+
 /** POST /api/auth/register — create a new platform account */
 router.post("/register", registerLimiter, async (req, res) => {
   // Fail fast in production when no mail transport is configured so we never
@@ -146,7 +171,14 @@ router.post("/register", registerLimiter, async (req, res) => {
     req.log.error({ err: emailErr, userId: user.id }, "Failed to send verification email");
   }
 
-  req.session.userId = user.id;
+  try {
+    await establishAuthenticatedSession(req, user.id);
+  } catch (sessionError) {
+    req.log.error({ err: sessionError, userId: user.id }, "session establishment failed");
+    res.status(500).json({ error: "Could not start your session" });
+    return;
+  }
+
   res.status(201).json({ user });
 });
 
@@ -237,7 +269,13 @@ router.post("/login", loginLimiter, async (req, res) => {
       .where(eq(usersTable.id, user.id));
   }
 
-  req.session.userId = user.id;
+  try {
+    await establishAuthenticatedSession(req, user.id);
+  } catch (sessionError) {
+    req.log.error({ err: sessionError, userId: user.id }, "session establishment failed");
+    res.status(500).json({ error: "Could not start your session" });
+    return;
+  }
 
   res.json(
     LoginResponse.parse({

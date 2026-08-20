@@ -81,6 +81,14 @@ export async function requireAuth(
   res: Response,
   next: NextFunction,
 ): Promise<void> {
+  // Password-authenticated contributors already have a server-side session.
+  // Preserve that path before attempting the Clerk bridge so the API's
+  // login/register endpoints remain valid for the web reader.
+  if (req.session.userId) {
+    next();
+    return;
+  }
+
   const { userId: clerkUserId } = getAuth(req);
 
   if (!clerkUserId) {

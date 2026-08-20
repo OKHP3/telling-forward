@@ -3,11 +3,34 @@ import { Link, useLocation } from "wouter";
 import { BookOpen, Settings, LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/auth-context";
+import {
+  getGetMeQueryKey,
+  useGetMe,
+  useLogout,
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
-  const { user, logout } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: meData } = useGetMe({
+    query: {
+      queryKey: getGetMeQueryKey(),
+      retry: false,
+    },
+  });
+  const logoutMutation = useLogout({
+    mutation: {
+      onSuccess: () => {
+        queryClient.clear();
+      },
+    },
+  });
+  const user = meData?.user ?? null;
+
+  async function handleLogout() {
+    await logoutMutation.mutateAsync();
+  }
 
   return (
     <div className="min-h-[100dvh] flex flex-col font-sans">
@@ -74,7 +97,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   <Settings className="h-4 w-4" />
                 </Link>
                 <button
-                  onClick={() => logout()}
+                  onClick={() => void handleLogout()}
+                  disabled={logoutMutation.isPending}
                   aria-label="Sign out"
                   title="Sign out"
                   className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
@@ -84,13 +108,22 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </button>
               </div>
             ) : (
-              <Link
-                href="/sign-in"
-                className="ml-1 px-3 py-1.5 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-                data-testid="button-sign-in"
-              >
-                Sign in
-              </Link>
+              <div className="ml-1 flex items-center gap-2">
+                <Link
+                  href="/sign-in"
+                  className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground sm:inline"
+                  data-testid="text-guest"
+                >
+                  Guest Reader
+                </Link>
+                <Link
+                  href="/sign-in"
+                  className="px-3 py-1.5 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+                  data-testid="button-sign-in"
+                >
+                  Sign in
+                </Link>
+              </div>
             )}
           </div>
         </div>
