@@ -19,6 +19,12 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { setBaseUrl } from '@workspace/api-client-react';
 import { AuthProvider } from '@/context/AuthContext';
+import {
+  shouldPersistStoryQuery,
+  STORY_CACHE_BUSTER,
+  STORY_CACHE_MAX_AGE,
+  STORY_CACHE_STORAGE_KEY,
+} from '@/lib/story-cache';
 
 // Configure the base URL for all API calls.
 // Expo bundles run outside the shared web proxy and need absolute URLs.
@@ -27,8 +33,6 @@ if (process.env['EXPO_PUBLIC_DOMAIN']) {
 }
 
 SplashScreen.preventAutoHideAsync();
-
-const STORY_CACHE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
 
 onlineManager.setEventListener((setOnline) =>
   NetInfo.addEventListener((state) => {
@@ -49,25 +53,15 @@ const queryClient = new QueryClient({
 
 const asyncStoragePersister = createAsyncStoragePersister({
   storage: AsyncStorage,
-  key: 'telling-forward-story-cache',
+  key: STORY_CACHE_STORAGE_KEY,
 });
 
 const persistOptions = {
   persister: asyncStoragePersister,
   maxAge: STORY_CACHE_MAX_AGE,
-  buster: 'telling-forward-story-cache-v2',
+  buster: STORY_CACHE_BUSTER,
   dehydrateOptions: {
-    shouldDehydrateQuery: (query: {
-      queryKey: readonly unknown[];
-      state: { status: string };
-    }) => {
-      const [queryPath] = query.queryKey;
-      return (
-        query.state.status === 'success' &&
-        typeof queryPath === 'string' &&
-        queryPath.startsWith('/api/storyworlds')
-      );
-    },
+      shouldDehydrateQuery: shouldPersistStoryQuery,
   },
 };
 
