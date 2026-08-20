@@ -38,6 +38,7 @@ import type {
   RegisterRequest,
   RestrictProposalBody,
   ReturnProposalBody,
+  StewardProposal,
   StoryPath,
   StoryProvenance,
   Storyworld,
@@ -1816,8 +1817,8 @@ export const getListStoryworldProposalsUrl = (id: number) => {
 export const listStoryworldProposals = async (
   id: number,
   options?: RequestInit,
-): Promise<Proposal[]> => {
-  return customFetch<Proposal[]>(getListStoryworldProposalsUrl(id), {
+): Promise<StewardProposal[]> => {
+  return customFetch<StewardProposal[]>(getListStoryworldProposalsUrl(id), {
     ...options,
     method: "GET",
   });

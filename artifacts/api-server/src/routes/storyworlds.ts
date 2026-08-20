@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, asc, count, desc, inArray } from "drizzle-orm";
+import { eq, and, asc, count, desc, inArray, or } from "drizzle-orm";
 import {
   db,
   storyworldsTable,
@@ -584,7 +584,88 @@ router.get(
         .from(proposalsTable)
         .where(eq(proposalsTable.storyworldId, params.data.id))
         .orderBy(desc(proposalsTable.submittedAt));
-      res.json(rows);
+
+      const pathIds = [...new Set(rows.map((proposal) => proposal.pathId))];
+      const contributionRows = pathIds.length
+        ? await db
+            .select({
+              contributionPathId: contributionsTable.pathId,
+              membershipPathId: contributionPathMembershipsTable.pathId,
+              id: contributionsTable.id,
+              title: contributionsTable.title,
+              content: contributionsTable.summary,
+              createdAt: contributionsTable.createdAt,
+              contributorDisplayName: contributorsTable.displayName,
+            })
+            .from(contributionsTable)
+            .leftJoin(
+              contributionPathMembershipsTable,
+              eq(
+                contributionPathMembershipsTable.contributionId,
+                contributionsTable.id,
+              ),
+            )
+            .leftJoin(
+              contributorsTable,
+              eq(contributionsTable.contributorId, contributorsTable.id),
+            )
+            .where(
+              and(
+                eq(contributionsTable.storyworldId, params.data.id),
+                or(
+                  inArray(contributionsTable.pathId, pathIds),
+                  inArray(contributionPathMembershipsTable.pathId, pathIds),
+                ),
+              ),
+            )
+            .orderBy(asc(contributionsTable.createdAt))
+        : [];
+
+      // A contribution can be shared by multiple paths. Deduplicate each
+      // contribution per related path while retaining direct path records for
+      // older rows that predate the membership index.
+      const previewsByPath = new Map<
+        number,
+        Map<
+          number,
+          {
+            id: number;
+            title: string;
+            content: string | null;
+            contributorDisplayName: string | null;
+            createdAt: Date;
+          }
+        >
+      >();
+      const proposalPathIds = new Set(pathIds);
+      for (const contribution of contributionRows) {
+        const relatedPathIds = new Set(
+          [contribution.contributionPathId, contribution.membershipPathId].filter(
+            (pathId): pathId is number =>
+              pathId !== null && proposalPathIds.has(pathId),
+          ),
+        );
+        for (const pathId of relatedPathIds) {
+          const pathPreviews = previewsByPath.get(pathId) ?? new Map();
+          pathPreviews.set(contribution.id, {
+            id: contribution.id,
+            title: contribution.title,
+            content: contribution.content,
+            contributorDisplayName: contribution.contributorDisplayName,
+            createdAt: contribution.createdAt,
+          });
+          previewsByPath.set(pathId, pathPreviews);
+        }
+      }
+
+      res.json(
+        rows.map((proposal) => ({
+          ...proposal,
+          contributionPreviews: Array.from(
+            previewsByPath.get(proposal.pathId)?.values() ?? [],
+          ),
+        })),
+      );
     } catch (err) {
       req.log.error({ err }, "listStoryworldProposals DB error");
       res.status(500).json({ error: "Failed to load proposals" });

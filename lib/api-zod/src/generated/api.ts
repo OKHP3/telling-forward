@@ -492,26 +492,48 @@ export const ListStoryworldProposalsParams = zod.object({
   id: zod.coerce.number(),
 });
 
-export const ListStoryworldProposalsResponseItem = zod.object({
-  id: zod.number(),
-  storyworldId: zod.number(),
-  pathId: zod.number(),
-  prNumber: zod.number(),
-  state: zod.enum([
-    "draft",
-    "submitted",
-    "under-review",
-    "returned-with-notes",
-    "accepted-into-canon",
-    "published-alternate",
-    "restricted",
-    "withdrawn",
-    "archived",
-  ]),
-  submittedAt: zod.coerce.date(),
-  decidedAt: zod.coerce.date().nullish(),
-  decisionReason: zod.string().nullish(),
-});
+export const ListStoryworldProposalsResponseItem = zod
+  .object({
+    id: zod.number(),
+    storyworldId: zod.number(),
+    pathId: zod.number(),
+    prNumber: zod.number(),
+    state: zod.enum([
+      "draft",
+      "submitted",
+      "under-review",
+      "returned-with-notes",
+      "accepted-into-canon",
+      "published-alternate",
+      "restricted",
+      "withdrawn",
+      "archived",
+    ]),
+    submittedAt: zod.coerce.date(),
+    decidedAt: zod.coerce.date().nullish(),
+    decisionReason: zod.string().nullish(),
+  })
+  .and(
+    zod.object({
+      contributionPreviews: zod
+        .array(
+          zod
+            .object({
+              id: zod.number(),
+              title: zod.string(),
+              content: zod.string().nullable(),
+              contributorDisplayName: zod.string().nullish(),
+              createdAt: zod.coerce.date(),
+            })
+            .describe(
+              "Full narration content shown to a steward while reviewing a proposal.",
+            ),
+        )
+        .describe(
+          "All narration contributions currently associated with the proposal's story path.",
+        ),
+    }),
+  );
 export const ListStoryworldProposalsResponse = zod.array(
   ListStoryworldProposalsResponseItem,
 );

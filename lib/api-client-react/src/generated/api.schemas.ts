@@ -313,6 +313,22 @@ export interface AcceptProposalResponse {
   provenanceRecordId: number;
 }
 
+/**
+ * Full narration content shown to a steward while reviewing a proposal.
+ */
+export interface ContributionPreview {
+  id: number;
+  title: string;
+  content: string | null;
+  contributorDisplayName?: string | null;
+  createdAt: string;
+}
+
+export type StewardProposal = Proposal & {
+  /** All narration contributions currently associated with the proposal's story path. */
+  contributionPreviews: ContributionPreview[];
+};
+
 export interface EditorQuestion {
   id: number;
   proposalId: number;

@@ -18,6 +18,7 @@ import {
   useReturnProposal,
   useRestrictProposal,
   useArchiveProposal,
+  type StewardProposal,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -44,16 +45,6 @@ type ProposalState =
   | "restricted"
   | "withdrawn"
   | "archived";
-
-interface Proposal {
-  id: number;
-  storyworldId: number;
-  pathId: number;
-  prNumber: number;
-  state: ProposalState;
-  submittedAt: Date | string;
-  decidedAt?: Date | string | null;
-}
 
 function getStateBadge(state: ProposalState) {
   switch (state) {
@@ -137,10 +128,11 @@ function ProposalCard({
   worldId,
   onActionComplete,
 }: {
-  proposal: Proposal;
+  proposal: StewardProposal;
   worldId: number;
   onActionComplete: () => void;
 }) {
+  const [showPreview, setShowPreview] = useState(false);
   const [showReturn, setShowReturn] = useState(false);
   const [showRestrict, setShowRestrict] = useState(false);
   const [restrictionReason, setRestrictionReason] = useState("");
@@ -269,6 +261,62 @@ function ProposalCard({
           Submitted {format(new Date(proposal.submittedAt), "MMM d, yyyy")}
           {proposal.decidedAt && (
             <> · Decided {format(new Date(proposal.decidedAt), "MMM d, yyyy")}</>
+          )}
+        </div>
+
+        <div className="border-t border-border/40 pt-3">
+          <button
+            type="button"
+            onClick={() => setShowPreview((visible) => !visible)}
+            aria-expanded={showPreview}
+            aria-controls={`submission-preview-${proposal.id}`}
+            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+            data-testid={`btn-read-submission-${proposal.id}`}
+          >
+            <BookOpen className="h-4 w-4" />
+            {showPreview ? "Hide submission" : "Read submission"}
+            <ChevronRight
+              className={cn(
+                "h-3.5 w-3.5 transition-transform",
+                showPreview && "rotate-90",
+              )}
+            />
+          </button>
+
+          {showPreview && (
+            <div
+              id={`submission-preview-${proposal.id}`}
+              className="mt-3 space-y-3 rounded-lg border border-border/60 bg-secondary/20 p-4"
+              data-testid={`submission-preview-${proposal.id}`}
+            >
+              {proposal.contributionPreviews.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No narration content is indexed for this story path yet.
+                </p>
+              ) : (
+                proposal.contributionPreviews.map((contribution) => (
+                  <article
+                    key={contribution.id}
+                    className="space-y-2"
+                    data-testid={`submission-contribution-${contribution.id}`}
+                  >
+                    <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                      <h3 className="font-serif font-medium text-foreground">
+                        {contribution.title}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        {contribution.contributorDisplayName
+                          ? `By ${contribution.contributorDisplayName}`
+                          : "Contributor not identified"}
+                      </p>
+                    </div>
+                    <p className="text-sm leading-7 text-foreground/85 whitespace-pre-wrap break-words">
+                      {contribution.content ?? "This contribution has no text."}
+                    </p>
+                  </article>
+                ))
+              )}
+            </div>
           )}
         </div>
 
@@ -513,7 +561,7 @@ export function StewardDashboard() {
         {!isLoadingProposals && openProposals.map(proposal => (
           <ProposalCard
             key={proposal.id}
-            proposal={proposal as Proposal}
+            proposal={proposal as StewardProposal}
             worldId={worldId}
             onActionComplete={onActionComplete}
           />
@@ -532,7 +580,7 @@ export function StewardDashboard() {
           {closedProposals.map(proposal => (
             <ProposalCard
               key={proposal.id}
-              proposal={proposal as Proposal}
+              proposal={proposal as StewardProposal}
               worldId={worldId}
               onActionComplete={onActionComplete}
             />
