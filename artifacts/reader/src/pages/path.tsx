@@ -15,23 +15,34 @@ import { ReaderLayout, resolveReaderTheme } from "@/components/layout";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 import { ArrowLeft, Sparkles, Network } from "lucide-react";
+import {
+  getPathRecoveryHref,
+  isValidReaderId,
+  readerRecoveryCopy,
+  retryReaderRouteQuery,
+  shouldShowPathNotFound,
+} from "@/lib/recovery-state";
 
 export default function PathReaderPage() {
   const params = useParams();
   const worldId = Number(params.worldId);
   const pathId = Number(params.pathId);
-  const hasValidIds =
-    Number.isSafeInteger(worldId) &&
-    worldId > 0 &&
-    Number.isSafeInteger(pathId) &&
-    pathId > 0;
+  const hasValidIds = isValidReaderId(worldId) && isValidReaderId(pathId);
 
   const { data: world, isLoading: loadingWorld, error: errorWorld } = useGetStoryworld(worldId, {
-    query: { enabled: hasValidIds, queryKey: getGetStoryworldQueryKey(worldId) }
+    query: {
+      enabled: hasValidIds,
+      queryKey: getGetStoryworldQueryKey(worldId),
+      retry: retryReaderRouteQuery,
+    }
   });
   
   const { data: paths, isLoading: loadingPaths, error: errorPaths } = useListStoryPaths(worldId, {
-    query: { enabled: hasValidIds, queryKey: getListStoryPathsQueryKey(worldId) }
+    query: {
+      enabled: hasValidIds,
+      queryKey: getListStoryPathsQueryKey(worldId),
+      retry: retryReaderRouteQuery,
+    }
   });
 
   const { data: contributions, isLoading: loadingContributions, error: errorContributions } = useListContributions(worldId, pathId, {
@@ -62,25 +73,30 @@ export default function PathReaderPage() {
   const acceptedMoments = provenance?.filter(
     (record) => record.sourcePathId === pathId,
   ) ?? [];
+  const showPathNotFound = shouldShowPathNotFound({
+    hasValidIds,
+    hasWorld: Boolean(world),
+    isLoadingWorld: loadingWorld,
+    hasWorldError: Boolean(errorWorld),
+    hasPathsError: Boolean(errorPaths),
+    pathsLoaded: paths !== undefined,
+    pathExists: Boolean(currentPath),
+  });
 
-  if (
-    !hasValidIds ||
-    errorWorld ||
-    errorPaths ||
-    (!loadingWorld && !world) ||
-    (paths && !currentPath)
-  ) {
+  if (showPathNotFound) {
     return (
       <ReaderLayout theme={theme}>
         <div className="w-full max-w-[var(--reader-line-length)] mt-20 text-center animate-reveal" data-testid="status-path-not-found">
-          <h1 className="text-2xl font-light mb-4" style={{ fontFamily: "var(--reader-font-body)" }}>Path Not Found</h1>
+          <h1 className="text-2xl font-light mb-4" style={{ fontFamily: "var(--reader-font-body)" }}>{readerRecoveryCopy.path.heading}</h1>
           <p className="text-muted-foreground text-lg" style={{ fontFamily: "var(--reader-font-body)" }}>
-            This story path could not be located. You can return to the world and choose another path.
+            {readerRecoveryCopy.path.message}
           </p>
           <div className="mt-8">
-            <Link href={hasValidIds ? `/worlds/${worldId}` : "/"} data-testid="link-recover-world" className="inline-flex items-center text-sm font-semibold tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors">
+            <Link href={getPathRecoveryHref({ hasValidIds, worldId })} data-testid="link-recover-world" className="inline-flex items-center text-sm font-semibold tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              {hasValidIds ? "Return to World" : "Return to Discovery"}
+              {hasValidIds
+                ? readerRecoveryCopy.path.actionForWorld
+                : readerRecoveryCopy.path.actionForDiscovery}
             </Link>
           </div>
         </div>

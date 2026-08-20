@@ -2,37 +2,57 @@ import { useGetStoryworld, getGetStoryworldQueryKey, useListStoryPaths, getListS
 import { Link, useParams } from "wouter";
 import { ReaderLayout, resolveReaderTheme } from "@/components/layout";
 import { ArrowLeft } from "lucide-react";
+import {
+  isValidReaderId,
+  readerRecoveryCopy,
+  retryReaderRouteQuery,
+  shouldShowWorldNotFound,
+} from "@/lib/recovery-state";
 
 export default function WorldLandingPage() {
   const params = useParams();
   const worldId = Number(params.worldId);
-  const hasValidWorldId = Number.isSafeInteger(worldId) && worldId > 0;
+  const hasValidWorldId = isValidReaderId(worldId);
 
   const { data: world, isLoading: loadingWorld, error: errorWorld } = useGetStoryworld(worldId, {
-    query: { enabled: hasValidWorldId, queryKey: getGetStoryworldQueryKey(worldId) }
+    query: {
+      enabled: hasValidWorldId,
+      queryKey: getGetStoryworldQueryKey(worldId),
+      retry: retryReaderRouteQuery,
+    }
   });
   
   const { data: paths, isLoading: loadingPaths, error: errorPaths } = useListStoryPaths(worldId, {
-    query: { enabled: hasValidWorldId, queryKey: getListStoryPathsQueryKey(worldId) }
+    query: {
+      enabled: hasValidWorldId,
+      queryKey: getListStoryPathsQueryKey(worldId),
+      retry: retryReaderRouteQuery,
+    }
   });
   const theme = resolveReaderTheme(world?.readerTheme);
 
   const canonPaths = paths?.filter(p => isCanonState(p.state)) || [];
   const alternatePaths = paths?.filter(p => isAlternateState(p.state)) || [];
   const otherPaths = paths?.filter(p => isDevelopmentState(p.state)) || [];
+  const showWorldNotFound = shouldShowWorldNotFound({
+    hasValidWorldId,
+    hasWorld: Boolean(world),
+    isLoadingWorld: loadingWorld,
+    hasWorldError: Boolean(errorWorld),
+  });
 
-  if (!hasValidWorldId || errorWorld || (!loadingWorld && !world)) {
+  if (showWorldNotFound) {
     return (
       <ReaderLayout theme={theme}>
         <div className="w-full max-w-[var(--reader-line-length)] mt-20 text-center animate-reveal" data-testid="status-world-not-found">
-          <h1 className="text-2xl font-light mb-4" style={{ fontFamily: "var(--reader-font-body)" }}>A Lost Record</h1>
+          <h1 className="text-2xl font-light mb-4" style={{ fontFamily: "var(--reader-font-body)" }}>{readerRecoveryCopy.world.heading}</h1>
           <p className="text-muted-foreground text-lg" style={{ fontFamily: "var(--reader-font-body)" }}>
-            This world could not be found in the archive. It may have moved, or its address may be incomplete.
+            {readerRecoveryCopy.world.message}
           </p>
           <div className="mt-8">
             <Link href="/" data-testid="link-recover-discovery" className="inline-flex items-center text-sm font-semibold tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Return to Discovery
+              {readerRecoveryCopy.world.action}
             </Link>
           </div>
         </div>
@@ -64,7 +84,7 @@ export default function WorldLandingPage() {
           </header>
         )}
 
-        {errorPaths && (
+        {Boolean(errorPaths) && (
           <div className="border-y border-destructive/20 py-10 text-center text-destructive" role="alert" data-testid="status-paths-error">
             The paths for this world could not be loaded. Please return to discovery and try again.
           </div>
