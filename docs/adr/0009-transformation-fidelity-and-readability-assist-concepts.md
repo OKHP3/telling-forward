@@ -6,9 +6,11 @@
 
 ## Numbering note
 
-`docs/adr/` is under an active, live multi-session numbering race, discovered in two stages while preparing this ADR. This ADR was first drafted and delivered as `0007-transformation-fidelity-and-readability-assist-concepts.md`. Before it was committed, a check of `docs/adr/` found the number already collided three ways at 0007, once at 0008, and twice at 0009, so this ADR was renumbered to 0010 and the file was moved to `docs/adr/_to_delete/`. By the time that renumbered file was about to be written to disk, two more files had already landed at 0010 from a separate concurrent session (apparent renames of the same two 0009 files just observed), so this ADR is renumbered a second time to **0009**, which is vacant again now that those files moved to 0010. Given the pace of concurrent renumbering, this slot may not stay vacant either; the project owner should treat the number in this filename as provisional until the wider pileup is resolved and this ADR is committed to git, at which point its content, not its number, is what should survive any later renumbering pass.
+`docs/adr/` went through an active, live multi-session numbering race while this ADR was being prepared. This ADR was first drafted and delivered as `0007-transformation-fidelity-and-readability-assist-concepts.md`. Before it was committed, a check of `docs/adr/` found the number already collided three ways at 0007, once at 0008, and twice at 0009, so this ADR was renumbered to 0010; by the time that file was about to be written to disk, two more files had already landed at 0010 from a separate concurrent session, so this ADR was renumbered a second time to 0009. Both superseded drafts were moved to `docs/adr/_to_delete/` rather than left as stray duplicates.
 
-One file in the pileup, `0007-reader-accessibility-register-and-clarity-pass-from-bac-thread.md`, proposes an "author-facing clarity/register pass" and a "reader accessibility/complexity register" that substantially overlap items 1 and 2 below, apparently drafted from the same or a near-identical pasted ChatGPT thread by a separate concurrent session. This ADR does not re-litigate that overlap; it flags it in "Corroborating and overlapping work" below so the project owner can merge rather than reconcile two independent proposals for the same capability.
+**Update, post-commit:** this ADR is now committed at `docs/adr/0009-transformation-fidelity-and-readability-assist-concepts.md`. The files that briefly collided at 0010 are now uniquely numbered 0010 and 0011. The final 0007 collision was resolved by retaining `0007-reader-accessibility-and-clarity.md` and renumbering the separate scene-purpose ADR to `0012-scene-purpose-framing-from-synopsis-discipline.md`. This ADR's own number is stable.
+
+One file in the pileup, `0007-reader-accessibility-and-clarity.md`, proposes an "author-facing clarity/register pass" and a "reader accessibility/complexity register" that substantially overlap items 1 and 2 below, apparently drafted from the same or a near-identical pasted ChatGPT thread by a separate concurrent session. This ADR does not re-litigate that overlap; it flags it in "Corroborating and overlapping work" below so the project owner can merge rather than reconcile two independent proposals for the same capability.
 
 ## Context
 
@@ -57,7 +59,7 @@ A closer second pass over the source thread surfaced additional unique elements.
 
 ## Corroborating and overlapping work, not duplicated
 
-`docs/adr/0007-reader-accessibility-register-and-clarity-pass-from-bac-thread.md`, drafted concurrently by a separate session from an apparently related or identical thread paste, proposes an "author-facing clarity/register pass" (its item 1) and a "reader accessibility/complexity register" open question (its item 2, logged as open question 15.13). These overlap items 1 and 2 above closely enough that they read as two independent extractions of the same underlying capability rather than two different ideas. This ADR does not restate or duplicate that file's specific field or open-question proposal. When the project owner resolves the numbering pileup noted above, these two ADRs' overlapping items are the most likely candidates for merging into one.
+`docs/adr/0007-reader-accessibility-and-clarity.md`, drafted concurrently by a separate session from an apparently related or identical thread paste, proposes an "author-facing clarity/register pass" (its item 1) and a "reader accessibility/complexity register" open question (its item 2, logged as open question 15.13). These overlap items 1 and 2 above closely enough that they read as two independent extractions of the same underlying capability rather than two different ideas. This ADR does not restate or duplicate that file's specific field or open-question proposal. When the project owner resolves the numbering pileup noted above, these two ADRs' overlapping items are the most likely candidates for merging into one.
 
 ## Non-goals of this ADR
 
@@ -72,7 +74,7 @@ A closer second pass over the source thread surfaced additional unique elements.
 | Item | Recommendation |
 |---|---|
 | 1. Transformation fidelity report | Log as proposed; low-cost output-contract change to fold in once any transformation step (ADR-0004 Tier 1/2, or Disrupt/Invert) gets designed |
-| 2. Contributor-facing readability/register assist | Log as proposed; needs an explicit owner scope decision, is this inside TF's "revision" promise, before any design work; likely candidate for merging with the overlapping proposal in `0007-reader-accessibility-register-and-clarity-pass-from-bac-thread.md` |
+| 2. Contributor-facing readability/register assist | Log as proposed; needs an explicit owner scope decision, is this inside TF's "revision" promise, before any design work; likely candidate for merging with the overlapping proposal in `0007-reader-accessibility-and-clarity.md` |
 
 ## Consequences
 
@@ -82,4 +84,4 @@ A closer second pass over the source thread surfaced additional unique elements.
 
 ## Next action
 
-The project owner should give a per-item call, accept, reject, or defer, for items 1 and 2, decide whether to merge item 2 with the overlapping proposal in the `0007-reader-accessibility-register-and-clarity-pass-from-bac-thread.md` file, and separately resolve the broader ADR numbering pileup across all affected files. Update this ADR's Status once that call is made.
+The project owner should give a per-item call, accept, reject, or defer, for items 1 and 2, decide whether to merge item 2 with the overlapping proposal in the `0007-reader-accessibility-and-clarity.md` file, and separately resolve the broader ADR numbering pileup across all affected files. Update this ADR's Status once that call is made.

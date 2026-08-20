@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0",
+  "review_protocol": "equilibrium-v1",
+  "review_mode": "conditional-five-role",
+  "evaluation_status": "analytical",
+  "artifact": {
+    "paths": [
+      "docs/product/dream-platform-specification.md",
+      "docs/product/attainable-delivery-roadmap.md"
+    ],
+    "sha256": {
+      "dream-platform-specification.md": "A841D81DC5395A0C3A2A9D3D3745019405FD9033A84A7030A46EB6AE608B13F5",
+      "attainable-delivery-roadmap.md": "5A194A9D19ED3143893FB213AFB3DEDCA7C6F293D562065EDA132B0EA4B27DBB"
+    },
+    "version": "pre-review draft"
+  },
+  "decision_question": "Are the dream specification and delivery roadmap safe and useful to guide controlled Stage 0 discovery and bounded Stage 1 design?",
+  "acceptance_criteria": [
+    "Truthful current versus proposed status",
+    "Useful and staged user outcomes",
+    "Human-controlled consent, canon, and AI boundaries",
+    "Safe ingestion, portability, restriction, and recovery gates",
+    "Traceable requirements and testable completion evidence"
+  ],
+  "independence": {
+    "reviewer_contexts_separated": true,
+    "shared_model_or_source_limits": [
+      "All reviewers are agents using the same local repository and overlapping model context.",
+      "No external holdout, live user test, security test, legal review, or deployment evidence was available."
+    ]
+  },
+  "initial_reviews": [
+    { "role": "evidence", "decision": "approve-with-limits", "confidence": "medium", "findings": ["honest scope", "architecture decisions open", "traceability missing", "non-public disposition missing", "capability baseline stale"] },
+    { "role": "outcome", "decision": "approve-with-limits", "confidence": "high", "findings": ["whole-system coherence", "workbench/CME/PME central", "CIE/PIE unsequenced", "acceptance measures qualitative"] },
+    { "role": "safety_portability", "decision": "approve-with-limits", "confidence": "medium", "findings": ["private-first direction", "legal consent unresolved", "upload threat contract missing", "moderation and restoration unproven"] }
+  ],
+  "concordance": "initial reviewers agreed on a constrained design-only approval",
+  "disruptor": {
+    "triggered": true,
+    "authority": "falsification input, adjudicated by negotiator",
+    "falsification_hypotheses": [
+      "Private source deletion can fail across logs, Git, caches, exports, and backups.",
+      "No safe terminal disposition exists for restricted or withdrawn work.",
+      "Generic processing consent can be misread as derivative consent.",
+      "Revocation can affect descendants and co-created outputs.",
+      "Export does not prove portability or privacy.",
+      "Stage 1 records may make later governance impossible.",
+      "Untrusted upload processing can violate confidentiality and safety.",
+      "Missing traceability permits false stage completion."
+    ],
+    "test_results": ["Not run. Credible counterexamples became explicit design gates."]
+  },
+  "negotiator": {
+    "triggered": true,
+    "decision": "approve-with-limits",
+    "decisive_evidence": [
+      "Frozen documents label target-state requirements as Proposed or Open.",
+      "Existing open decisions and policy boundaries block unsafe implementation assumptions.",
+      "Credible falsification hypotheses identify requirements that can be added now and evidence that must be obtained later."
+    ],
+    "unresolved_items": [
+      "Owner decisions 15.1, 15.2, 15.6, 15.10, 15.14, and 15.15",
+      "Qualified legal input for rights-sensitive terms",
+      "Security validation for real uploads",
+      "Portable-archive restore test and real-user Stage 1 test"
+    ]
+  },
+  "release_decision": "approve-with-limits",
+  "limitations": [
+    "Use only for controlled discovery and bounded design.",
+    "Do not accept real untrusted uploads, open public contribution, or enable derivative transformations of other people's material.",
+    "Do not treat analytical review as deployment, legal, security, or usability evidence."
+  ],
+  "follow_up": [
+    "Create a Stage 0/1 traceability matrix and dated capability inventory.",
+    "Specify restriction/withdrawal and source-data lifecycle.",
+    "Define default-deny action-specific consent and descendant lineage.",
+    "Approve and test the untrusted-upload contract.",
+    "Add gated CIE/PIE delivery evidence and prove portability through restoration."
+  ]
+}

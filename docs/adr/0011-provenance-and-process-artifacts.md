@@ -89,23 +89,23 @@ Mission principle #10 ("earn the right to monetize") and the README's staged mod
 - If item 4 is accepted, it can proceed independently of the `capsules` table and of the rest of this ADR, since it only documents capability already decided or already proposed elsewhere.
 - Item 5 has no consequence until real traction exists. It does not block, and is not blocked by, items 1 through 4.
 
-## Also flagged, out of scope for this ADR — a live multi-session numbering collision, partially resolved by others, still not fully settled
+## Also flagged, out of scope for this ADR: a multi-session numbering collision resolved later
 
-This ADR's number changed four times while this repository had multiple concurrent Cowork sessions writing to it at once: drafted as 0008, renumbered to 0009 after finding three files already numbered 0007 and two already numbered 0008 on disk, renumbered to 0010 after a second concurrent session also claimed 0009 for a different file, and renumbered again to **0011** after discovering that a batch commit (`a485309`, already pushed to `origin/main` by another process before this session could commit its own work) resolved most of the 0007-0009 collisions but left a *new* collision behind: both this file and `docs/adr/0010-content-ops-schema-and-governance-signals-from-mps-council-thread.md` were committed and pushed under the number 0010.
+This ADR's number changed four times while this repository had multiple concurrent Cowork sessions writing to it at once: drafted as 0008, renumbered to 0009 after finding three files already numbered 0007 and two already numbered 0008 on disk, renumbered to 0010 after a second concurrent session also claimed 0009 for a different file, and renumbered again to **0011** after discovering that a batch commit (`a485309`) resolved most of the 0007-0009 collisions but left this file and `docs/adr/0010-content-ops-and-governance.md` with the number 0010. A subsequent correction retained `0010` for the content-ops ADR and this ADR at 0011.
 
 As of this ADR's final number, the resolved history in `docs/adr/` is:
 
-- `0007-reader-accessibility-register-and-clarity-pass-from-bac-thread.md` (kept, referenced by open question 15.13)
-- `0007-scene-purpose-framing-from-synopsis-discipline.md` (kept)
-- `0008-reader-contribution-consent-ladder-data-stream-separation-and-echo-relay-concept.md` (kept)
+- `0007-reader-accessibility-and-clarity.md` (kept, referenced by open question 15.13)
+- `0012-scene-purpose-framing-from-synopsis-discipline.md` (renumbered from the former 0007)
+- `0008-reader-consent-and-contribution.md` (kept)
 - `0009-transformation-fidelity-and-readability-assist-concepts.md` (renumbered from a former 0007 by another session, now committed)
-- `0010-content-ops-schema-and-governance-signals-from-mps-council-thread.md` (not written by this session, kept at 0010)
+- `0010-content-ops-and-governance.md` (not written by this session, kept at 0010)
 - Three files moved to `docs/adr/_to_delete/` as `.superseded` by another session's reconciliation pass, not deleted (device-side delete restriction), pending Jamie's final cleanup
 
-This session's own file is the one renumbered here, from a committed-and-pushed 0010 to 0011, specifically because it collided with the file above — this session did not touch, rename, or evaluate `0010-content-ops-schema-and-governance-signals-from-mps-council-thread.md` itself, consistent with scope staying inside this thread's own material only. The commit that pushed the collision to `origin/main` also bundled a large amount of unrelated work (new skill directories, `docs/decisions/open-questions.md` edits, thread-extract cleanup) from other concurrent sessions — none of that is this ADR's concern or this session's to evaluate.
+This session's own file is the one renumbered here, from a committed-and-pushed 0010 to 0011, specifically because it collided with the file above — this session did not touch, rename, or evaluate `0010-content-ops-and-governance.md` itself, consistent with scope staying inside this thread's own material only. The commit that pushed the collision to `origin/main` also bundled a large amount of unrelated work (new skill directories, `docs/decisions/open-questions.md` edits, thread-extract cleanup) from other concurrent sessions — none of that is this ADR's concern or this session's to evaluate.
 
 Separately, this session observed a `.git/index.lock` reappearing multiple times during this task, including after the project owner manually cleared it once, which is consistent with more than one process actively running git operations against this same working directory concurrently. That contention, and the `docs/adr/_to_delete/*.superseded` files still awaiting real deletion, remain open.
 
 ## Next action
 
-The project owner should give a per-item call — accept, reject, or defer — for items 1 through 5. Separately: confirm this ADR's renumbering to 0011 is acceptable (it was pushed to `origin/main` at 0010 before the collision with `0010-content-ops-schema-and-governance-signals-from-mps-council-thread.md` was discovered), decide whether the `_to_delete/*.superseded` files should be committed as deletions or gitignored, and consider whether concurrent Cowork sessions against this repository should continue running at the same time given the repeated lock contention.
+The project owner should give a per-item call — accept, reject, or defer — for items 1 through 5. Separately: confirm this ADR's renumbering to 0011 is acceptable (it was pushed to `origin/main` at 0010 before the collision with `0010-content-ops-and-governance.md` was discovered), decide whether the `_to_delete/*.superseded` files should be committed as deletions or gitignored, and consider whether concurrent Cowork sessions against this repository should continue running at the same time given the repeated lock contention.
