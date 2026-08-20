@@ -235,6 +235,8 @@ vi.mock("../../lib/github", () => ({
 const mockProvenance = vi.hoisted(() => ({
   indexNarrationCommit: vi.fn().mockResolvedValue(null),
   parseNarrationCommit: vi.fn().mockReturnValue(null),
+  replacePathMomentMemberships: vi.fn().mockResolvedValue(undefined),
+  writeAcceptedProvenance: vi.fn().mockResolvedValue(1),
 }));
 
 vi.mock("../../lib/provenance", () => ({
@@ -248,12 +250,12 @@ vi.mock("../../lib/provenance", () => ({
   indexNarrationCommit: mockProvenance.indexNarrationCommit,
   indexSavedMoment: vi.fn().mockResolvedValue(null),
   parseNarrationCommit: mockProvenance.parseNarrationCommit,
-  replacePathMomentMemberships: vi.fn().mockResolvedValue(undefined),
+  replacePathMomentMemberships: mockProvenance.replacePathMomentMemberships,
   resolveContributor: vi.fn().mockResolvedValue(null),
   resolveContributorIdentity: vi.fn().mockResolvedValue(null),
   stewardAttribution: vi.fn().mockResolvedValue({ githubIdentity: "github:alice" }),
   verifyAcceptanceDecisionNote: vi.fn().mockReturnValue(null),
-  writeAcceptedProvenance: vi.fn().mockResolvedValue(1),
+  writeAcceptedProvenance: mockProvenance.writeAcceptedProvenance,
 }));
 
 // ---------------------------------------------------------------------------
@@ -532,6 +534,146 @@ describe("webhook pull_request handler — protected proposal outcomes", () => {
       expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
     },
   );
+});
+
+describe("admin reconcile — GitHub fixture rebuild", () => {
+  let app: ReturnType<typeof buildAdminApp>;
+  const fixturePr = {
+    number: 42,
+    state: "closed" as const,
+    merged: true,
+    headRef: "contrib/scene",
+    baseRef: "main",
+    createdAt: "2026-01-10T12:00:00.000Z",
+    mergedAt: "2026-01-11T12:00:00.000Z",
+    closedAt: "2026-01-11T12:00:00.000Z",
+    mergeCommitSha: "merge-sha-001",
+    headSha: "source-head-001",
+    baseSha: "base-sha-001",
+    mergedBy: { login: "steward", name: "Steward" },
+    author: { id: "github-user-7", login: "contributor", name: "Contributor", email: "writer@example.com" },
+  };
+  const fixtureNarration = {
+    sha: "narration-sha-001",
+    message: "Telling-Forward-Narration: v1",
+    authorName: "Contributor",
+    authorEmail: "writer@example.com",
+    authorLogin: "contributor",
+    timestamp: "2026-01-11T11:00:00.000Z",
+  };
+
+  function seedFixture() {
+    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+    mockDb._pushSelectRows([{ ...mockDb._PATH_ROW, branchRef: "main", state: "open" }]);
+    mockDb._pushSelectRows([{ ...mockDb._PATH_ROW, branchRef: "contrib/scene" }]);
+    mockDb._pushSelectRows([{ ...mockDb._PATH_ROW, branchRef: "main", id: 11 }]);
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    insertLog.reset();
+    proposalUpsertLog.reset();
+    proposalPersistence.reset();
+    mockDb._resetSelectQueue();
+    process.env["ADMIN_SECRET"] = "admin-secret-test";
+    mockGh.listBranches.mockResolvedValue([
+      { name: "main", sha: "canon-head" },
+      { name: "contrib/scene", sha: "source-head-001" },
+    ]);
+    mockGh.listOpenPullRequests.mockResolvedValue([fixturePr]);
+    mockGh.listCommitsForBranch.mockResolvedValue([]);
+    mockGh.listCommitsBetween.mockResolvedValue([fixtureNarration]);
+    mockGh.getPullRequest.mockResolvedValue(fixturePr);
+    mockGh.getMergeCommitRange.mockResolvedValue({
+      baseSha: "base-sha-001",
+      headSha: "source-head-001",
+    });
+    mockGh.listPullRequestReviews.mockResolvedValue([
+      { id: 701, body: "What does the witness remember?", state: "CHANGES_REQUESTED", submittedAt: "2026-01-10T15:00:00.000Z" },
+    ]);
+    mockGh.listPullRequestComments.mockResolvedValue([]);
+    mockGh.getFileContent.mockResolvedValue("# Recovered scene\n\nRecovered body\n");
+    mockProvenance.parseNarrationCommit.mockReturnValue({
+      submissionId: "submission-001",
+      platformIdentity: "platform:writer-7",
+      title: "Recovered scene",
+      displayName: "Contributor",
+    });
+    mockProvenance.indexNarrationCommit.mockResolvedValue(null);
+    app = buildAdminApp();
+  });
+
+  it("rebuilds story paths, contributions, proposal lineage, questions, and provenance from one fixture", async () => {
+    seedFixture();
+    const res = await request(app)
+      .post("/reconcile")
+      .set({ "x-admin-secret": "admin-secret-test" })
+      .send({ storyworld_id: 1 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.summary).toMatchObject({
+      branches_fetched: 2,
+      paths_upserted: 2,
+      commits_fetched: 1,
+      contributions_upserted: 2,
+      prs_fetched: 1,
+      proposals_upserted: 1,
+      editor_questions_upserted: 1,
+      provenance_records_upserted: 1,
+    });
+    expect(mockProvenance.indexNarrationCommit).toHaveBeenCalledWith(
+      1, 10, fixtureNarration, "# Recovered scene\n\nRecovered body\n",
+    );
+    expect(mockProvenance.replacePathMomentMemberships).toHaveBeenCalledWith(
+      1, 10, ["narration-sha-001"],
+    );
+    expect(mockProvenance.writeAcceptedProvenance).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storyworldId: 1,
+        canonCommitSha: "merge-sha-001",
+        sourcePathId: 10,
+        sourcePrNumber: 42,
+      }),
+    );
+    expect(proposalUpsertLog.calls).toHaveLength(1);
+  });
+
+  it("is safe when a rerun sees no GitHub objects and does not reopen terminal local outcomes", async () => {
+    seedFixture();
+    const first = await request(app)
+      .post("/reconcile")
+      .set({ "x-admin-secret": "admin-secret-test" })
+      .send({ storyworld_id: 1 });
+
+    insertLog.reset();
+    proposalUpsertLog.reset();
+    mockDb._resetSelectQueue();
+    mockGh.listBranches.mockResolvedValue([]);
+    mockGh.listOpenPullRequests.mockResolvedValue([]);
+    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+
+    const second = await request(app)
+      .post("/reconcile")
+      .set({ "x-admin-secret": "admin-secret-test" })
+      .send({ storyworld_id: 1 });
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(second.body.summary).toEqual({
+      branches_fetched: 0,
+      paths_upserted: 0,
+      paths_state_updated: 0,
+      commits_fetched: 0,
+      contributions_upserted: 0,
+      prs_fetched: 0,
+      proposals_upserted: 0,
+      editor_questions_upserted: 0,
+      provenance_records_upserted: 0,
+    });
+    expect(proposalUpsertLog.calls).toHaveLength(0);
+    expect(mockProvenance.writeAcceptedProvenance).toHaveBeenCalledTimes(1);
+    expect(first.body.summary.proposals_upserted).toBe(1);
+  });
 });
 
 // ---------------------------------------------------------------------------
