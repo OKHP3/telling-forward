@@ -13,5 +13,6 @@ export interface EditorQuestion {
   reviewCommentId: number;
   body: string;
   resolved: boolean;
+  addressedAt?: Date | null;
   createdAt: Date;
 }

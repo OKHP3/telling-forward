@@ -24,6 +24,7 @@ import {
   editorQuestionsTable,
   stewardsTable,
   userGithubLinksTable,
+  contributorsTable,
 } from "@workspace/db";
 import {
   GetProposalParams,
@@ -161,6 +162,64 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to load proposal" });
   }
 });
+
+// POST /api/proposals/:id/editor-questions/:questionId/address
+// Only the contributor who owns the proposal may acknowledge a question.
+router.post(
+  "/:id/editor-questions/:questionId/address",
+  requireAuth,
+  async (req, res) => {
+    const proposalId = Number(req.params.id);
+    const questionId = Number(req.params.questionId);
+    const addressed = req.body?.addressed;
+    if (!Number.isSafeInteger(proposalId) || !Number.isSafeInteger(questionId)) {
+      res.status(400).json({ error: "Invalid proposal or editor question id" });
+      return;
+    }
+    if (typeof addressed !== "boolean") {
+      res.status(400).json({ error: "addressed must be a boolean" });
+      return;
+    }
+    try {
+      const [proposal] = await db
+        .select({ id: proposalsTable.id, contributorId: proposalsTable.contributorId })
+        .from(proposalsTable)
+        .where(eq(proposalsTable.id, proposalId))
+        .limit(1);
+      if (!proposal) {
+        res.status(404).json({ error: "Proposal not found" });
+        return;
+      }
+      const [contributor] = await db
+        .select({ id: contributorsTable.id })
+        .from(contributorsTable)
+        .where(eq(contributorsTable.platformIdentity, `platform:${req.session.userId}`))
+        .limit(1);
+      if (!contributor || proposal.contributorId !== contributor.id) {
+        res.status(403).json({ error: "Only the proposal contributor can address editor questions" });
+        return;
+      }
+      const [question] = await db
+        .update(editorQuestionsTable)
+        .set({ addressedAt: addressed ? new Date() : null })
+        .where(
+          and(
+            eq(editorQuestionsTable.id, questionId),
+            eq(editorQuestionsTable.proposalId, proposalId),
+          ),
+        )
+        .returning();
+      if (!question) {
+        res.status(404).json({ error: "Editor question not found" });
+        return;
+      }
+      res.json(question);
+    } catch (err) {
+      req.log.error({ err, proposalId, questionId }, "address editor question error");
+      res.status(500).json({ error: "Failed to update editor question" });
+    }
+  },
+);
 
 // ---------------------------------------------------------------------------
 // POST /api/proposals/:id/review — steward marks submission as under review

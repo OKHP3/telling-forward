@@ -18,6 +18,7 @@ import type {
 
 import type {
   AcceptProposalResponse,
+  AddressEditorQuestionBody,
   AuthResponse,
   BadRequestResponse,
   Capsule,
@@ -28,6 +29,7 @@ import type {
   ContributionInput,
   CreateCapsuleBody,
   DisruptCapsuleBody,
+  EditorQuestion,
   ErrorResponse,
   GithubCallbackParams,
   HealthStatus,
@@ -2846,6 +2848,114 @@ export const useReturnProposal = <
   TContext
 > => {
   return useMutation(getReturnProposalMutationOptions(options));
+};
+
+/**
+ * Records or clears the contributor's acknowledgement without changing the original editor question. Only the proposal contributor may change it.
+
+ * @summary Mark an editor question addressed for the contributor's revision
+ */
+export const getAddressEditorQuestionUrl = (id: number, questionId: number) => {
+  return `/api/proposals/${id}/editor-questions/${questionId}/address`;
+};
+
+export const addressEditorQuestion = async (
+  id: number,
+  questionId: number,
+  addressEditorQuestionBody: AddressEditorQuestionBody,
+  options?: RequestInit,
+): Promise<EditorQuestion> => {
+  return customFetch<EditorQuestion>(
+    getAddressEditorQuestionUrl(id, questionId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(addressEditorQuestionBody),
+    },
+  );
+};
+
+export const getAddressEditorQuestionMutationOptions = <
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addressEditorQuestion>>,
+    TError,
+    {
+      id: number;
+      questionId: number;
+      data: BodyType<AddressEditorQuestionBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addressEditorQuestion>>,
+  TError,
+  { id: number; questionId: number; data: BodyType<AddressEditorQuestionBody> },
+  TContext
+> => {
+  const mutationKey = ["addressEditorQuestion"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addressEditorQuestion>>,
+    {
+      id: number;
+      questionId: number;
+      data: BodyType<AddressEditorQuestionBody>;
+    }
+  > = (props) => {
+    const { id, questionId, data } = props ?? {};
+
+    return addressEditorQuestion(id, questionId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddressEditorQuestionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addressEditorQuestion>>
+>;
+export type AddressEditorQuestionMutationBody =
+  BodyType<AddressEditorQuestionBody>;
+export type AddressEditorQuestionMutationError = ErrorType<
+  UnauthorizedResponse | ErrorResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Mark an editor question addressed for the contributor's revision
+ */
+export const useAddressEditorQuestion = <
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addressEditorQuestion>>,
+    TError,
+    {
+      id: number;
+      questionId: number;
+      data: BodyType<AddressEditorQuestionBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addressEditorQuestion>>,
+  TError,
+  { id: number; questionId: number; data: BodyType<AddressEditorQuestionBody> },
+  TContext
+> => {
+  return useMutation(getAddressEditorQuestionMutationOptions(options));
 };
 
 /**

@@ -201,6 +201,8 @@ export async function ensureSchema(): Promise<void> {
       resolved          BOOLEAN     NOT NULL DEFAULT FALSE,
       created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    ALTER TABLE editor_questions
+      ADD COLUMN IF NOT EXISTS addressed_at TIMESTAMPTZ;
 
     CREATE TABLE IF NOT EXISTS stewards (
       id            SERIAL      PRIMARY KEY,

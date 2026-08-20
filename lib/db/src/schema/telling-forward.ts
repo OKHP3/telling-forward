@@ -197,6 +197,9 @@ export const editorQuestionsTable = pgTable("editor_questions", {
   reviewCommentId: bigint("review_comment_id", { mode: "number" }).notNull().unique(),
   body: text("body").notNull(),
   resolved: boolean("resolved").notNull().default(false),
+  // Contributor-owned acknowledgement for the current revision cycle. This
+  // never changes the original editor question text.
+  addressedAt: timestamp("addressed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

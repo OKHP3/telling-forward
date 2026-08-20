@@ -963,6 +963,50 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /proposals/{id}/editor-questions/{questionId}/address:
+    post:
+      operationId: addressEditorQuestion
+      tags: [proposals]
+      summary: Mark an editor question addressed for the contributor's revision
+      description: >
+        Records or clears the contributor's acknowledgement without changing the
+        original editor question. Only the proposal contributor may change it.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: questionId
+          in: path
+          required: true
+          schema: { type: integer }
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                addressed: { type: boolean }
+              required: [addressed]
+      responses:
+        "200":
+          description: Updated editor question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorQuestion"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Not the contributor who owns this proposal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /proposals/{id}/restrict:
     post:
       operationId: restrictProposal
@@ -1785,6 +1829,10 @@ components:
           type: string
         resolved:
           type: boolean
+        addressedAt:
+          type: string
+          format: date-time
+          nullable: true
         createdAt:
           type: string
           format: date-time

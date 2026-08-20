@@ -430,6 +430,7 @@ export interface EditorQuestion {
   reviewCommentId: number;
   body: string;
   resolved: boolean;
+  addressedAt?: string | null;
   createdAt: string;
 }
 
@@ -466,4 +467,8 @@ export type GithubCallbackParams = {
   code?: string;
   state?: string;
   error?: string;
+};
+
+export type AddressEditorQuestionBody = {
+  addressed: boolean;
 };

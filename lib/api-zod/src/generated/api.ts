@@ -803,6 +803,7 @@ export const GetProposalResponse = zod
             reviewCommentId: zod.number().describe("GitHub review comment ID."),
             body: zod.string(),
             resolved: zod.boolean(),
+            addressedAt: zod.coerce.date().nullish(),
             createdAt: zod.coerce.date(),
           }),
         )
@@ -914,6 +915,30 @@ export const ReturnProposalResponse = zod.object({
   submittedAt: zod.coerce.date(),
   decidedAt: zod.coerce.date().nullish(),
   decisionReason: zod.string().nullish(),
+});
+
+/**
+ * Records or clears the contributor's acknowledgement without changing the original editor question. Only the proposal contributor may change it.
+
+ * @summary Mark an editor question addressed for the contributor's revision
+ */
+export const AddressEditorQuestionParams = zod.object({
+  id: zod.coerce.number(),
+  questionId: zod.coerce.number(),
+});
+
+export const AddressEditorQuestionBody = zod.object({
+  addressed: zod.boolean(),
+});
+
+export const AddressEditorQuestionResponse = zod.object({
+  id: zod.number(),
+  proposalId: zod.number(),
+  reviewCommentId: zod.number().describe("GitHub review comment ID."),
+  body: zod.string(),
+  resolved: zod.boolean(),
+  addressedAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
 });
 
 /**

@@ -13,6 +13,7 @@ import {
   useRestrictProposal,
   useWithdrawProposal,
   useArchiveProposal,
+  useAddressEditorQuestion,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -95,6 +96,7 @@ export function ProposalView() {
   const restrict = useRestrictProposal();
   const withdraw = useWithdrawProposal();
   const archive = useArchiveProposal();
+  const addressQuestion = useAddressEditorQuestion();
 
   const isBusy =
     markReview.isPending ||
@@ -103,6 +105,19 @@ export function ProposalView() {
     restrict.isPending ||
     withdraw.isPending ||
     archive.isPending;
+
+  async function handleAddressQuestion(questionId: number, addressed: boolean) {
+    try {
+      await addressQuestion.mutateAsync({
+        id: proposalId,
+        questionId,
+        data: { addressed },
+      });
+      void refetchProposal();
+    } catch {
+      setStewardError("Only the contributor who opened this submission can update question status.");
+    }
+  }
 
   async function handleMarkReview() {
     setStewardError(null);
@@ -380,6 +395,20 @@ export function ProposalView() {
                     <p className="text-sm text-rose-950 dark:text-rose-100 whitespace-pre-wrap leading-relaxed">
                       {question.body}
                     </p>
+                    <button
+                      type="button"
+                      onClick={() => void handleAddressQuestion(question.id, !question.addressedAt)}
+                      disabled={addressQuestion.isPending}
+                      className={cn(
+                        "mt-3 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
+                        question.addressedAt
+                          ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                          : "border-rose-300 bg-background text-rose-700 hover:bg-rose-100",
+                      )}
+                      data-testid={`button-address-question-${question.id}`}
+                    >
+                      {question.addressedAt ? "Addressed in this revision" : "Mark addressed"}
+                    </button>
                   </div>
                 ))}
                 {!proposal.editorQuestions.length && (
