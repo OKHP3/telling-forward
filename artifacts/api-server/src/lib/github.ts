@@ -165,6 +165,12 @@ export interface GitHubClientInterface {
     branch: string,
     maxPages?: number,
   ): Promise<GitHubCommit[]>;
+  getFileContent(
+    owner: string,
+    repo: string,
+    path: string,
+    ref: string,
+  ): Promise<string>;
   listCommitsBetween(
     owner: string,
     repo: string,
@@ -301,6 +307,28 @@ class OctokitGitHubClient implements GitHubClientInterface {
       page++;
     }
     return results;
+  }
+
+  async getFileContent(
+    owner: string,
+    repo: string,
+    path: string,
+    ref: string,
+  ): Promise<string> {
+    const { data } = await this.octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path,
+      ref,
+    });
+    if (Array.isArray(data) || data.type !== "file" || !data.content) {
+      throw new Error(`Expected ${path} to be a file at ${ref}`);
+    }
+    // GitHub file content is base64; Octokit's generated type deliberately
+    // leaves `encoding` open-ended, so do not pass an arbitrary API string to
+    // Node's stricter BufferEncoding parameter.
+    const encoding = data.encoding === "utf-8" ? "utf8" : "base64";
+    return Buffer.from(data.content, encoding).toString("utf8");
   }
 
   async listPullRequestCommits(

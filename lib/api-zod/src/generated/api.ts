@@ -203,6 +203,29 @@ export const ListContributionsResponse = zod.array(
 );
 
 /**
+ * Creates a contributor record for the authenticated user and commits the narration to the selected open path's branch in the storyworld repository. The Git commit is the durable source of truth; the contribution record indexes it. Requires authentication.
+
+ * @summary Submit a narration to an open story path
+ */
+export const CreateContributionParams = zod.object({
+  id: zod.coerce.number(),
+  pathId: zod.coerce.number(),
+});
+
+export const CreateContributionBody = zod
+  .object({
+    title: zod.string().min(1).describe("Human-facing title for the scene."),
+    content: zod.string().min(1).describe("The narrated scene text."),
+    submissionId: zod
+      .string()
+      .uuid()
+      .describe(
+        "Client-generated idempotency key retained while retrying this narration.",
+      ),
+  })
+  .describe("A narration submitted by the authenticated contributor.");
+
+/**
  * Reader-facing lineage for accepted story contributions. Uses plain story language rather than source-control terminology.
 
  * @summary Show how contributions entered the canon

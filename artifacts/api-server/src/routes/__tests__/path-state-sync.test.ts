@@ -153,6 +153,7 @@ vi.mock("@workspace/db", () => {
 
 const mockGh = vi.hoisted(() => ({
   listBranches: vi.fn().mockResolvedValue([]),
+  listCommitsForBranch: vi.fn().mockResolvedValue([]),
   listOpenPullRequests: vi.fn().mockResolvedValue([]),
   listClosedPullRequests: vi.fn().mockResolvedValue([]),
   listCommitsBetween: vi.fn().mockResolvedValue([]),
@@ -162,6 +163,7 @@ const mockGh = vi.hoisted(() => ({
   listPullRequestReviews: vi.fn().mockResolvedValue([]),
   createPullRequestComment: vi.fn().mockResolvedValue(undefined),
   getCommitMessage: vi.fn().mockResolvedValue(""),
+  getFileContent: vi.fn().mockResolvedValue(""),
 }));
 
 vi.mock("../../lib/github", () => ({
@@ -172,6 +174,11 @@ vi.mock("../../lib/github", () => ({
 // Provenance mock
 // ---------------------------------------------------------------------------
 
+const mockProvenance = vi.hoisted(() => ({
+  indexNarrationCommit: vi.fn().mockResolvedValue(null),
+  parseNarrationCommit: vi.fn().mockReturnValue(null),
+}));
+
 vi.mock("../../lib/provenance", () => ({
   buildAcceptanceDecisionNote: vi.fn().mockReturnValue("note"),
   buildAcceptanceIntentNote: vi.fn().mockReturnValue("intent"),
@@ -180,7 +187,9 @@ vi.mock("../../lib/provenance", () => ({
   isAcceptanceIntentNote: vi.fn().mockReturnValue(false),
   parseAcceptanceDecisionNote: vi.fn().mockReturnValue(null),
   contributorAttributionsForPath: vi.fn().mockResolvedValue([]),
+  indexNarrationCommit: mockProvenance.indexNarrationCommit,
   indexSavedMoment: vi.fn().mockResolvedValue(null),
+  parseNarrationCommit: mockProvenance.parseNarrationCommit,
   replacePathMomentMemberships: vi.fn().mockResolvedValue(undefined),
   resolveContributor: vi.fn().mockResolvedValue(null),
   resolveContributorIdentity: vi.fn().mockResolvedValue(null),
@@ -409,11 +418,15 @@ describe("admin reconcile — path state from PR outcome", () => {
 
     // Default: no branches, no PRs (overridden per test)
     mockGh.listBranches.mockResolvedValue([]);
+    mockGh.listCommitsForBranch.mockResolvedValue([]);
     mockGh.listOpenPullRequests.mockResolvedValue([]);
     mockGh.listCommitsBetween.mockResolvedValue([]);
     mockGh.listPullRequestReviews.mockResolvedValue([]);
     mockGh.listPullRequestComments.mockResolvedValue([]);
     mockGh.getPullRequest.mockResolvedValue(null);
+    mockGh.getFileContent.mockResolvedValue("");
+    mockProvenance.parseNarrationCommit.mockReturnValue(null);
+    mockProvenance.indexNarrationCommit.mockResolvedValue(null);
 
     app = buildAdminApp();
   });
@@ -457,6 +470,49 @@ describe("admin reconcile — path state from PR outcome", () => {
     const prPathInsert = insertLog.calls.find(c => c.branchRef === "contrib/scene");
     expect(prPathInsert?.state).toBe("published-canon");
     expect(prPathInsert?.state).not.toBe("published-alternate");
+  });
+
+  it("recovers narration commits from the canon branch", async () => {
+    const narrationCommit = {
+      sha: "narration-sha",
+      message: "Telling-Forward-Narration: v1",
+      authorName: "Telling Forward",
+      authorEmail: "noreply@tellingforward.app",
+      authorLogin: null,
+      timestamp: new Date().toISOString(),
+    };
+    mockGh.listBranches.mockResolvedValue([{ name: "main", sha: "head-sha" }]);
+    mockGh.listCommitsForBranch.mockResolvedValue([narrationCommit]);
+    mockGh.getFileContent.mockResolvedValue("# Recovered scene\n\nGit body\n");
+    mockProvenance.parseNarrationCommit.mockReturnValue({
+      submissionId: "660e8400-e29b-41d4-a716-446655440004",
+      platformIdentity: "platform:42",
+      title: "Recovered scene",
+      displayName: "River Writer",
+    });
+
+    // world lookup, then the canonical path lookup
+    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+    mockDb._pushSelectRows([{ ...mockDb._PATH_ROW, branchRef: "main", state: "open" }]);
+
+    const res = await request(app)
+      .post("/reconcile")
+      .set({ "x-admin-secret": "admin-secret-test" })
+      .send({ storyworld_id: 1 });
+
+    expect(res.status).toBe(200);
+    expect(mockGh.getFileContent).toHaveBeenCalledWith(
+      "testowner",
+      "testrepo",
+      "narrations/660e8400-e29b-41d4-a716-446655440004.md",
+      "narration-sha",
+    );
+    expect(mockProvenance.indexNarrationCommit).toHaveBeenCalledWith(
+      1,
+      10,
+      narrationCommit,
+      "# Recovered scene\n\nGit body\n",
+    );
   });
 
   it("reconcile with a closed-without-merge PR → published-alternate path state", async () => {

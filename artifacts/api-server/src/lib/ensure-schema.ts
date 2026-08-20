@@ -141,7 +141,8 @@ export async function ensureSchema(): Promise<void> {
       display_name      TEXT        NOT NULL,
       platform_identity TEXT        NOT NULL,
       github_identity   TEXT,
-      created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT contributors_platform_identity_unique UNIQUE (platform_identity)
     );
 
     CREATE TABLE IF NOT EXISTS contributions (
@@ -287,6 +288,23 @@ export async function ensureSchema(): Promise<void> {
       ) THEN
         ALTER TABLE contributors
           ADD CONSTRAINT contributors_github_identity_unique UNIQUE (github_identity);
+      END IF;
+    END $$;
+
+    -- One contributor row per platform identity. Required as the conflict
+    -- target for the atomic upsert in the contribution submission route;
+    -- without it PostgreSQL rejects ON CONFLICT (platform_identity).
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'contributors_platform_identity_unique'
+          AND conrelid = 'contributors'::regclass
+      ) AND NOT EXISTS (
+        SELECT 1 FROM pg_class
+        WHERE relname = 'contributors_platform_identity_unique'
+      ) THEN
+        ALTER TABLE contributors
+          ADD CONSTRAINT contributors_platform_identity_unique UNIQUE (platform_identity);
       END IF;
     END $$;
 

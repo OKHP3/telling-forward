@@ -117,6 +117,24 @@ export interface Contribution {
 }
 
 /**
+ * A narration submitted by the authenticated contributor.
+ */
+export interface ContributionInput {
+  /**
+   * Human-facing title for the scene.
+   * @minLength 1
+   */
+  title: string;
+  /**
+   * The narrated scene text.
+   * @minLength 1
+   */
+  content: string;
+  /** Client-generated idempotency key retained while retrying this narration. */
+  submissionId: string;
+}
+
+/**
  * Reader-facing record of an accepted contribution.
  */
 export interface StoryProvenance {

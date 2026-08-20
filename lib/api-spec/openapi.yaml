@@ -254,6 +254,57 @@ paths:
                   $ref: "#/components/schemas/Contribution"
         "404":
           $ref: "#/components/responses/NotFound"
+    post:
+      operationId: createContribution
+      tags: [storyworlds]
+      summary: Submit a narration to an open story path
+      description: >
+        Creates a contributor record for the authenticated user and commits the
+        narration to the selected open path's branch in the storyworld
+        repository. The Git commit is the durable source of truth; the
+        contribution record indexes it. Requires authentication.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: pathId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContributionInput"
+      responses:
+        "201":
+          description: Submitted contribution
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contribution"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The selected path is not open for contributions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: GitHub could not save the submission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /storyworlds/{id}/provenance:
     get:
@@ -1148,6 +1199,24 @@ components:
         - title
         - agentAssisted
         - createdAt
+
+    ContributionInput:
+      type: object
+      description: A narration submitted by the authenticated contributor.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          description: Human-facing title for the scene.
+        content:
+          type: string
+          minLength: 1
+          description: The narrated scene text.
+        submissionId:
+          type: string
+          format: uuid
+          description: Client-generated idempotency key retained while retrying this narration.
+      required: [title, content, submissionId]
 
     StoryProvenance:
       type: object

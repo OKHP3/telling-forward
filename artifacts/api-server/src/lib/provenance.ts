@@ -8,7 +8,7 @@
  */
 
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import {
   contributionPathMembershipsTable,
   contributionsTable,
@@ -42,6 +42,80 @@ export interface AcceptanceDecisionRecord {
 
 const ACCEPTANCE_NOTE_MARKER = "telling-forward:accepted-contribution:v1";
 const ACCEPTANCE_INTENT_MARKER = "telling-forward:acceptance-intent:v1";
+const NARRATION_MARKER = "Telling-Forward-Narration: v1";
+
+export interface NarrationCommitMetadata {
+  submissionId: string;
+  platformIdentity: string;
+  title: string;
+  displayName: string;
+}
+
+function decodeNarrationText(encoded: string): string | null {
+  if (!/^[A-Za-z0-9_-]+$/.test(encoded)) return null;
+  try {
+    const decoded = Buffer.from(encoded, "base64url").toString("utf8");
+    return decoded.trim() ? decoded : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The commit trailer is a constrained recovery record. It deliberately avoids
+ * raw user text in trailer values: names and titles can contain newlines, while
+ * Git trailers must remain one physical line to be unambiguous to a sync job.
+ */
+export function buildNarrationCommitMessage(
+  metadata: NarrationCommitMetadata,
+): string {
+  const encode = (value: string) => Buffer.from(value, "utf8").toString("base64url");
+  return [
+    "Add narration",
+    "",
+    NARRATION_MARKER,
+    `Submission-Id: ${metadata.submissionId}`,
+    `Platform-Attribution: ${metadata.platformIdentity}`,
+    `Title-B64: ${encode(metadata.title)}`,
+    `Display-Name-B64: ${encode(metadata.displayName)}`,
+  ].join("\n");
+}
+
+export function parseNarrationCommit(
+  message: string,
+): NarrationCommitMetadata | null {
+  const trailers = new Map<string, string>();
+  for (const line of message.split("\n")) {
+    const match = /^([A-Za-z0-9-]+): (.+)$/.exec(line);
+    if (match) trailers.set(match[1], match[2]);
+  }
+  if (!message.split("\n").includes(NARRATION_MARKER)) return null;
+
+  const submissionId = trailers.get("Submission-Id");
+  const platformIdentity = trailers.get("Platform-Attribution");
+  const title = trailers.get("Title-B64");
+  const displayName = trailers.get("Display-Name-B64");
+  if (
+    !submissionId ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(submissionId) ||
+    !platformIdentity ||
+    !/^platform:\d+$/.test(platformIdentity) ||
+    !title ||
+    !displayName
+  ) {
+    return null;
+  }
+  const decodedTitle = decodeNarrationText(title);
+  const decodedDisplayName = decodeNarrationText(displayName);
+  if (!decodedTitle || !decodedDisplayName) return null;
+
+  return {
+    submissionId,
+    platformIdentity,
+    title: decodedTitle,
+    displayName: decodedDisplayName,
+  };
+}
 
 interface SignedAcceptanceDecisionRecord extends AcceptanceDecisionRecord {
   signature: string;
@@ -187,7 +261,12 @@ export async function resolveContributorIdentity(
       displayName: contributorsTable.displayName,
     })
     .from(contributorsTable)
-    .where(eq(contributorsTable.githubIdentity, identity))
+    .where(
+      or(
+        eq(contributorsTable.platformIdentity, identity),
+        eq(contributorsTable.githubIdentity, identity),
+      ),
+    )
     .limit(1);
 
   if (existing) {
@@ -196,6 +275,24 @@ export async function resolveContributorIdentity(
       identity,
       displayName: existing.displayName,
     };
+  }
+
+  if (identity.startsWith("platform:")) {
+    const [contributor] = await db
+      .insert(contributorsTable)
+      .values({
+        displayName,
+        platformIdentity: identity,
+        githubIdentity: null,
+      })
+      .onConflictDoUpdate({
+        target: contributorsTable.platformIdentity,
+        set: { displayName },
+      })
+      .returning({ id: contributorsTable.id, displayName: contributorsTable.displayName });
+    return contributor
+      ? { id: contributor.id, identity, displayName: contributor.displayName }
+      : null;
   }
 
   const login = identity.startsWith("github:")
@@ -208,6 +305,61 @@ export async function resolveContributorIdentity(
       ? identity.slice("git-email:".length)
       : null,
   });
+}
+
+/**
+ * Indexs a narration commit after recovering its body from the committed file.
+ * Unlike generic saved moments, narration metadata is explicitly encoded in
+ * the commit trailer so a rebuild does not depend on the former Postgres row.
+ */
+export async function indexNarrationCommit(
+  storyworldId: number,
+  pathId: number,
+  commit: GitHubCommit,
+  content: string,
+): Promise<ContributorAttribution | null> {
+  const metadata = parseNarrationCommit(commit.message);
+  if (!metadata) return null;
+
+  const contributor = await resolveContributorIdentity(
+    metadata.platformIdentity,
+    metadata.displayName,
+  );
+  const heading = `# ${metadata.title}\n\n`;
+  const summary = content.startsWith(heading)
+    ? content.slice(heading.length).replace(/\n$/, "")
+    : null;
+
+  await db.transaction(async (tx) => {
+    const [contribution] = await tx
+      .insert(contributionsTable)
+      .values({
+        storyworldId,
+        pathId,
+        commitSha: commit.sha,
+        contributorId: contributor?.id ?? null,
+        title: metadata.title,
+        summary,
+        createdAt: new Date(commit.timestamp),
+      })
+      .onConflictDoUpdate({
+        target: [contributionsTable.storyworldId, contributionsTable.commitSha],
+        set: {
+          contributorId: contributor?.id ?? null,
+          title: metadata.title,
+          summary,
+        },
+      })
+      .returning({ id: contributionsTable.id });
+
+    if (contribution) {
+      await tx
+        .insert(contributionPathMembershipsTable)
+        .values({ contributionId: contribution.id, pathId })
+        .onConflictDoNothing();
+    }
+  });
+  return contributor;
 }
 
 export async function indexSavedMoment(

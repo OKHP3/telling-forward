@@ -216,7 +216,12 @@ export const contributorsTable = pgTable("contributors", {
     .notNull()
     .defaultNow(),
 },
-(t) => [unique("contributors_github_identity_unique").on(t.githubIdentity)]);
+(t) => [
+  unique("contributors_github_identity_unique").on(t.githubIdentity),
+  // Required for the atomic upsert on submission: one contributor row per
+  // platform identity, even under concurrent submissions by the same user.
+  unique("contributors_platform_identity_unique").on(t.platformIdentity),
+]);
 
 // The durable provenance ledger from Section 7.4
 export const provenanceRecordsTable = pgTable("provenance_records", {

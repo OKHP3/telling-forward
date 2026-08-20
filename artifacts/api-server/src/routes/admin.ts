@@ -25,11 +25,17 @@ import {
   proposalsTable,
   editorQuestionsTable,
 } from "@workspace/db";
-import { getGitHubClient } from "../lib/github";
+import {
+  getGitHubClient,
+  type GitHubClientInterface,
+  type GitHubCommit,
+} from "../lib/github";
 import { logger } from "../lib/logger";
 import {
   contributorAttributionsForPath,
+  indexNarrationCommit,
   indexSavedMoment,
+  parseNarrationCommit,
   acceptanceIntentForOperation,
   acceptanceOperationIdFromCommitMessage,
   parseAcceptanceDecisionNote,
@@ -43,6 +49,27 @@ import {
 } from "../lib/provenance";
 
 const router: IRouter = Router();
+
+async function indexCommitForPath(
+  world: { id: number; repoOwner: string; repoName: string },
+  path: { id: number },
+  commit: GitHubCommit,
+  gh: GitHubClientInterface,
+): Promise<void> {
+  const narration = parseNarrationCommit(commit.message);
+  if (!narration) {
+    await indexSavedMoment(world.id, path.id, commit);
+    return;
+  }
+
+  const content = await gh.getFileContent(
+    world.repoOwner,
+    world.repoName,
+    `narrations/${narration.submissionId}.md`,
+    commit.sha,
+  );
+  await indexNarrationCommit(world.id, path.id, commit, content);
+}
 
 // ---------------------------------------------------------------------------
 // Admin secret guard middleware — always fails closed
@@ -199,7 +226,24 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
       if (!path) continue;
 
       const baseRef = baseRefByHead.get(branch.name) ?? canonRef;
-      if (baseRef === branch.name) continue;
+      if (baseRef === branch.name) {
+        // Canon has no parent branch to compare against. Only narration
+        // commits are indexed from its full history; generic commits remain
+        // intentionally excluded so inherited repository history is never
+        // shown as reader contributions.
+        const commits = await gh.listCommitsForBranch(owner, repo, branch.name);
+        const narrationCommits = commits.filter((commit) =>
+          Boolean(parseNarrationCommit(commit.message)),
+        );
+        summary["commits_fetched"] =
+          (summary["commits_fetched"] ?? 0) + narrationCommits.length;
+        for (const commit of narrationCommits) {
+          await indexCommitForPath(world, path, commit, gh);
+          summary["contributions_upserted"] =
+            (summary["contributions_upserted"] ?? 0) + 1;
+        }
+        continue;
+      }
       const commits = await gh.listCommitsBetween(
         owner,
         repo,
@@ -209,7 +253,7 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
       summary["commits_fetched"] = (summary["commits_fetched"] ?? 0) + commits.length;
 
       for (const commit of commits) {
-        await indexSavedMoment(world.id, path.id, commit);
+        await indexCommitForPath(world, path, commit, gh);
         summary["contributions_upserted"] =
           (summary["contributions_upserted"] ?? 0) + 1;
       }
@@ -396,7 +440,7 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
         : [];
 
       for (const commit of commits) {
-        await indexSavedMoment(world.id, path.id, commit);
+        await indexCommitForPath(world, path, commit, gh);
         summary["contributions_upserted"] =
           (summary["contributions_upserted"] ?? 0) + 1;
       }

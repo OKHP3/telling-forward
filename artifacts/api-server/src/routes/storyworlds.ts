@@ -17,10 +17,16 @@ import {
   ListStoryPathsParams,
   ListContributionsParams,
   ListStoryworldProposalsParams,
+  CreateContributionBody,
+  CreateContributionParams,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
 import { requireStewardForStoryworld } from "../middlewares/steward";
 import { getGitHubClient, type GitHubIssue, type EnsureLabelsEntry } from "../lib/github";
+import {
+  buildNarrationCommitMessage,
+  parseNarrationCommit,
+} from "../lib/provenance";
 import { openai } from "@workspace/integrations-openai-ai-server";
 
 // ---------------------------------------------------------------------------
@@ -186,6 +192,230 @@ router.get("/:id/paths/:pathId/contributions", async (req, res) => {
     res.status(500).json({ error: "Failed to load contributions" });
   }
 });
+
+// POST /api/storyworlds/:id/paths/:pathId/contributions
+// Authenticated contributors submit a narrated scene to an open path.
+router.post(
+  "/:id/paths/:pathId/contributions",
+  requireAuth,
+  async (req, res): Promise<void> => {
+    const params = CreateContributionParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid storyworld or path id" });
+      return;
+    }
+
+    const body = CreateContributionBody.safeParse(req.body);
+    if (!body.success) {
+      res.status(400).json({ error: body.error.message });
+      return;
+    }
+
+    const userId = req.session.userId;
+    if (!userId) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+
+    const { id: storyworldId, pathId } = params.data;
+    const { title, content, submissionId } = body.data;
+
+    try {
+      const [world] = await db
+        .select({
+          repoOwner: storyworldsTable.repoOwner,
+          repoName: storyworldsTable.repoName,
+        })
+        .from(storyworldsTable)
+        .where(eq(storyworldsTable.id, storyworldId))
+        .limit(1);
+
+      if (!world) {
+        res.status(404).json({ error: "Storyworld not found" });
+        return;
+      }
+
+      const [path] = await db
+        .select({
+          id: storyPathsTable.id,
+          storyworldId: storyPathsTable.storyworldId,
+          branchRef: storyPathsTable.branchRef,
+          state: storyPathsTable.state,
+        })
+        .from(storyPathsTable)
+        .where(
+          and(
+            eq(storyPathsTable.id, pathId),
+            eq(storyPathsTable.storyworldId, storyworldId),
+          ),
+        )
+        .limit(1);
+
+      if (!path) {
+        res.status(404).json({ error: "Story path not found" });
+        return;
+      }
+      if (path.state !== "open") {
+        res.status(409).json({ error: "This story path is not open for contributions" });
+        return;
+      }
+
+      const [user] = await db
+        .select({
+          displayName: usersTable.displayName,
+        })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId))
+        .limit(1);
+
+      if (!user) {
+        res.status(401).json({ error: "Session refers to a deleted account" });
+        return;
+      }
+
+      // Platform service identity used for ALL Git commit author/committer fields.
+      // Real user attribution stays in Postgres (contributors table) only.
+      // Never put a user's login email into commit metadata — it is durable and
+      // public. A linked GitHub identity (optional, future) is the only approved
+      // path for first-party attribution in Git history.
+      const PLATFORM_GIT_AUTHOR_NAME =
+        process.env["PLATFORM_GIT_AUTHOR_NAME"] ?? "Telling Forward";
+      const PLATFORM_GIT_AUTHOR_EMAIL =
+        process.env["PLATFORM_GIT_AUTHOR_EMAIL"] ??
+        "noreply@tellingforward.app";
+
+      // The mobile client retains this UUID while retrying. It is embedded in
+      // the Git commit trailer and filename, allowing a retry (or
+      // reconciliation) to reuse the same durable commit after an index write
+      // fails instead of creating a duplicate scene.
+      const platformIdentity = `platform:${userId}`;
+      let commitSha: string;
+      const gh = getGitHubClient();
+      try {
+        const existingCommit = (
+          await gh.listCommitsForBranch(
+            world.repoOwner,
+            world.repoName,
+            path.branchRef,
+          )
+        ).find(
+          (commit) =>
+            parseNarrationCommit(commit.message)?.submissionId === submissionId,
+        );
+        if (existingCommit) {
+          const metadata = parseNarrationCommit(existingCommit.message);
+          if (
+            !metadata ||
+            metadata.platformIdentity !== platformIdentity ||
+            metadata.title !== title
+          ) {
+            res.status(409).json({
+              error: "This submission id already belongs to a different narration",
+            });
+            return;
+          }
+          const committedContent = await gh.getFileContent(
+            world.repoOwner,
+            world.repoName,
+            `narrations/${submissionId}.md`,
+            existingCommit.sha,
+          );
+          if (committedContent !== `# ${title}\n\n${content}\n`) {
+            res.status(409).json({
+              error: "This submission id already belongs to a different narration",
+            });
+            return;
+          }
+          commitSha = existingCommit.sha;
+        } else {
+          commitSha = await gh.createCommit({
+            owner: world.repoOwner,
+            repo: world.repoName,
+            branch: path.branchRef,
+            files: {
+              [`narrations/${submissionId}.md`]: `# ${title}\n\n${content}\n`,
+            },
+            message: buildNarrationCommitMessage({
+              submissionId,
+              platformIdentity,
+              title,
+              displayName: user.displayName,
+            }),
+            authorName: PLATFORM_GIT_AUTHOR_NAME,
+            authorEmail: PLATFORM_GIT_AUTHOR_EMAIL,
+          });
+        }
+      } catch (err) {
+        req.log.error(
+          { err, storyworldId, pathId },
+          "createContribution GitHub sync error",
+        );
+        res.status(502).json({ error: "Failed to save narration to GitHub" });
+        return;
+      }
+
+      // Every Postgres row that makes the commit visible in the app is written
+      // as one transaction. If this fails after GitHub has accepted the
+      // commit, the retry/reconciliation path above can recover it by
+      // Submission-Id without producing a second commit.
+      const contribution = await db.transaction(async (tx) => {
+        const [contributor] = await tx
+          .insert(contributorsTable)
+          .values({
+            displayName: user.displayName,
+            platformIdentity,
+            githubIdentity: null,
+          })
+          .onConflictDoUpdate({
+            target: contributorsTable.platformIdentity,
+            set: { displayName: user.displayName },
+          })
+          .returning({ id: contributorsTable.id });
+        if (!contributor) throw new Error("Failed to create contributor record");
+
+        const [indexed] = await tx
+          .insert(contributionsTable)
+          .values({
+            storyworldId,
+            pathId,
+            commitSha,
+            contributorId: contributor.id,
+            title,
+            summary: content,
+            agentAssisted: false,
+          })
+          .onConflictDoUpdate({
+            target: [
+              contributionsTable.storyworldId,
+              contributionsTable.commitSha,
+            ],
+            set: {
+              contributorId: contributor.id,
+              title,
+              summary: content,
+              agentAssisted: false,
+            },
+          })
+          .returning();
+        if (!indexed) throw new Error("Failed to index contribution");
+
+        await tx
+          .insert(contributionPathMembershipsTable)
+          .values({ contributionId: indexed.id, pathId })
+          .onConflictDoNothing();
+        return indexed;
+      });
+
+      res.status(201).json({
+        ...contribution,
+        contributorDisplayName: user.displayName,
+      });
+    } catch (err) {
+      req.log.error({ err, storyworldId, pathId }, "createContribution DB error");
+      res.status(500).json({ error: "Failed to save contribution" });
+    }
+  },
+);
 
 // GET /api/storyworlds/:id/provenance
 // Public, reader-facing lineage for moments a steward accepted into canon.

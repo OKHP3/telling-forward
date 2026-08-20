@@ -23,6 +23,7 @@ import type {
   Capsule,
   CapsuleProposalResponse,
   Contribution,
+  ContributionInput,
   CreateCapsuleBody,
   DisruptCapsuleBody,
   ErrorResponse,
@@ -963,6 +964,102 @@ export function useListContributions<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Creates a contributor record for the authenticated user and commits the narration to the selected open path's branch in the storyworld repository. The Git commit is the durable source of truth; the contribution record indexes it. Requires authentication.
+
+ * @summary Submit a narration to an open story path
+ */
+export const getCreateContributionUrl = (id: number, pathId: number) => {
+  return `/api/storyworlds/${id}/paths/${pathId}/contributions`;
+};
+
+export const createContribution = async (
+  id: number,
+  pathId: number,
+  contributionInput: ContributionInput,
+  options?: RequestInit,
+): Promise<Contribution> => {
+  return customFetch<Contribution>(getCreateContributionUrl(id, pathId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(contributionInput),
+  });
+};
+
+export const getCreateContributionMutationOptions = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createContribution>>,
+    TError,
+    { id: number; pathId: number; data: BodyType<ContributionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createContribution>>,
+  TError,
+  { id: number; pathId: number; data: BodyType<ContributionInput> },
+  TContext
+> => {
+  const mutationKey = ["createContribution"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createContribution>>,
+    { id: number; pathId: number; data: BodyType<ContributionInput> }
+  > = (props) => {
+    const { id, pathId, data } = props ?? {};
+
+    return createContribution(id, pathId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateContributionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createContribution>>
+>;
+export type CreateContributionMutationBody = BodyType<ContributionInput>;
+export type CreateContributionMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+>;
+
+/**
+ * @summary Submit a narration to an open story path
+ */
+export const useCreateContribution = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createContribution>>,
+    TError,
+    { id: number; pathId: number; data: BodyType<ContributionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createContribution>>,
+  TError,
+  { id: number; pathId: number; data: BodyType<ContributionInput> },
+  TContext
+> => {
+  return useMutation(getCreateContributionMutationOptions(options));
+};
 
 /**
  * Reader-facing lineage for accepted story contributions. Uses plain story language rather than source-control terminology.
