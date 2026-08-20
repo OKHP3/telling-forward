@@ -5,3 +5,4 @@
 - [Offline story cache](offline-story-cache.md) — persist only successful story queries; rotate the cache buster when persistence selection or shape changes.
 - [Contributor auth compatibility](contributor-auth-compatibility.md) — the web reader's password sessions and Clerk identities must coexist at protected API boundaries.
 - [Concurrent Git merges](concurrent-git-merges.md) — task integrations can finalize a merge on a helper ref while local main still needs the same remote merge resolved and pushed.
+- [Equilibrium evidence boundary](equilibrium-review-boundaries.md) — local checkout and workflow health do not establish production availability; require revision, route, and external smoke-test evidence.
