@@ -1,5 +1,9 @@
 import React, { useEffect } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { onlineManager, QueryClient } from '@tanstack/react-query';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -24,14 +28,48 @@ if (process.env['EXPO_PUBLIC_DOMAIN']) {
 
 SplashScreen.preventAutoHideAsync();
 
+const STORY_CACHE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
+
+onlineManager.setEventListener((setOnline) =>
+  NetInfo.addEventListener((state) => {
+    setOnline(state.isConnected === true && state.isInternetReachable !== false);
+  }),
+);
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
       retry: 1,
+      gcTime: STORY_CACHE_MAX_AGE,
+      networkMode: 'offlineFirst',
     },
   },
 });
+
+const asyncStoragePersister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+  key: 'telling-forward-story-cache',
+});
+
+const persistOptions = {
+  persister: asyncStoragePersister,
+  maxAge: STORY_CACHE_MAX_AGE,
+  buster: 'telling-forward-story-cache-v2',
+  dehydrateOptions: {
+    shouldDehydrateQuery: (query: {
+      queryKey: readonly unknown[];
+      state: { status: string };
+    }) => {
+      const [queryPath] = query.queryKey;
+      return (
+        query.state.status === 'success' &&
+        typeof queryPath === 'string' &&
+        queryPath.startsWith('/api/storyworlds')
+      );
+    },
+  },
+};
 
 function RootLayoutNav() {
   return (
@@ -76,7 +114,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
+        <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
           <AuthProvider>
             <GestureHandlerRootView style={{ flex: 1 }}>
               <KeyboardProvider>
@@ -84,7 +122,7 @@ export default function RootLayout() {
               </KeyboardProvider>
             </GestureHandlerRootView>
           </AuthProvider>
-        </QueryClientProvider>
+        </PersistQueryClientProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
   );

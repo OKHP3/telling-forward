@@ -6,18 +6,18 @@ import React, { useCallback } from 'react';
 import {
   FlatList,
   RefreshControl,
-  SectionList,
   View,
   Text,
   StyleSheet,
   Platform,
-  SectionListData,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useListStoryworlds, useListStoryPaths } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
+import { useStoryCacheRefresh } from '@/hooks/useStoryCacheRefresh';
 import { PathCard } from '@/components/PathCard';
 import { EmptyState } from '@/components/EmptyState';
+import { OfflineCacheNotice } from '@/components/OfflineCacheNotice';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import type { StoryPath, Storyworld } from '@workspace/api-client-react';
 
@@ -66,7 +66,14 @@ function StoryworldSection({
 
 export default function ReadScreen() {
   const colors = useColors();
-  const { data: storyworlds, isLoading, error, refetch, isFetching } = useListStoryworlds();
+  const {
+    data: storyworlds,
+    isLoading,
+    error,
+    isFetching,
+    dataUpdatedAt,
+  } = useListStoryworlds();
+  const { isOffline, refreshStoryCache } = useStoryCacheRefresh();
 
   const renderItem = useCallback(
     ({ item }: { item: Storyworld }) => (
@@ -106,6 +113,10 @@ export default function ReadScreen() {
         </Text>
       </View>
 
+      {isOffline && (
+        <OfflineCacheNotice contentLabel="paths" updatedAt={dataUpdatedAt} />
+      )}
+
       {isLoading ? (
         <View style={styles.content}>
           {[1, 2, 3].map((k) => <SkeletonCard key={k} />)}
@@ -129,7 +140,7 @@ export default function ReadScreen() {
           refreshControl={
             <RefreshControl
               refreshing={isFetching && !isLoading}
-              onRefresh={refetch}
+              onRefresh={refreshStoryCache}
               tintColor={colors.primary}
             />
           }

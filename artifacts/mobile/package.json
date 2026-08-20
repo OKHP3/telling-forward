@@ -57,6 +57,9 @@
   },
   "dependencies": {
     "@clerk/expo": "^4.3.0",
+    "@react-native-community/netinfo": "^11.4.1",
+    "@tanstack/query-async-storage-persister": "^5.90.21",
+    "@tanstack/react-query-persist-client": "^5.90.21",
     "expo-auth-session": "~7.0.11",
     "expo-av": "^16.0.8",
     "expo-crypto": "~15.0.9",

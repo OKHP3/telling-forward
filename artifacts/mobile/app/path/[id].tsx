@@ -19,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { useListContributions } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
+import { useStoryCacheRefresh } from '@/hooks/useStoryCacheRefresh';
 import { ContributionCard } from '@/components/ContributionCard';
 import { EmptyState } from '@/components/EmptyState';
 import { SkeletonCard } from '@/components/SkeletonCard';
@@ -39,9 +40,9 @@ export default function PathScreen() {
     data: contributions,
     isLoading,
     error,
-    refetch,
     isFetching,
   } = useListContributions(swId, pathId);
+  const { refreshStoryCache } = useStoryCacheRefresh();
 
   const [isSpeaking, setIsSpeaking] = useState(false);
 
@@ -150,7 +151,7 @@ export default function PathScreen() {
           refreshControl={
             <RefreshControl
               refreshing={isFetching && !isLoading}
-              onRefresh={refetch}
+              onRefresh={refreshStoryCache}
               tintColor={colors.primary}
             />
           }

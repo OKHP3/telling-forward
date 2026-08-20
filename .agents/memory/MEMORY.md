@@ -2,3 +2,4 @@
 - [Workspace build environment](workspace-build-environment.md) — root validation must provide non-production runtime configuration without weakening artifact safeguards.
 - [GitHub canonical provenance](github-canonical-provenance.md) — accepted-story attribution must be GitHub-recoverable, signed, and independent of a merge service account.
 - [GitHub write-path contract](github-write-path-contract.md) — commits use platform identity (never user email), land on the indexed path's own branch, and no synthetic SHAs.
+- [Offline story cache](offline-story-cache.md) — persist only successful story queries; rotate the cache buster when persistence selection or shape changes.

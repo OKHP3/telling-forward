@@ -18,14 +18,24 @@ import {
 import { router } from 'expo-router';
 import { useListStoryworlds } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
+import { useStoryCacheRefresh } from '@/hooks/useStoryCacheRefresh';
 import { StoryWorldCard } from '@/components/StoryWorldCard';
 import { EmptyState } from '@/components/EmptyState';
+import { OfflineCacheNotice } from '@/components/OfflineCacheNotice';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import type { Storyworld } from '@workspace/api-client-react';
 
 export default function DiscoverScreen() {
   const colors = useColors();
-  const { data: storyworlds, isLoading, error, refetch, isFetching } = useListStoryworlds();
+  const {
+    data: storyworlds,
+    isLoading,
+    error,
+    refetch,
+    isFetching,
+    dataUpdatedAt,
+  } = useListStoryworlds();
+  const { isOffline, refreshStoryCache } = useStoryCacheRefresh();
   const [seeding, setSeeding] = React.useState(false);
 
   const handleSeed = useCallback(async () => {
@@ -88,6 +98,10 @@ export default function DiscoverScreen() {
         </Text>
       </View>
 
+      {isOffline && (
+        <OfflineCacheNotice contentLabel="storyworlds" updatedAt={dataUpdatedAt} />
+      )}
+
       {isLoading ? (
         <View style={styles.list}>
           {[1, 2, 3].map((k) => <SkeletonCard key={k} />)}
@@ -111,7 +125,7 @@ export default function DiscoverScreen() {
           refreshControl={
             <RefreshControl
               refreshing={isFetching && !isLoading}
-              onRefresh={refetch}
+              onRefresh={refreshStoryCache}
               tintColor={colors.primary}
             />
           }
