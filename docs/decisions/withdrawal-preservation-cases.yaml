@@ -1,0 +1,92 @@
+schema: telling-forward.withdrawal-preservation-cases.v1
+status: policy-fixtures-only
+enforcement_approved: false
+proposal_state_model_unchanged: true
+public_contribution_launched: false
+cases:
+  - id: draft-contributor-withdraws
+    situation: A contributor withdraws a draft before editorial review begins.
+    current_proposal_state: draft
+    requested_outcome: withdrawn-and-preserved
+    requester: verified-proposal-contributor
+    approval: existing-eligible-withdrawal-authorization
+    reader_visibility: not-presented-as-active-or-available
+    can_reenter_same_proposal: false
+    recoverable:
+      - proposal-and-withdrawal-event
+      - github-pr-or-source-record-if-created
+      - contributor-attribution
+      - private-consent-and-audit-records
+    unresolved:
+      - whether-an-unsubmitted-draft-has-any-reader-facing-record
+
+  - id: under-review-contributor-withdraws
+    situation: A contributor withdraws while a steward is reviewing the submission.
+    current_proposal_state: under-review
+    requested_outcome: withdrawn-and-preserved
+    requester: verified-proposal-contributor
+    approval: existing-eligible-withdrawal-authorization-and-steward-notice
+    reader_visibility: no-active-review-or-ordinary-reader-display
+    can_reenter_same_proposal: false
+    recoverable:
+      - github-pr-review-history
+      - source-branch-and-commits
+      - contributor-attribution
+      - withdrawal-time-and-proposal-history
+      - private-consent-and-audit-records
+    unresolved:
+      - handling-of-an-open-private-moderation-case
+
+  - id: accepted-scene-attribution-request
+    situation: A contributor asks to remove their displayed name from an accepted scene.
+    current_proposal_state: accepted-into-canon
+    requested_outcome: attribution-removed-or-orphaned
+    requester: contributor-or-authorized-identity-holder
+    approval: owner-and-legal-privacy-review-required
+    reader_visibility: owner-approved-neutral-attribution-or-no-display
+    can_reenter_same_proposal: false
+    recoverable:
+      - accepted-provenance-record
+      - original-attribution-in-access-controlled-record
+      - canon-commit-and-pr-history-unless-approved-disposition-says-otherwise
+      - attribution-change-audit-event
+    unresolved:
+      - public-redaction-versus-required-provenance
+      - downstream-quotes-and-derivative-material
+      - jurisdictional-and-retention-rules
+
+  - id: steward-restricts-for-safety
+    situation: A steward restricts an under-review submission after a safety concern.
+    current_proposal_state: under-review
+    requested_outcome: restricted
+    requester: steward
+    approval: steward-decision-with-safe-contributor-facing-reason
+    reader_visibility: unavailable-without-private-case-details
+    can_reenter_same_proposal: false
+    recoverable:
+      - github-source-and-review-history
+      - restriction-decision-and-safe-reason
+      - private-moderation-case-and-evidence
+      - actor-and-timestamps
+    unresolved:
+      - appeal-and-retention-policy
+      - whether-any-reader-facing-notice-is-required
+
+  - id: accepted-scene-with-derivative
+    situation: An accepted scene has already been used in a future derivative or transformed work.
+    current_proposal_state: accepted-into-canon
+    requested_outcome: deletion-or-preservation-disposition-review
+    requester: contributor-or-affected-rightsholder
+    approval: owner-legal-rights-and-affected-steward-review-required
+    reader_visibility: hold-or-remove-only-after-approved-scope-and-window
+    can_reenter_same_proposal: false
+    recoverable:
+      - original-canon-provenance
+      - derivative-lineage-and-attribution-if-required
+      - consent-policy-version-and-revocation-time
+      - legal-hold-and-decision-audit
+    unresolved:
+      - source-specific-derivative-consent-15-10
+      - derivative-separability
+      - independent-copies-and-backups
+      - history-rewrite-versus-reader-removal

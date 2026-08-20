@@ -220,6 +220,12 @@ misconduct. A future service process must separately handle requests to remove
 displayed material, preserve Git/provenance history where required, and explain
 what cannot be retroactively undone.
 
+The distinct preservation choices are defined in
+`withdrawal-preservation-policy.md`. Revoking a consent action, withdrawing a
+proposal, removing displayed attribution, restricting a work, archiving it,
+and deleting material are separate decisions with different authorities and
+retention effects.
+
 ## Consequences
 
 ### Positive

@@ -1,0 +1,163 @@
+# Withdrawal and Preservation Policy
+
+## Status
+
+**Design complete; enforcement not approved.**
+
+This policy defines the preservation choices that must not be collapsed into the
+single `withdrawn` proposal state. It does not add a database table, change the
+proposal state machine, authorize public contribution, or approve deletion,
+orphaning, consent, moderation, or derivative enforcement.
+
+## Decision
+
+Telling Forward separates four different questions:
+
+1. **Should editorial processing stop?**
+2. **Should the work remain available to readers?**
+3. **Should the contributor's public attribution change?**
+4. **What records must remain recoverable?**
+
+The existing proposal state answers only the first question for an eligible
+submission. A withdrawal is not automatically an erasure request, a rights
+revocation, an admission of wrongdoing, or permission to remove provenance.
+
+## Preservation outcome table
+
+| Outcome | Who may request | Who approves / timing | Reader view | Can the same proposal re-enter review? | Required recoverability |
+|---|---|---|---|---|---|
+| **Withdrawn and preserved** | The verified proposal contributor, while the proposal is `draft`, `submitted`, `under-review`, or `returned-with-notes` | The current service authorization is sufficient for the eligible withdrawal; the steward is notified. Withdrawal is prospective and stops editorial processing. | Do not present the withdrawn submission as active or available for ordinary reading. Use plain language such as “This submission is no longer in review.” | **No.** A new submission would require a new proposal and whatever consent is then applicable. | The GitHub PR, source branch/commits, contributor identity, withdrawal time, and proposal history remain recoverable. Private consent and audit records remain in the application control plane. |
+| **Attribution removed / orphaned** | The contributor may request a change to displayed attribution; a steward may identify an attribution-safety issue | **Owner and legal/privacy approval required before enforcement.** The request must be evaluated separately from editorial state and rights. | If approved, show only an owner-approved neutral label such as “Attribution unavailable” or “Anonymous contributor.” Never imply that anonymity changes authorship or canon status. | The original proposal state and its review eligibility do not change. A new review request needs an explicit owner-approved process. | Preserve the original identity and attribution evidence in access-controlled application records and the durable provenance trail where legally required. Any public redaction must itself be auditable; do not silently rewrite history. |
+| **Restricted** | A steward, usually after an editorial, safety, rights, or policy concern | Steward decision under the existing lifecycle; a private moderation case may be linked when safety or conduct is involved | Do not expose the restricted work or private reason. Show a safe message such as “This submission is unavailable.” | **No.** Restriction is terminal in the proposal model. Any later remediation needs an owner-approved process and must not silently reopen the proposal. | Preserve the proposal, GitHub source/history, steward decision, safe reason, and any private moderation evidence under separate access controls. Restriction is not proof of misconduct or consent revocation. |
+| **Archived** | A steward after a terminal outcome | Steward housekeeping after `accepted-into-canon`, `published-alternate`, `restricted`, or `withdrawn` | Remove from active work queues. Reader visibility follows the underlying outcome and any separately approved publication decision. | **No.** Archival is filing, not reopening or deletion. | Preserve the underlying terminal outcome, GitHub history, provenance, decision time, and linked private records. |
+| **Deleted / erased where allowed** | The contributor, an affected person, or an authorized legal/privacy process may request it | **Owner and legal/privacy approval required.** Determine scope, jurisdiction, retention duties, downstream reuse, backups, and whether deletion is technically and legally possible. No automatic deletion follows from withdrawal. | Remove the affected material from the approved reader surfaces within the decided operational window. Do not promise removal from independent copies, required records, or Git history until those boundaries are decided. | **No.** Deletion is not a state transition and cannot silently recreate or reopen the proposal. A future submission is a new record. | Retain only the minimum private audit, legal hold, safety, consent, and provenance evidence required by the approved policy. GitHub history, backups, exports, and downstream derivatives require a separate disposition decision. |
+
+## Boundaries between outcomes
+
+### Withdrawal is not attribution removal
+
+Withdrawal stops the contributor's active proposal. It does not by itself remove
+the contributor's name from a durable creative record, revoke authorship, or
+erase a GitHub branch, commit, PR, review, or audit event.
+
+### Attribution removal is not content deletion
+
+An approved display-name change may leave the work and its provenance intact.
+The product must not describe an orphaned or anonymized work as ownerless in a
+legal sense. The original attribution may remain in a restricted provenance
+record even when a reader-facing surface no longer displays it.
+
+### Restriction is not withdrawal or misconduct
+
+Restriction is a steward-owned terminal editorial outcome. If safety or conduct
+evidence exists, it belongs in the private moderation case. A contributor may
+withdraw an eligible proposal, but that does not close or conceal an existing
+moderation case.
+
+### Deletion is not archival
+
+Archive removes a terminal outcome from active work. Deletion is a separately
+approved disposition of particular material and records. No archive action may
+be presented as erasure.
+
+## Durable and private records
+
+### GitHub-recoverable creative record
+
+Where the record remains subject to preservation, GitHub remains the durable
+source for the creative content, PR/review history, commit ancestry, and
+accepted-canon provenance. A withdrawal or display-attribution request must not
+silently make the PostgreSQL index the only copy.
+
+If an owner-approved process changes a public display, it must create an
+auditable record of what changed and why. The exact mechanism for public
+redaction, branch deletion, or history rewriting is not approved by this
+design.
+
+### Private application control plane
+
+The following remain private application records and are not to be placed in
+public Issues, pull requests, commit messages, or labels:
+
+- consent grants, revocations, and policy versions;
+- identity-verification details and private attribution mapping;
+- moderation reports, evidence, reporter identity, and appeals;
+- legal requests, legal holds, retention decisions, and deletion approvals;
+- access logs and operational audit details.
+
+These records require their own access control, backup, export, retention,
+deletion, and recovery design. PostgreSQL remains a rebuildable index for
+creative records, but private control-plane records are an explicit exception.
+
+## Contributor-facing wording
+
+The interface should use plain language:
+
+- “Withdraw this submission” — “This stops review. It does not erase the
+  story's history or automatically remove your name from records that must be
+  kept.”
+- “Ask to change how your name appears” — “This is separate from withdrawing
+  the submission. We will review what can change on reader-facing pages.”
+- “This submission is restricted” — “A steward has made this submission
+  unavailable. This is not a public finding about you.”
+- “Request removal” — “We will review which copies and records can be removed.
+  Some safety, legal, provenance, or backup records may need to remain.”
+
+Do not expose GitHub, branch, pull-request, commit, CODEOWNER, or Project
+terminology on contributor or reader surfaces.
+
+## Acceptance fixtures
+
+Representative cases are recorded in
+`docs/decisions/withdrawal-preservation-cases.yaml`. They are policy fixtures,
+not executable authorization rules. Each fixture preserves unresolved owner,
+legal, privacy, safety, or operational questions rather than turning them into
+defaults.
+
+## Owner and legal questions before enforcement
+
+The following decisions remain open:
+
+- What jurisdictions, age rules, guardian approvals, and legal bases govern
+  removal or anonymization requests?
+- When may a public display be taken down, and what operational window applies?
+- Must a contributor's identity remain visible to stewards after public
+  attribution is removed?
+- Which GitHub history, backups, exports, moderation evidence, or legal holds
+  must be retained, and for how long?
+- What happens to an accepted scene, capsule, or alternate path that has
+  already been quoted, displayed, or used in a future derivative?
+- Who decides whether a derivative is sufficiently separable to preserve, and
+  how are affected contributors notified?
+- What appeal, correction, and audit process applies when attribution is
+  disputed?
+- May any content be deleted from Git history, or is only reader-facing
+  removal allowed?
+
+Until these are answered, no API, webhook, reconciliation job, consent toggle,
+moderation action, or public workflow may infer deletion, orphaning, or
+derivative permission from `withdrawn`.
+
+## Compatibility with existing governance
+
+- The nine-value proposal enum remains unchanged; this policy does not add
+  states for attribution or deletion.
+- The consent ladder remains per-action, revocable, and design-only. Withdrawal
+  stops future eligible use subject to preservation limits; it does not erase
+  historical records automatically.
+- Moderation remains private and case-based. A withdrawal does not resolve a
+  moderation case, and a restriction does not publish its private reason.
+- ADR-0013 remains authoritative: GitHub is canonical for recoverable creative
+  history, while consent, moderation, identity, legal, and audit records stay
+  application-owned.
+- Public contribution, public reporting, derivatives, monetization, and
+  automatic canon or publication decisions remain out of scope.
+
+## References
+
+- `docs/adr/0013-github-native-boundary-and-donor-primitives.md`
+- `docs/decisions/consent-ladder-design.md`
+- `docs/decisions/moderation-tooling-design.md`
+- `docs/decisions/open-questions.md`
+- `artifacts/api-server/src/routes/proposals.ts`
+- `lib/db/src/schema/telling-forward.ts`

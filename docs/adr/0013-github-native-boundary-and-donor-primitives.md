@@ -112,6 +112,12 @@ recoverable from GitHub-native records. Private consent and moderation records
 are an explicit application-owned control-plane exception. They require their
 own backup, access-control, retention, export, deletion, and recovery design.
 
+The preservation choices for withdrawal, attribution removal, restriction,
+archival, and deletion are defined separately in
+`docs/decisions/withdrawal-preservation-policy.md`. None of those choices may
+be inferred from the `withdrawn` proposal state or represented only by a public
+GitHub metadata change.
+
 ### Reader and contributor vocabulary remains product-owned
 
 No migration may expose repository, branch, commit, pull request, merge,

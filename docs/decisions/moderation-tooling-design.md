@@ -170,6 +170,11 @@ restricted.”
   case rather than mutate history or mislabel an accepted contribution. Any
   remediation beyond this baseline design requires an explicit owner decision.
 
+The separate preservation policy at
+`docs/decisions/withdrawal-preservation-policy.md` defines why withdrawal,
+restriction, attribution changes, archival, and deletion must not be treated
+as interchangeable outcomes.
+
 Webhook and GitHub reconciliation must preserve locally managed restriction,
 withdrawal, and archive states. A future moderation implementation must use the
 same principle: a GitHub event cannot silently clear a private safety hold or a

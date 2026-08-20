@@ -225,6 +225,12 @@ A pull request is the unit of editorial review. The interface needs:
   - Accepted into canon and Published as an alternate path are mutually exclusive terminal outcomes of the same review, not a sequence. ADR-0001's arrow notation ("Draft → Under review → Accepted into canon → Published as an alternate path") lists the possible statuses in rough order; it does not mean an accepted submission later becomes an alternate path.
   - This is a UI simplification over PR states (open, changes requested, approved, merged, closed) that must be maintained explicitly, not inferred ad hoc per screen.
 
+Withdrawal, attribution changes, restriction, archive, and deletion are not
+interchangeable proposal states. Their authority, reader visibility, and
+preservation requirements are defined in
+`docs/decisions/withdrawal-preservation-policy.md`; no implementation may infer
+deletion, orphaning, or derivative permission from `withdrawn`.
+
 ### 7.4 Canon selection and provenance ledger
 
 Every accepted-into-canon event must produce a durable, queryable provenance record: source path, contributor(s), reviewing steward, timestamp, and the resulting canon commit SHA. This is required by `CONTRIBUTING.md`'s attribution and rights-tracking commitments, not optional polish — it is the record any future adaptation-rights conversation would need to point to.
