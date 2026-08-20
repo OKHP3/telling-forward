@@ -1,0 +1,40 @@
+name: Story capsule
+description: Capture a small, reviewable storyworld building block.
+title: "[Capsule] "
+labels:
+  - "state:draft"
+body:
+  - type: dropdown
+    id: capsule-type
+    attributes:
+      label: Capsule type
+      options:
+        - character
+        - arc
+        - event
+        - arc-beat
+        - planned-event
+        - motif
+    validations:
+      required: true
+  - type: textarea
+    id: content
+    attributes:
+      label: Capsule content
+      description: Use only synthetic or demonstrably owned material for this private pilot.
+    validations:
+      required: true
+  - type: input
+    id: attribution
+    attributes:
+      label: Attribution
+      description: Who created or co-created this material?
+    validations:
+      required: true
+  - type: textarea
+    id: provenance
+    attributes:
+      label: Source and permission notes
+      description: Identify whether this is original, adapted, quoted, or assisted, and state any restrictions.
+    validations:
+      required: true

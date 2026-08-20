@@ -60,7 +60,7 @@ Only then: commercial or adaptation programmes
 
 | Requirement slice | Includes | Durable outcome |
 | --- | --- | --- |
-| One template repository | Manifest, README, world bible, canon policy, contribution policy, content notices, folder conventions, issue/PR templates, labels, and Actions. | A reusable repository blueprint. |
+| One template repository | The checked-in `content/pilot-storyworld/` Storyworld Kit baseline: manifest, README, canon policy, contribution policy, provenance convention, issue/PR templates, canonical labels, CODEOWNERS template, branch-protection prerequisites, and structural-only Actions validation. | A reusable repository blueprint that can be checked before a private pilot is opened. |
 | World initialization | Guided configuration or documented setup that creates a world from the template. | A repository with world-specific settings committed to it. |
 | Private Writer's Workbench | Direct creation and editing of character, arc, scene, event, setting, motif, question, and vision capsules. | A private, versioned Concept Board. |
 | Safe ingestion design baseline | Manual capture plus synthetic or demonstrably owned fixtures; rules-only extraction/segmentation design, source hash/provenance, draft candidate capsules, and failure handling. Real untrusted uploads remain gated by Stage 0. | An inspectable ingestion record that never auto-promotes work or places a private raw source in Git or a reader build. |
@@ -211,7 +211,7 @@ These are intentionally small enough to plan next, while still building Stage 1 
 
 1. Decide the Stage 0 pilot and resolve its blocking open questions.
 2. Define the versioned `world-manifest`, capsule, source-asset, ingestion-job, and transformation-record schemas.
-3. Create the template’s contribution policy, canon policy, content notices, issue forms, labels, and Actions.
+3. Start from `content/pilot-storyworld/` and run `scripts/validate-storyworld-kit.mjs`; customize the world manifest, contribution policy, canon policy, CODEOWNERS, issue forms, labels, and branch-protection settings without changing the structural-only Action into an editorial or rights decision.
 4. Define the untrusted-upload threat model, source lifecycle, retention/deletion/restriction behavior, and malicious-fixture acceptance contract. Do not accept real uploads until this gate passes.
 5. Build the private Concept Board, manual capsule creation, candidate-capsule review, and source-provenance links. GitHub Issues and labels remain the canonical capsule store; native Project fields or Actions are optional derived controls.
 6. Define the scene file format and metadata required to render full story text.

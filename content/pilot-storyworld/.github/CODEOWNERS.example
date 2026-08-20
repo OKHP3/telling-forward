@@ -1,0 +1,7 @@
+# Copy this file to .github/CODEOWNERS and replace the placeholder with the
+# actual steward account or team before enabling protected-branch rules.
+#
+# CODEOWNERS is defense in depth. The Telling Forward application steward role
+# remains authoritative for product permissions, moderation, and canon actions.
+/content/ @REPLACE_WITH_STORYWORLD_STEWARD
+/PROVENANCE.md @REPLACE_WITH_STORYWORLD_STEWARD

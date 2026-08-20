@@ -33,6 +33,13 @@ not as a wholesale replacement for the product layer:
   They must not be placed in public Issues, pull requests, commit messages, or
   labels.
 
+The Storyworld Kit baseline is checked in at `content/pilot-storyworld/`.
+It standardizes the capsule labels, issue forms, contribution and canon
+policies, provenance convention, CODEOWNERS template, and structural-only
+validation Action for each new private pilot repository. The Action validates
+the shape of the contract with read-only contents permission; it cannot make
+editorial, rights, moderation, or publication decisions.
+
 This decision rejects both extremes:
 
 1. **GitHub-only application:** rejected as insufficient for private controls,
@@ -117,6 +124,14 @@ Actions and required checks may validate structure or provide automation, but
 they must not silently make editorial, rights, moderation, or canon decisions.
 Any automated signal remains evidence for a human steward unless a separate
 owner-approved policy explicitly says otherwise.
+
+### Storyworld Kit governance is defense in depth
+
+`content/pilot-storyworld/.github/branch-protection.md` documents protected
+canon branches, required steward review, required structural checks, and the
+GitHub plan/organization prerequisites for CODEOWNERS and required status
+checks. These controls are not evidence that a newly created repository has
+been configured: the steward must apply and verify them in that repository.
 
 ## Migration gates
 

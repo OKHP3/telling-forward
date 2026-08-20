@@ -147,6 +147,15 @@ flowchart TB
 
 **Decided (2026-08-19, Jamie Hill, PRD Build Directive v1 §4):** One GitHub repository per storyworld. New storyworlds are created from a template repo ("Storyworld Kit"). See `docs/decisions/open-questions.md` 15.1 and 15.6.
 
+The current checked-in baseline for that kit is
+`content/pilot-storyworld/`. It supplies the world manifest, invite-only
+contribution and canon policies, provenance convention, canonical
+`capsule:<type>` and `state:*` labels, issue and pull-request forms,
+maintainer CODEOWNERS template, branch-protection prerequisites, and a
+read-only structural validation Action. A new pilot repository must run
+`scripts/validate-storyworld-kit.mjs` before steward configuration is
+considered complete.
+
 ### 6.2 Read path
 
 - Use **Octokit** (`@octokit/rest` + `@octokit/graphql`) from the Express API, not raw `fetch` against the GitHub API. It handles pagination, retry-after, and typed responses.
@@ -169,6 +178,13 @@ Every contributor-facing action maps to a specific GitHub write, executed server
 ### 6.4 Steward authority
 
 World steward permission should be enforced **twice**: once in GitHub (branch protection rule on canon requiring a review from a designated user/team, or CODEOWNERS on the canon path) and once in the application layer (a `stewards` table gating which product actions render as available). Do not rely on GitHub permissions alone — a steward's product-level authority (canon policy, moderation) is broader than "can merge a PR," and the UI needs to reason about it independent of a live GitHub permissions check on every render.
+
+The kit's `.github/branch-protection.md` records the defense-in-depth setup,
+including protected canon branch, required steward review, required
+`validate-storyworld` status check, and the prerequisite that the GitHub
+organization and plan actually support CODEOWNERS and required-review rules.
+The validation Action has `contents: read` only and may reject malformed
+metadata, but it may not merge, publish, accept canon, or decide rights.
 
 ### 6.5 Idempotency and drift
 

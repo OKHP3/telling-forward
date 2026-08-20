@@ -1,0 +1,19 @@
+name: Validate Storyworld Kit
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  structural-contract:
+    name: Validate structural contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Storyworld Kit baseline
+        run: node scripts/validate-storyworld-kit.mjs

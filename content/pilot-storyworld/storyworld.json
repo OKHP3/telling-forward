@@ -1,0 +1,14 @@
+{
+  "kit": "telling-forward-storyworld",
+  "kitVersion": 1,
+  "storyworldId": "replace-with-storyworld-slug",
+  "canonBranch": "main",
+  "contentRoot": "content",
+  "provenanceContract": "telling-forward:accepted-contribution:v1",
+  "governance": {
+    "inviteOnly": true,
+    "publicContribution": false,
+    "automaticCanon": false,
+    "automaticRightsDecision": false
+  }
+}

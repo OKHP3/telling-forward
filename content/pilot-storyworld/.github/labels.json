@@ -1,0 +1,122 @@
+[
+  {
+    "name": "capsule:character",
+    "color": "7c3aed",
+    "description": "Capsule describing a character"
+  },
+  {
+    "name": "capsule:arc",
+    "color": "2563eb",
+    "description": "Capsule describing a story arc"
+  },
+  {
+    "name": "capsule:event",
+    "color": "0891b2",
+    "description": "Capsule describing an event"
+  },
+  {
+    "name": "capsule:arc-beat",
+    "color": "0d9488",
+    "description": "Capsule describing an arc beat"
+  },
+  {
+    "name": "capsule:planned-event",
+    "color": "16a34a",
+    "description": "Capsule describing a planned event"
+  },
+  {
+    "name": "capsule:motif",
+    "color": "65a30d",
+    "description": "Capsule describing a motif"
+  },
+  {
+    "name": "state:draft",
+    "color": "64748b",
+    "description": "Draft material awaiting human review"
+  },
+  {
+    "name": "state:submitted",
+    "color": "0284c7",
+    "description": "Material submitted for steward review"
+  },
+  {
+    "name": "state:under-review",
+    "color": "7c3aed",
+    "description": "Material currently under steward review"
+  },
+  {
+    "name": "state:returned-with-notes",
+    "color": "d97706",
+    "description": "Material returned with a steward question"
+  },
+  {
+    "name": "state:accepted-into-canon",
+    "color": "15803d",
+    "description": "Human steward accepted material into canon"
+  },
+  {
+    "name": "state:published-alternate",
+    "color": "be185d",
+    "description": "Human steward published a permitted alternate path"
+  },
+  {
+    "name": "role:steward",
+    "color": "334155",
+    "description": "Maintainer-only role metadata"
+  },
+  {
+    "name": "rung:0",
+    "color": "cbd5e1",
+    "description": "Capsule maturity metadata"
+  },
+  {
+    "name": "rung:1",
+    "color": "cbd5e1",
+    "description": "Capsule maturity metadata"
+  },
+  {
+    "name": "rung:2",
+    "color": "cbd5e1",
+    "description": "Capsule maturity metadata"
+  },
+  {
+    "name": "rung:3",
+    "color": "cbd5e1",
+    "description": "Capsule maturity metadata"
+  },
+  {
+    "name": "rung:4",
+    "color": "cbd5e1",
+    "description": "Capsule maturity metadata"
+  },
+  {
+    "name": "rung:5",
+    "color": "cbd5e1",
+    "description": "Capsule maturity metadata"
+  },
+  {
+    "name": "rung:6",
+    "color": "cbd5e1",
+    "description": "Capsule maturity metadata"
+  },
+  {
+    "name": "rung:7",
+    "color": "cbd5e1",
+    "description": "Capsule maturity metadata"
+  },
+  {
+    "name": "rung:8",
+    "color": "cbd5e1",
+    "description": "Capsule maturity metadata"
+  },
+  {
+    "name": "rung:9",
+    "color": "cbd5e1",
+    "description": "Capsule maturity metadata"
+  },
+  {
+    "name": "rung:10",
+    "color": "cbd5e1",
+    "description": "Capsule maturity metadata"
+  }
+]

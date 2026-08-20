@@ -1,0 +1,37 @@
+name: Story submission
+description: Offer a story path or saved moment for steward review.
+title: "[Story submission] "
+labels:
+  - "state:submitted"
+body:
+  - type: dropdown
+    id: requested-outcome
+    attributes:
+      label: Requested outcome
+      options:
+        - personal-work
+        - open-path
+        - proposed-canon
+        - published-alternate
+    validations:
+      required: true
+  - type: textarea
+    id: story
+    attributes:
+      label: Story material
+      description: Share only material you are authorized to place in this private pilot.
+    validations:
+      required: true
+  - type: input
+    id: contributor
+    attributes:
+      label: Contributor and co-creators
+    validations:
+      required: true
+  - type: textarea
+    id: rights
+    attributes:
+      label: Attribution, restrictions, and permission requested
+      description: Acceptance does not grant reuse rights, canon status, payment, or adaptation permission.
+    validations:
+      required: true

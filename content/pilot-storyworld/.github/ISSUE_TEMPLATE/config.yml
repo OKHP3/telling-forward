@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private rights or safety question
+    url: https://github.com/OWNER/REPOSITORY/security/policy
+    about: Do not put private source material or personal information in a public issue.

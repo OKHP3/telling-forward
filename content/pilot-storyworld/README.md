@@ -3,6 +3,25 @@
 This directory is the **single authorized location** for real creative source
 material during Stage 0–1 of the Telling Forward build.
 
+It also contains the checked-in **Storyworld Kit baseline** used to create a
+new private pilot repository. Copy the repository-facing files below into a
+new repository before adding world-specific material:
+
+- `storyworld.json` — world identity and baseline contract version
+- `CONTRIBUTING.md` — plain-language invitation and rights boundary
+- `CANON-POLICY.md` — steward-owned canon decision rules
+- `PROVENANCE.md` — durable attribution and acceptance record convention
+- `.github/labels.json` — canonical issue labels
+- `.github/ISSUE_TEMPLATE/` — capsule and story-submission forms
+- `.github/CODEOWNERS.example` — maintainer template to customize
+- `.github/branch-protection.md` — defense-in-depth setup requirements
+- `.github/workflows/validate-storyworld.yml` — structural-only validation
+- `scripts/validate-storyworld-kit.mjs` — local/CI baseline checker
+
+The Kit is an operations baseline, not an automatic editorial authority.
+Human stewards still decide permission, moderation, canon, and alternate
+publication outcomes through the application.
+
 ## What belongs here
 
 - Creative fiction, story seeds, character notes, or scene drafts that the
