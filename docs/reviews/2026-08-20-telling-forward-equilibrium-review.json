@@ -5,8 +5,8 @@
   "evaluation_status": "analytical",
   "artifact": {
     "path": "docs/reviews/2026-08-20-telling-forward-equilibrium-review.md",
-    "sha256": "dd65d9931b2f91fe593b5b8bec5030bfb6e5a7a0a99392aec1bc155416fbfd17",
-    "version": "50c60252b4a25db808634c65c427d40983c88356"
+    "sha256": "89f427f8272fc29fda221d64994d17e62064da194501d98e2684a332004860b7",
+    "version": "997bc09deb3cab99fe764f41464620ec06e1f7b9"
   },
   "decision_question": "Does the documented Telling Forward vision accurately describe the implemented and demonstrably deployed product, and are the current project tasks sufficient to close material gaps without overstating readiness?",
   "acceptance_criteria": [
@@ -45,6 +45,45 @@
     }
   ],
   "concordance": "material-agreement",
+  "release_boundary_addendum": {
+    "date": "2026-08-21",
+    "status": "analytical",
+    "decision_unchanged": true,
+    "decision": "approve-with-limits",
+    "public_contribution": "blocked",
+    "deployment_check": {
+      "success": true,
+      "isDeployed": false,
+      "primaryUrl": "",
+      "deploymentType": "",
+      "hasSuccessfulBuild": false,
+      "visibility": "",
+      "route_smoke": "not-run",
+      "reason": "The deployment service reports no published deployment."
+    },
+    "workspace_check": {
+      "web_surfaces": "serving",
+      "mobile": "failed on a temporary-directory ENOENT watcher path",
+      "classification": "workspace-only"
+    },
+    "post_freeze_implementation": [
+      "Contributor notifications",
+      "Manuscript ingestion",
+      "Private control-plane recovery",
+      "Proposal ownership authorization tests",
+      "Malformed contribution validation tests",
+      "Telling Forward visual asset pack"
+    ],
+    "unresolved_evidence_gaps": [
+      "Published revision, URL, and external route smoke tests",
+      "Owner-approved encrypted recovery drill",
+      "Live GitHub synchronization and side-effect acceptance",
+      "Participant and real-device acceptance",
+      "Approved and enforced consent and moderation controls",
+      "Owner decisions for open questions 15.7, 15.10, and 15.13"
+    ],
+    "limitation": "This is an adversarial addendum in the same agent context, not an independent specialist or protected-holdout review."
+  },
   "disruptor": {
     "triggered": true,
     "authority": "exploratory",
@@ -97,7 +136,7 @@
     "Analytical review in one agent context with correlated role evidence.",
     "No protected or unseen holdout.",
     "No production deployment exists; specialist legal, privacy, or security review is also absent.",
-    "Workspace workflow failures are operational observations, not production conclusions."
+    "Workspace workflow observations, including the current mobile watcher failure, are not production conclusions."
   ],
   "follow_up": [
     "Correct stale requirements and roadmap claims while preserving evidence labels.",

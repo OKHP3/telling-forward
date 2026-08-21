@@ -3,13 +3,13 @@
 ## Review identity
 
 - **Review date:** 2026-08-20
-- **Frozen checkout:** `50c60252b4a25db808634c65c427d40983c88356`
+- **Review checkout:** `997bc09deb3cab99fe764f41464620ec06e1f7b9`
 - **Review protocol:** `equilibrium-v1`
-- **Review mode:** conditional five-role review, executed analytically in one agent context
+- **Review mode:** conditional five-role review with an adversarial release-boundary addendum
 - **Decision question:** Does the documented Telling Forward vision accurately describe the implemented and demonstrably deployed product, and are the current project tasks sufficient to close the material gaps without overstating readiness?
 - **Audience:** project owner, stewards, contributors, maintainers, and future implementation agents
 - **Release decision:** `approve-with-limits`
-- **Overall evidence status:** `analytical`; selected workflow observations are `live` for this workspace session, while production behavior is `not-run`
+- **Overall evidence status:** `analytical`; selected workflow observations and deployment metadata are `live` for this workspace session, while production behavior is `not-run`
 
 ## Scope and acceptance criteria
 
@@ -48,6 +48,9 @@ The review passes only if:
 | E-11 | `git status` and revision inspection | live | Local checkout only; at freeze local `main` was one commit ahead of fetched GitHub ref |
 | E-12 | Deployment service query on 2026-08-20 returned `success=true`, `isDeployed=false`, empty `primaryUrl`, empty `deploymentType`, `hasSuccessfulBuild=false`, and empty `visibility` | live | No published revision or production URL exists to smoke-test |
 | E-13 | Local-only smoke checks on 2026-08-20: `GET /api/healthz` → 200 `{"status":"ok"}`, Author App `/` → 200, Expo `/status` → 200 `packager-status:running` | live | Workspace evidence only; local success does not establish production availability |
+| E-14 | Current checkout after the review freeze includes contributor notifications, manuscript ingestion, private control-plane recovery, proposal ownership tests, malformed-submission tests, ADR updates, and the Telling Forward visual asset pack; current `main` is `997bc09deb3cab99fe764f41464620ec06e1f7b9` | live/analytical | Checkout evidence; no production assertion |
+| E-15 | Current workspace logs on 2026-08-21 show API, Author App, reader, archive, broadsheet, signal-noise, scriptorium, and mockup-sandbox serving; mobile failed with an ENOENT watcher error on a temporary `.local/skills` path | live | Workspace process observation only; no device or production evidence |
+| E-16 | Fresh deployment-service query on 2026-08-21 returned `success=true`, `isDeployed=false`, empty `primaryUrl`, empty `deploymentType`, `hasSuccessfulBuild=false`, and empty `visibility` | live | Confirms no published URL, revision, or production route smoke test is available |
 
 ## Capability matrix
 
@@ -205,6 +208,33 @@ triggered with these falsifiable objections:
 | Updating stale docs proves user usefulness | Compare E-04 acceptance tests with E-09/E-12 | Survives; no participant or external acceptance evidence |
 | Consent/moderation design equals enforcement | Read E-05 status statements and inspect absence of ledger/case implementation | Survives; enforcement must remain blocked |
 
+### Release-boundary addendum
+
+An additional adversarial pass was performed against the current checkout,
+current task-era implementation evidence, current workflow logs, and a fresh
+deployment-service query. It did not change the decision:
+
+1. **Decision unchanged:** `approve-with-limits` remains the only supported
+   release decision.
+2. **Public contribution remains blocked:** consent and moderation are designed
+   but not approved and enforced as launch controls. No implementation progress
+   may be interpreted as permission to open an ungoverned public contribution
+   surface.
+3. **Production evidence remains absent:** the deployment service still reports
+   no deployment, so there is no published URL, revision, or route smoke result.
+4. **Workspace evidence remains local:** the configured reader web workflows are
+   currently serving; the mobile workflow has a workspace watcher failure.
+   Neither observation establishes production or device acceptance.
+5. **Post-freeze work strengthens the prototype, not the release claim:** the
+   notification, ingestion, recovery, authorization-test, validation-test, and
+   visual-asset changes are checkout evidence only.
+
+The remaining decisive gaps are a real deployment and external route smoke
+test, owner-approved recovery evidence, live GitHub synchronization and
+side-effect acceptance, participant/device acceptance, and approved/enforced
+consent and moderation controls. Open questions 15.7, 15.10, and 15.13 remain
+unresolved.
+
 ## Negotiation and adjudication
 
 ### Decision
@@ -314,16 +344,18 @@ evidence that is currently absent.
 
 ## Limitations and review expiry
 
-- This is an analytical review performed by one agent context. The three
-  initial roles share source context and are correlated evidence.
+- This is an analytical review performed in one agent context. The three
+  initial roles and the release-boundary addendum share source context and are
+  correlated evidence; the addendum is adversarial, not an independent
+  specialist or protected-holdout review.
 - No protected or unseen holdout was available.
 - The deployment service reported no active production deployment on
-  2026-08-20, so no production URL, revision, external reader, device
+  2026-08-21 (and the same absence was recorded on 2026-08-20), so no production URL, revision, external reader, device
   participant, legal review, privacy review, or security specialist review was
   available.
-- Workspace workflow failures caused by occupied ports are a live operational
-  observation, not a conclusion that the corresponding production artifacts
-  are broken.
+- Workspace workflow failures, including the current mobile watcher failure,
+  are live operational observations, not conclusions that corresponding
+  production artifacts are broken.
 - The review should be reopened after a major architecture change, deployment
   change, public-contribution launch decision, GitHub App migration, consent or
   moderation enforcement, or owner resolution of open questions 15.7, 15.10,
@@ -333,8 +365,10 @@ evidence that is currently absent.
 
 - `python -m json.tool docs/reviews/2026-08-20-telling-forward-equilibrium-review.json`
 - `git diff --check`
-- `pnpm run typecheck`
-- `pnpm run build`
+- `pnpm run typecheck` (prior review validation; no application code changed in
+  this addendum)
+- `pnpm run build` (prior review validation; no application code changed in
+  this addendum)
 - Referenced governance files and artifact manifests checked for existence
 - Stale scaffold, planned-mobile, undecided-architecture, and completed-backlog
   searches re-run after remediation
@@ -343,11 +377,12 @@ evidence that is currently absent.
 
 Telling Forward is directionally aligned with its mission and has a substantive
 Stage 0–1 implementation, especially around storyworld discovery, attribution,
-proposal review, canon safeguards, and reader/contributor surfaces. The local
-API, web, and mobile control checks are healthy, but the deployment service
-currently reports no published deployment. The project is therefore not
-evidenced as a production-ready public contribution platform, and no public
-route claim should be made until a revision is published and externally tested.
+proposal review, canon safeguards, and reader/contributor surfaces. The current
+workspace web services provide useful local evidence, but the deployment
+service still reports no published deployment and the mobile workflow has a
+workspace watcher failure. The project is therefore not evidenced as a
+production-ready public contribution platform, and no public route claim
+should be made until a revision is published and externally tested.
 
 The strongest surviving objection is not a single broken feature. It is the
 combination of stale requirements, incomplete deployment evidence, and explicit
