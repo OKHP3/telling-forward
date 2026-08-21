@@ -131,24 +131,61 @@ vi.mock("../../middlewares/auth", () => ({
 
 vi.mock("@workspace/api-zod", () => ({
   CreateContributionParams: {
-    safeParse: (value: Record<string, string>) => ({
-      success: true,
-      data: { id: Number(value.id), pathId: Number(value.pathId) },
-    }),
+    safeParse: (value: Record<string, string>) => {
+      const id = Number(value?.id);
+      const pathId = Number(value?.pathId);
+      if (!Number.isSafeInteger(id) || !Number.isSafeInteger(pathId)) {
+        return {
+          success: false,
+          error: { message: "Invalid storyworld or path id" },
+        };
+      }
+      return { success: true, data: { id, pathId } };
+    },
   },
   CreateContributionBody: {
-    safeParse: (value: Record<string, unknown>) => ({
-      success: true,
-      data: {
-        title: value.title,
-        content: value.content,
-        submissionId: value.submissionId,
-        agentAssisted: value.agentAssisted ?? false,
-        consentRecordId: value.consentRecordId ?? "00000000-0000-0000-0000-000000000001",
-        aiAssistedConsentRecordId:
-          value.aiAssistedConsentRecordId ?? "00000000-0000-0000-0000-000000000002",
-      },
-    }),
+    safeParse: (value: Record<string, unknown>) => {
+      const input = value ?? {};
+      const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const errors: string[] = [];
+      if (typeof input.title !== "string" || input.title.length < 1) {
+        errors.push("title is required");
+      }
+      if (typeof input.content !== "string" || input.content.length < 1) {
+        errors.push("content is required");
+      }
+      if (typeof input.submissionId !== "string" || !uuid.test(input.submissionId)) {
+        errors.push("submissionId must be a UUID");
+      }
+      if (input.agentAssisted !== undefined && typeof input.agentAssisted !== "boolean") {
+        errors.push("agentAssisted must be a boolean");
+      }
+      for (const [name, valueToCheck] of [
+        ["consentRecordId", input.consentRecordId],
+        ["aiAssistedConsentRecordId", input.aiAssistedConsentRecordId],
+      ] as const) {
+        if (valueToCheck !== undefined &&
+            (typeof valueToCheck !== "string" || !uuid.test(valueToCheck))) {
+          errors.push(`${name} must be a UUID`);
+        }
+      }
+      if (errors.length > 0) {
+        return { success: false, error: { message: errors.join("; ") } };
+      }
+      return {
+        success: true,
+        data: {
+          title: input.title,
+          content: input.content,
+          submissionId: input.submissionId,
+          agentAssisted: input.agentAssisted ?? false,
+          consentRecordId: input.consentRecordId ??
+            "00000000-0000-0000-0000-000000000001",
+          aiAssistedConsentRecordId: input.aiAssistedConsentRecordId ??
+            "00000000-0000-0000-0000-000000000002",
+        },
+      };
+    },
   },
   GetStoryworldParams: { safeParse: () => ({ success: false }) },
   ListStoryPathsParams: { safeParse: () => ({ success: false }) },
@@ -193,6 +230,82 @@ describe("POST /storyworlds/:id/paths/:pathId/contributions", () => {
     state.listCommitsForBranch.mockResolvedValue([]);
     state.getFileContent.mockResolvedValue("");
     state.transaction.mockImplementation(async (callback) => callback((await import("@workspace/db")).db));
+  });
+
+  function expectRejectedBeforeGitHub(response: request.Response, expectedText: string) {
+    expect(response.status).toBe(400);
+    expect(response.body.error).toContain(expectedText);
+    expect(state.createBranch).not.toHaveBeenCalled();
+    expect(state.createCommit).not.toHaveBeenCalled();
+  }
+
+  it.each([
+    {
+      label: "missing title",
+      body: {
+        content: "A scene without a title.",
+        submissionId: "660e8400-e29b-41d4-a716-446655440010",
+      },
+      error: "title is required",
+    },
+    {
+      label: "missing content",
+      body: {
+        title: "A scene without content",
+        submissionId: "660e8400-e29b-41d4-a716-446655440011",
+      },
+      error: "content is required",
+    },
+    {
+      label: "malformed submission id",
+      body: {
+        title: "Bad retry key",
+        content: "This must not reach GitHub.",
+        submissionId: "not-a-uuid",
+      },
+      error: "submissionId must be a UUID",
+    },
+    {
+      label: "invalid submit consent id",
+      body: {
+        title: "Bad consent",
+        content: "This must not reach GitHub.",
+        submissionId: "660e8400-e29b-41d4-a716-446655440012",
+        consentRecordId: "not-a-uuid",
+      },
+      error: "consentRecordId must be a UUID",
+    },
+    {
+      label: "invalid AI consent id",
+      body: {
+        title: "Bad AI consent",
+        content: "This must not reach GitHub.",
+        submissionId: "660e8400-e29b-41d4-a716-446655440013",
+        aiAssistedConsentRecordId: "not-a-uuid",
+      },
+      error: "aiAssistedConsentRecordId must be a UUID",
+    },
+  ])("rejects $label before any GitHub call", async ({ body, error }) => {
+    const response = await request(buildApp())
+      .post("/1/paths/7/contributions")
+      .send(body);
+
+    expectRejectedBeforeGitHub(response, error);
+  });
+
+  it.each([
+    ["/not-a-number/paths/7/contributions", "Invalid storyworld or path id"],
+    ["/1/paths/not-a-number/contributions", "Invalid storyworld or path id"],
+  ])("rejects malformed path parameters before any GitHub call", async (url, error) => {
+    const response = await request(buildApp())
+      .post(url)
+      .send({
+        title: "Valid title",
+        content: "Valid content.",
+        submissionId: "660e8400-e29b-41d4-a716-446655440014",
+      });
+
+    expectRejectedBeforeGitHub(response, error);
   });
 
   it("commits the narration to the path's own branch and indexes it", async () => {
