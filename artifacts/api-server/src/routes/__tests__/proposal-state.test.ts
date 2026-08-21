@@ -42,6 +42,10 @@ const capture = vi.hoisted(() => ({
   proposalState: null as string | null,
   /** Restriction reason written with a steward restriction */
   decisionReason: null as string | null,
+  /** Values written by the editor-question address endpoint */
+  editorQuestionUpdate: null as Record<string, unknown> | null,
+  /** Authenticated platform user used by the auth seam */
+  userId: 1,
   authenticated: true,
   steward: true,
   reset() {
@@ -49,6 +53,8 @@ const capture = vi.hoisted(() => ({
     this.persistedPathState = null;
     this.proposalState = null;
     this.decisionReason = null;
+    this.editorQuestionUpdate = null;
+    this.userId = 1;
     this.authenticated = true;
     this.steward = true;
   },
@@ -104,6 +110,9 @@ vi.mock("@workspace/db", () => {
         }
         if (tag === "path" && val["state"]) {
           capture.pathState = val["state"] as string;
+        }
+        if (tag === "other") {
+          capture.editorQuestionUpdate = val;
         }
         return { where: () => ({ returning: () => Promise.resolve(result) }) };
       },
@@ -169,6 +178,7 @@ vi.mock("@workspace/db", () => {
     storyPathsTable: "storyPathsTable",
     stewardsTable: "stewardsTable",
     userGithubLinksTable: "userGithubLinksTable",
+    contributorsTable: "contributorsTable",
     editorQuestionsTable: "editorQuestionsTable",
     contributionsTable: "contributionsTable",
   };
@@ -222,7 +232,7 @@ vi.mock("../../middlewares/auth", () => ({
       res.status(401).json({ error: "Authentication required" });
       return;
     }
-    req.session = { userId: 1 };
+    req.session = { userId: capture.userId };
     next();
   },
 }));
@@ -393,6 +403,83 @@ describe("GET /:id — proposal detail", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.editorQuestions).toEqual([firstQuestion, secondQuestion]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: editor-question ownership
+// ---------------------------------------------------------------------------
+
+describe("POST /:id/editor-questions/:questionId/address — contributor ownership", () => {
+  let app: Express;
+  const originalQuestion = {
+    id: 7,
+    proposalId: 100,
+    reviewCommentId: 701,
+    body: "What changes when the bell rings?",
+    addressedAt: null,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capture.reset();
+    mockDb.__reset();
+    app = buildApp();
+  });
+
+  it("allows the proposal contributor to mark and unmark a question", async () => {
+    capture.userId = 1;
+
+    mockDb.__pushSelectRows([makeProposal("returned-with-notes", { contributorId: 11 })]);
+    mockDb.__pushSelectRows([{ id: 11 }]);
+    mockDb.__pushUpdate("other", [{ ...originalQuestion, addressedAt: new Date() }]);
+
+    const addressed = await request(app)
+      .post("/100/editor-questions/7/address")
+      .send({ addressed: true });
+
+    expect(addressed.status).toBe(200);
+    expect(addressed.body.body).toBe(originalQuestion.body);
+    expect(addressed.body.addressedAt).toBeTruthy();
+    expect(capture.editorQuestionUpdate?.addressedAt).toBeInstanceOf(Date);
+
+    capture.editorQuestionUpdate = null;
+    mockDb.__pushSelectRows([makeProposal("returned-with-notes", { contributorId: 11 })]);
+    mockDb.__pushSelectRows([{ id: 11 }]);
+    mockDb.__pushUpdate("other", [{ ...originalQuestion, addressedAt: null }]);
+
+    const unaddressed = await request(app)
+      .post("/100/editor-questions/7/address")
+      .send({ addressed: false });
+
+    expect(unaddressed.status).toBe(200);
+    expect(unaddressed.body.body).toBe(originalQuestion.body);
+    expect(unaddressed.body.addressedAt).toBeNull();
+    expect(capture.editorQuestionUpdate).toEqual({ addressedAt: null });
+  });
+
+  it.each([
+    { label: "another contributor", userId: 2, contributorId: 22 },
+    { label: "a steward without contributor ownership", userId: 3, contributorId: 33 },
+  ])("rejects $label without changing the question", async ({ userId, contributorId }) => {
+    capture.userId = userId;
+    mockDb.__pushSelectRows([makeProposal("returned-with-notes", { contributorId: 11 })]);
+    mockDb.__pushSelectRows([{ id: contributorId }]);
+
+    const res = await request(app)
+      .post("/100/editor-questions/7/address")
+      .send({ addressed: true });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toContain("Only the proposal contributor");
+    expect(capture.editorQuestionUpdate).toBeNull();
+    expect(originalQuestion).toEqual({
+      id: 7,
+      proposalId: 100,
+      reviewCommentId: 701,
+      body: "What changes when the bell rings?",
+      addressedAt: null,
+    });
   });
 });
 
