@@ -60,6 +60,42 @@ Archive removes a terminal outcome from active work. Deletion is a separately
 approved disposition of particular material and records. No archive action may
 be presented as erasure.
 
+### Accepted derivatives require a separate disposition
+
+An accepted scene, capsule, or alternate path may already have been quoted,
+displayed, transformed, or copied before a contributor asks for withdrawal,
+attribution change, or removal. The product must treat the source and each
+known downstream use as separate records:
+
+1. **Stop new source-dependent use.** Once a withdrawal or derivative-consent
+   revocation is recorded, do not begin a new derivative, expand an existing
+   derivative, or newly publish a source-dependent excerpt under the old
+   permission.
+2. **Hold unreleased use.** Pause a pending publication or transformation while
+   the owner-approved review determines its disposition, unless safety or law
+   requires an immediate hold.
+3. **Preserve released derivatives by default.** An existing derivative is not
+   automatically deleted or orphaned. Preserve it when it is sufficiently
+   separable, its independent consent or license remains valid, and no safety,
+   privacy, rights, or legal-hold decision requires removal.
+4. **Remove or correct source-dependent material only when approved.** A
+   derivative that substantially reproduces the source, depends on revoked
+   permission, contains protected material, or cannot be separated without
+   misleading attribution may require reader-facing removal, redaction,
+   attribution correction, or withdrawal. This does not authorize Git history
+   rewriting.
+5. **Keep copies and backups distinct.** The service controls its reader
+   surfaces and managed derivative records, but must not promise removal from
+   independent copies, third-party publications, external exports, or backups
+   retained under recovery or legal-hold policy.
+6. **Record decisions and allow appeal.** Identify the source, derivative,
+   consent version and revocation time, attribution, copies reviewed,
+   decision-maker, scope, effective window, and appeal or correction route.
+
+This is a private-pilot product boundary, not a legal conclusion. Legal and
+privacy review is required before enforcement, public derivative features, or
+jurisdiction-specific removal promises.
+
 ## Durable and private records
 
 ### GitHub-recoverable creative record
@@ -125,14 +161,12 @@ The following decisions remain open:
   attribution is removed?
 - Which GitHub history, backups, exports, moderation evidence, or legal holds
   must be retained, and for how long?
-- What happens to an accepted scene, capsule, or alternate path that has
-  already been quoted, displayed, or used in a future derivative?
-- Who decides whether a derivative is sufficiently separable to preserve, and
-  how are affected contributors notified?
 - What appeal, correction, and audit process applies when attribution is
   disputed?
 - May any content be deleted from Git history, or is only reader-facing
   removal allowed?
+- Which jurisdictions, contractual terms, and legal-hold rules require a
+  stricter disposition than this pilot default?
 
 Until these are answered, no API, webhook, reconciliation job, consent toggle,
 moderation action, or public workflow may infer deletion, orphaning, or
@@ -145,6 +179,8 @@ derivative permission from `withdrawn`.
 - The consent ladder remains per-action, revocable, and design-only. Withdrawal
   stops future eligible use subject to preservation limits; it does not erase
   historical records automatically.
+- The `cie-pie-derivative` action remains unavailable. This policy does not
+  create derivative consent or authorize Concept Board Disrupt/Invert.
 - Moderation remains private and case-based. A withdrawal does not resolve a
   moderation case, and a restriction does not publish its private reason.
 - ADR-0013 remains authoritative: GitHub is canonical for recoverable creative

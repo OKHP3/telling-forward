@@ -86,7 +86,13 @@ cases:
       - consent-policy-version-and-revocation-time
       - legal-hold-and-decision-audit
     unresolved:
-      - source-specific-derivative-consent-15-10
-      - derivative-separability
-      - independent-copies-and-backups
-      - history-rewrite-versus-reader-removal
+      - jurisdiction-specific-legal-or-privacy-disposition
+      - owner-approved-operational-window
+      - appeal-or-correction-outcome
+    policy_default:
+      - stop-new-source-dependent-use-after-revocation
+      - hold-unreleased-use-pending-review
+      - preserve-released-derivative-if-separable-and-authorized
+      - remove-or-correct-source-dependent-material-only-after-approved-disposition
+      - do-not-promise-control-over-independent-copies
+      - do-not-rewrite-github-history-as-an-automatic-remedy

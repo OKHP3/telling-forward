@@ -208,6 +208,32 @@ through the relevant submission flow. Revocation applies prospectively:
 - revocation does not silently erase Git history, a merged canon commit, or a
   legally required audit trail.
 
+### Accepted derivative boundary
+
+The reserved `cie-pie-derivative` action is not enabled by this design. If a
+future, source-specific derivative permission is approved, its revocation
+still cannot recall a derivative that was already created. The future
+implementation must:
+
+- stop new source-dependent transformations and new publication after the
+  revocation becomes effective;
+- identify every managed derivative by source record, consent version,
+  transformation purpose, audience, attribution, and release time;
+- hold an unreleased derivative while the owner and legal/privacy reviewers
+  decide its disposition;
+- preserve a released derivative when it is sufficiently separable and its
+  independent permission remains valid, unless safety, privacy, rights, or a
+  legal hold requires another result;
+- provide a separate path for reader-facing removal, attribution correction,
+  appeal, and correction, without rewriting Git history automatically; and
+- state plainly that independent copies, third-party publications, exports, and
+  retention-bound backups may be outside the service's control.
+
+This boundary is a product policy decision for the private pilot, not a legal
+determination. No consent toggle, derivative endpoint, or public derivative
+feature may be implemented until source-specific terms and enforcement are
+approved.
+
 The proposal lifecycle is the operational companion to consent:
 
 - the original PR author may withdraw an eligible draft, submitted,
@@ -257,6 +283,8 @@ retention effects.
 - The exact deletion/export process and the operational window for taking
   licensed displays down.
 - The source-specific CIE/PIE derivative consent model (open question 15.10).
+- The legal/privacy review, jurisdictional terms, and operational enforcement
+  for the accepted-derivative disposition policy.
 - Whether anonymous readers may use any optional reaction or telemetry features.
 - Whether a future storyworld may offer a broader, independently negotiated
   contribution agreement; it must remain an explicit alternative, not a hidden
