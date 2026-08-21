@@ -26,6 +26,25 @@ acceptance run, so participant execution was intentionally not simulated.
 
 **Failure classification:** deployment absence, not an application-route failure.
 
+## Deployment recheck
+
+On the current task run, the authoritative deployment lookup was repeated and
+returned the same boundary:
+
+| Field | Result |
+|---|---|
+| `success` | `true` |
+| `isDeployed` | `false` |
+| `primaryUrl` | empty |
+| `hasSuccessfulBuild` | `false` |
+| `visibility` | empty |
+
+The local API, Author App, Reader surfaces, and Expo packager are running, but
+they are workspace services rather than an externally reachable published
+revision. The participant journey therefore remains **not run**; no route,
+permission, vocabulary, attribution, or provenance result is inferred from
+local workflow health.
+
 ## Journey acceptance matrix
 
 | Step | Intended participant action | External result | Why |
