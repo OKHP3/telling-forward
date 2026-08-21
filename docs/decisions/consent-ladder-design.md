@@ -293,6 +293,8 @@ retention effects.
 ## References
 
 - `docs/adr/0008-reader-contribution-consent-ladder-data-stream-separation-and-echo-relay-concept.md`
-- `docs/decisions/open-questions.md` (15.10, 15.14)
+- `docs/decisions/open-questions.md` (15.10, 15.14, 15.18)
+- `docs/decisions/provenance-fidelity-contract.md` (reader visibility boundary, open question 15.18)
+- `docs/decisions/withdrawal-preservation-policy.md`
 - `docs/platform-requirements.md` §§6.5, 7.1–7.4
 - `CONTENT-LICENSE.md`

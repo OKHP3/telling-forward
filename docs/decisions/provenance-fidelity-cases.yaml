@@ -38,8 +38,18 @@ cases:
       - ingestion-run-reference
       - engine-and-rung
       - human-editor-reference
-    unresolved:
-      - reader-side-car-opt-in
+    pilot_decision:
+      reader_side_car_opt_in: not-enabled-for-private-pilot
+      safe_reader_fields_when_enabled:
+        - editorial-outcome-plain-language
+        - ingestion-tier-plain-language
+        - human-edited-after-when-true
+        - acceptance-date-approximate
+      permanently_private:
+        - model-name-and-provider
+        - engine-and-rung-details
+        - ingestion-run-reference
+        - contributor-or-steward-identity-beyond-approved-display
 
   - id: proposed-transformation
     kind: transformation
@@ -109,8 +119,18 @@ cases:
       - decision-time
       - canon-commit-sha
       - accepted-provenance-marker
-    unresolved:
-      - public-process-narrative-opt-in
+    pilot_decision:
+      public_process_narrative_opt_in: deferred-pending-working-laboratory-approval
+      safe_reader_fields_when_enabled:
+        - editorial-outcome-plain-language
+        - ingestion-tier-plain-language
+        - human-edited-after-when-true
+        - acceptance-date-approximate
+      permanently_private:
+        - pr-number-and-commit-sha
+        - steward-identity
+        - contributor-identity-beyond-approved-display
+        - fidelity-note-content
 
   - id: alternate-path-with-provenance
     kind: alternate
@@ -129,9 +149,15 @@ cases:
       - contributor-attribution
       - review-outcome
       - alternate-path-reference
-    unresolved:
-      - read-follow-signal
-      - reader-release-approval
+    pilot_decision:
+      reader_release_approval: not-approved-for-private-pilot-requires-public-edition-gate
+      read_follow_signal: steward-only-if-built
+      safe_reader_fields_when_enabled:
+        - editorial-outcome-plain-language
+        - acceptance-date-approximate
+      permanently_private:
+        - pr-number-and-branch-reference
+        - contributor-identity-beyond-approved-display
 
   - id: missing-provenance-source
     kind: missing-provenance

@@ -2,7 +2,7 @@
 
 ## Status
 
-**Design contract for owner review; enforcement not approved.**
+**Reader visibility boundary decided for the private pilot (2026-08-21); implementation and enforcement not approved. No reader feature added.**
 
 This document consolidates the overlapping proposals in ADR-0005, ADR-0006,
 ADR-0007, ADR-0009, ADR-0010, and ADR-0011. It defines the records and release
@@ -151,6 +151,83 @@ The policy fixtures in
 `docs/decisions/provenance-fidelity-cases.yaml` cover source, capsule,
 transformation, edit, acceptance, alternate, and missing-provenance cases.
 They are owner-review fixtures, not executable schema or permission rules.
+
+## Reader provenance boundary — private pilot decisions
+
+**Recorded 2026-08-21. No runtime enforcement or reader feature is added by this section.**
+
+### Working-laboratory opt-in
+
+The per-storyworld "working laboratory" presentation remains the only approved mechanism
+for a reader-facing provenance side-car. It is **not enabled for the private pilot**. A
+steward may not configure it until all of the following are separately approved and
+implemented:
+
+- the storyworld-level opt-in mechanism and who may set or revoke it;
+- the exact wording and form of each safe signal as it appears to a reader;
+- an API boundary that excludes private fields at query time, not only at render time; and
+- a steward review confirming that no consent, moderation, identity, or legal-hold record
+  can reach a reader through any storyworld's provenance configuration.
+
+Until those gates are passed, all provenance records remain steward-and-maintainer-only.
+
+### Safe fields approved for a future working-laboratory reader view
+
+When the opt-in is eventually enabled, the following are the **only** fields approved for
+reader presentation:
+
+| Field | Approved reader-facing form | What must not appear |
+|---|---|---|
+| Editorial outcome | "Accepted into canon" or "Published as alternate path" in plain language | Raw enum value; restricted, withdrawn, or archived outcomes |
+| Ingestion tier | One of: "Created by the author," "Created with AI assistance," or "Created with author-provided AI tools" | Model name, provider identity, prompt, engine version, or ingestion run reference |
+| Human-edited-after flag | "Reviewed and edited by the author" when true; omitted when false | Authorship claims the contributor did not approve; editor identity |
+| Storyworld acceptance date | Approximate date in plain language | Commit SHA, PR number, branch name, or review reference |
+
+No other provenance field is approved for reader presentation.
+
+### Permanently private fields
+
+The following must never appear on any reader-facing surface, including in
+working-laboratory mode:
+
+- contributor or steward identity beyond what the contributor separately approved for
+  display;
+- pull request, branch, commit, or repository references;
+- model name, provider identity, API version, or prompt content;
+- fidelity note content — changed material, ambiguities flagged, semantic preservation
+  rating, or audience calibration finding;
+- any consent record, revocation record, or policy version;
+- any moderation report, case reference, restriction reason, or safety evidence;
+- any legal hold, retention decision, or deletion approval;
+- ingestion run references or engine-specific identifiers;
+- internally unresolved provenance conditions or missing-source notes.
+
+### Reader accessibility/density signal (open question 15.13) — explicitly deferred
+
+No field, band, label, or reader-facing density signal is approved. This is an explicit
+**deferral**, not a rejection. The question of whether the signal should be author-set,
+steward-visible only, reader-facing, or unnecessary remains open (15.13). No band count,
+labeling vocabulary, or reader-facing implementation may proceed without a separate
+owner decision closing 15.13. The Lexical Ladder from the source thread is noted as one
+candidate mechanism but is not adopted by this deferral.
+
+### Outside-reader legibility check — steward-only advisory
+
+The outside-reader legibility check (ADR-0007 item 5, ADR-0005 item 5 context) is
+**steward-only advisory**. No reader-facing output, score, or label is approved. The
+advisory finding must not block, accept, restrict, archive, or auto-publish a proposal.
+
+### Process narrative and canon compendium — deferred
+
+The assembled "process narrative" view (ADR-0011 item 2) and the auto-compiled canon
+compendium (ADR-0011 item 3) are **deferred** pending:
+
+- the working-laboratory provenance feature being designed, implemented, and reviewed;
+- the term/motif ledger (ADR-0006 item 2) being separately implemented; and
+- a separate owner approval for each assembled reader-facing view.
+
+Neither artifact may include permanently private fields, material from restricted or
+withdrawn outcomes, or attribution not approved for display.
 
 ## References and crosswalk
 

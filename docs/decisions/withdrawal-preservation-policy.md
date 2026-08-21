@@ -195,5 +195,6 @@ derivative permission from `withdrawn`.
 - `docs/decisions/consent-ladder-design.md`
 - `docs/decisions/moderation-tooling-design.md`
 - `docs/decisions/open-questions.md`
+- `docs/decisions/provenance-fidelity-contract.md` (reader visibility boundary, open question 15.18)
 - `artifacts/api-server/src/routes/proposals.ts`
 - `lib/db/src/schema/telling-forward.ts`
