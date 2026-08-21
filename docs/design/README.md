@@ -12,6 +12,7 @@ These documents brief Replit Design on Telling Forward's Author App and Reader A
 ## Visual identity
 
 - **[telling-forward-visual-identity.md](./telling-forward-visual-identity.md)** — Working visual-language guide for the shared Telling Forward identity: light-first palette, narrative-matter metaphors, image directions, icon and social-art guidance, derivative rules, and accessibility guardrails.
+- **[telling-forward-visual-implementation-prd.md](./telling-forward-visual-implementation-prd.md)** — Paste-ready implementation brief for Claude and Replit: repository context, asset inventory, visual rules, implementation direction, non-goals, and acceptance checks.
 
 ## Source material
 
