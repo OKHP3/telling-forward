@@ -183,7 +183,13 @@ router.post(
     }
     try {
       const [proposal] = await db
-        .select({ id: proposalsTable.id, contributorId: proposalsTable.contributorId })
+        .select({
+          id: proposalsTable.id,
+          contributorId: proposalsTable.contributorId,
+          // Stable GitHub numeric user ID stored at reconcile time; used by the
+          // bridge below to guard against username rename or account-reuse bypass.
+          githubUserId: proposalsTable.githubUserId,
+        })
         .from(proposalsTable)
         .where(eq(proposalsTable.id, proposalId))
         .limit(1);
@@ -191,12 +197,56 @@ router.post(
         res.status(404).json({ error: "Proposal not found" });
         return;
       }
-      const [contributor] = await db
+
+      // Step 1: find contributor by platform session identity (platform-first accounts).
+      const [platformContributor] = await db
         .select({ id: contributorsTable.id })
         .from(contributorsTable)
         .where(eq(contributorsTable.platformIdentity, `platform:${req.session.userId}`))
         .limit(1);
-      if (!contributor || proposal.contributorId !== contributor.id) {
+
+      let contributor: { id: number } | undefined;
+
+      if (platformContributor?.id === proposal.contributorId) {
+        // The session user's platform contributor directly owns this proposal.
+        contributor = platformContributor;
+      } else {
+        // Step 2: GitHub-link bridge — reached when the session user has no
+        // matching platform contributor, OR has one that belongs to a different
+        // proposal (e.g. a user who submitted platform narrations but whose PR
+        // was reconciled under a separate GitHub-identity contributor row).
+        //
+        // Security: authorise by the immutable stable GitHub user ID stored on
+        // both the proposal and the account link rather than the mutable login
+        // name, so a GitHub username rename or account reuse cannot grant access.
+        const [githubLink] = await db
+          .select({
+            githubUsername: userGithubLinksTable.githubUsername,
+            githubUserId: userGithubLinksTable.githubUserId,
+          })
+          .from(userGithubLinksTable)
+          .where(eq(userGithubLinksTable.userId, req.session.userId as number))
+          .limit(1);
+
+        if (
+          githubLink &&
+          proposal.githubUserId &&
+          proposal.contributorId &&
+          githubLink.githubUserId === proposal.githubUserId
+        ) {
+          // Stable GitHub user ID confirms this session user is the PR author.
+          // Authorize via the proposal's established contributor link directly.
+          //
+          // We do NOT re-derive from githubLink.githubUsername because a GitHub
+          // username rename followed by reconciliation creates a *new* contributor
+          // row under the new login — which would have a different ID than the
+          // original row on the proposal. Using the immutable contributor link
+          // here ensures ownership survives renames.
+          contributor = { id: proposal.contributorId };
+        }
+      }
+
+      if (!contributor) {
         res.status(403).json({ error: "Only the proposal contributor can address editor questions" });
         return;
       }

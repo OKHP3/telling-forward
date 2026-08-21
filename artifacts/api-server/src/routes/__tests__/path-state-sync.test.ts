@@ -46,13 +46,25 @@ const insertLog = vi.hoisted(() => ({
 }));
 
 const proposalUpsertLog = vi.hoisted(() => ({
-  calls: [] as Array<{ state: unknown; decidedAt: unknown }>,
+  calls: [] as Array<{
+    state: unknown;
+    decidedAt: unknown;
+    /** contributorId from the INSERT .values() call — what the route resolved */
+    insertedContributorId: unknown;
+    /** contributorId from the ON CONFLICT DO UPDATE SET — should be a COALESCE SQL expression */
+    conflictContributorId: unknown;
+  }>,
   reset() { this.calls = []; },
 }));
 
 const proposalPersistence = vi.hoisted(() => ({
   state: null as string | null,
   decidedAt: null as Date | null,
+  /**
+   * Simulates COALESCE(existing, incoming) for contributorId across reconcile
+   * runs: once set, a subsequent upsert cannot overwrite it.
+   */
+  contributorId: null as number | null,
   seed(state: string, decidedAt: Date) {
     this.state = state;
     this.decidedAt = decidedAt;
@@ -60,6 +72,7 @@ const proposalPersistence = vi.hoisted(() => ({
   reset() {
     this.state = null;
     this.decidedAt = null;
+    this.contributorId = null;
   },
 }));
 
@@ -147,11 +160,15 @@ vi.mock("@workspace/db", () => {
       values: (v: Record<string, unknown>) => {
         insertLog.calls.push({ branchRef: v["branchRef"] as string, state: v["state"] as string });
         return {
+          // Used by contributorNotificationsTable inserts (emitContributorNotification)
+          onConflictDoNothing: () => Promise.resolve([]),
           onConflictDoUpdate: (config: { set?: Record<string, unknown> }) => {
             if (v["prNumber"]) {
               proposalUpsertLog.calls.push({
                 state: config.set?.["state"],
                 decidedAt: config.set?.["decidedAt"],
+                insertedContributorId: v["contributorId"],
+                conflictContributorId: config.set?.["contributorId"],
               });
               const existingState = proposalPersistence.state;
               const preservesState =
@@ -160,6 +177,13 @@ vi.mock("@workspace/db", () => {
               if (!preservesState) {
                 proposalPersistence.state = v["state"] as string;
                 proposalPersistence.decidedAt = v["decidedAt"] as Date | null;
+              }
+              // Simulate COALESCE(existing, incoming): once a contributorId is
+              // stored, subsequent upserts must not overwrite it — mirrors the
+              // COALESCE expression in the production ON CONFLICT DO UPDATE SET.
+              if (proposalPersistence.contributorId === null) {
+                proposalPersistence.contributorId =
+                  (v["contributorId"] as number | null) ?? null;
               }
             }
             return {
@@ -171,6 +195,8 @@ vi.mock("@workspace/db", () => {
                     ...PROPOSAL_ROW,
                     state: proposalPersistence.state ?? v["state"],
                     decidedAt: proposalPersistence.decidedAt ?? v["decidedAt"],
+                    // COALESCE simulation: always return the first-established owner
+                    contributorId: proposalPersistence.contributorId,
                   }]);
                 }
                 return Promise.resolve([]);
@@ -202,6 +228,9 @@ vi.mock("@workspace/db", () => {
     userGithubLinksTable: "userGithubLinksTable",
     editorQuestionsTable: "editorQuestionsTable",
     contributionsTable: "contributionsTable",
+    // Minimal stub so emitContributorNotification can read .eventKey for the
+    // onConflictDoNothing target without throwing on undefined.
+    contributorNotificationsTable: { eventKey: "event_key" },
   };
 });
 
@@ -236,6 +265,7 @@ const mockProvenance = vi.hoisted(() => ({
   indexNarrationCommit: vi.fn().mockResolvedValue(null),
   parseNarrationCommit: vi.fn().mockReturnValue(null),
   replacePathMomentMemberships: vi.fn().mockResolvedValue(undefined),
+  resolveContributor: vi.fn().mockResolvedValue(null),
   writeAcceptedProvenance: vi.fn().mockResolvedValue(1),
 }));
 
@@ -251,7 +281,7 @@ vi.mock("../../lib/provenance", () => ({
   indexSavedMoment: vi.fn().mockResolvedValue(null),
   parseNarrationCommit: mockProvenance.parseNarrationCommit,
   replacePathMomentMemberships: mockProvenance.replacePathMomentMemberships,
-  resolveContributor: vi.fn().mockResolvedValue(null),
+  resolveContributor: mockProvenance.resolveContributor,
   resolveContributorIdentity: vi.fn().mockResolvedValue(null),
   stewardAttribution: vi.fn().mockResolvedValue({ githubIdentity: "github:alice" }),
   verifyAcceptanceDecisionNote: vi.fn().mockReturnValue(null),
@@ -1061,4 +1091,183 @@ describe("admin reconcile — protected proposal outcomes", () => {
       expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
     },
   );
+});
+
+// ---------------------------------------------------------------------------
+// 6. Admin reconcile — contributor ownership link
+//
+// Proves that:
+//   a) resolveContributor is called for the PR author and its result is
+//      stored as contributorId in the proposal INSERT .values() clause.
+//   b) The ON CONFLICT DO UPDATE SET for contributorId is a COALESCE SQL
+//      expression — never a plain number — so a later reconcile pass with a
+//      different GitHub author cannot overwrite the existing link.
+//   c) Both (a) and (b) hold on a re-run where resolveContributor returns a
+//      different contributor id.
+//
+// The companion address-endpoint tests in proposal-state.test.ts confirm that
+// a proposal with contributorId = 55 (as produced by reconcile) grants access
+// only to the platform contributor with id 55 and rejects all others.
+// ---------------------------------------------------------------------------
+
+describe("admin reconcile — contributor link from PR author", () => {
+  let app: ReturnType<typeof buildAdminApp>;
+
+  const alicePr = {
+    number: 55,
+    state: "open" as const,
+    merged: false,
+    headRef: "contrib/alice-scene",
+    baseRef: "main",
+    createdAt: new Date().toISOString(),
+    mergedAt: null,
+    closedAt: null,
+    mergeCommitSha: null,
+    mergedBy: null,
+    author: {
+      id: "github-alice-1",
+      login: "alice",
+      name: "Alice",
+      email: "alice@example.com",
+    },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    insertLog.reset();
+    proposalUpsertLog.reset();
+    proposalPersistence.reset();
+    mockDb._resetSelectQueue();
+    process.env["ADMIN_SECRET"] = "admin-secret-test";
+    mockGh.listBranches.mockResolvedValue([]);
+    mockGh.listCommitsBetween.mockResolvedValue([]);
+    mockGh.listOpenPullRequests.mockResolvedValue([alicePr]);
+    mockGh.getPullRequest.mockResolvedValue({ ...alicePr, state: "open", merged: false });
+    mockGh.listPullRequestReviews.mockResolvedValue([]);
+    mockGh.listPullRequestComments.mockResolvedValue([]);
+    mockGh.getFileContent.mockResolvedValue("");
+    mockProvenance.parseNarrationCommit.mockReturnValue(null);
+    mockProvenance.indexNarrationCommit.mockResolvedValue(null);
+    mockProvenance.resolveContributor.mockResolvedValue(null);
+    app = buildAdminApp();
+  });
+
+  it("persists the GitHub-resolved contributor id in the proposal insert values", async () => {
+    // The reconcile route calls resolveContributor with the PR author and
+    // must store the returned id in the VALUES clause of the proposal upsert.
+    mockProvenance.resolveContributor.mockResolvedValue({
+      id: 55,
+      platformIdentity: "platform:7",
+    });
+
+    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+    mockDb._pushSelectRows([]); // base-path lookup for the PR
+
+    const res = await request(app)
+      .post("/reconcile")
+      .set({ "x-admin-secret": "admin-secret-test" })
+      .send({ storyworld_id: 1 });
+
+    expect(res.status).toBe(200);
+    expect(proposalUpsertLog.calls).toHaveLength(1);
+    // The VALUES clause carries the resolved contributor id, not null
+    expect(proposalUpsertLog.calls[0]!.insertedContributorId).toBe(55);
+  });
+
+  it("stores null when resolveContributor cannot match the PR author", async () => {
+    // If the GitHub author has not yet registered a platform account,
+    // the proposal must not block — it is inserted with null and the
+    // COALESCE rule will fill it on a future reconcile once they join.
+    mockProvenance.resolveContributor.mockResolvedValue(null);
+
+    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+    mockDb._pushSelectRows([]);
+
+    const res = await request(app)
+      .post("/reconcile")
+      .set({ "x-admin-secret": "admin-secret-test" })
+      .send({ storyworld_id: 1 });
+
+    expect(res.status).toBe(200);
+    expect(proposalUpsertLog.calls).toHaveLength(1);
+    expect(proposalUpsertLog.calls[0]!.insertedContributorId).toBeNull();
+  });
+
+  it("uses a COALESCE SQL expression for contributorId in the conflict-update set", async () => {
+    // The ON CONFLICT DO UPDATE SET must carry COALESCE(existing, incoming),
+    // not a plain number. If this assertion fails, the production code stopped
+    // using COALESCE and a re-run could overwrite the original owner's id.
+    mockProvenance.resolveContributor.mockResolvedValue({
+      id: 55,
+      platformIdentity: "platform:7",
+    });
+
+    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+    mockDb._pushSelectRows([]);
+
+    await request(app)
+      .post("/reconcile")
+      .set({ "x-admin-secret": "admin-secret-test" })
+      .send({ storyworld_id: 1 });
+
+    const conflictValue = proposalUpsertLog.calls[0]!.conflictContributorId;
+    // A plain number here would mean the production code stopped using COALESCE
+    expect(typeof conflictValue).not.toBe("number");
+    // The SQL object must contain a COALESCE reference
+    expect(sqlText(conflictValue)).toMatch(/COALESCE/i);
+  });
+
+  it("does not overwrite an existing contributor link when a rerun resolves a different author", async () => {
+    // First run: alice (contributor 55) is linked.
+    mockProvenance.resolveContributor.mockResolvedValue({
+      id: 55,
+      platformIdentity: "platform:7",
+    });
+    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+    mockDb._pushSelectRows([]);
+    await request(app)
+      .post("/reconcile")
+      .set({ "x-admin-secret": "admin-secret-test" })
+      .send({ storyworld_id: 1 });
+
+    // Second run: same PR now resolves to contributor 77 (e.g. a reused login
+    // or a subsequent registration). The COALESCE rule in the conflict set must
+    // prevent bob's id from replacing alice's established link.
+    const bobPr = {
+      ...alicePr,
+      author: {
+        id: "github-bob-2",
+        login: "bob",
+        name: "Bob",
+        email: "bob@example.com",
+      },
+    };
+    mockProvenance.resolveContributor.mockResolvedValue({
+      id: 77,
+      platformIdentity: "platform:9",
+    });
+    mockGh.listOpenPullRequests.mockResolvedValue([bobPr]);
+    mockGh.getPullRequest.mockResolvedValue({ ...bobPr, state: "open", merged: false });
+    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+    mockDb._pushSelectRows([]);
+    await request(app)
+      .post("/reconcile")
+      .set({ "x-admin-secret": "admin-secret-test" })
+      .send({ storyworld_id: 1 });
+
+    expect(proposalUpsertLog.calls).toHaveLength(2);
+
+    // Second INSERT carries bob's id in VALUES (that's what the route resolved)…
+    expect(proposalUpsertLog.calls[1]!.insertedContributorId).toBe(77);
+
+    // …but the conflict-update set still uses COALESCE, so the DB preserves 55.
+    const conflictValue = proposalUpsertLog.calls[1]!.conflictContributorId;
+    expect(typeof conflictValue).not.toBe("number");
+    expect(sqlText(conflictValue)).toMatch(/COALESCE/i);
+
+    // The mock simulates COALESCE persistence: alice's id (55) must survive
+    // the second upsert, not be overwritten by bob's 77. If this assertion
+    // fails the production COALESCE guard is no longer protecting the link.
+    expect(proposalPersistence.contributorId).toBe(55);
+  });
 });

@@ -484,6 +484,258 @@ describe("POST /:id/editor-questions/:questionId/address — contributor ownersh
 });
 
 // ---------------------------------------------------------------------------
+// Tests: editor-question ownership after reconciliation
+//
+// The admin reconcile route upserts proposals with:
+//   contributorId: contributor?.id ?? null
+//   onConflictDoUpdate: { contributorId: COALESCE(existing, excluded) }
+//
+// This means:
+//   • The first reconcile pass that resolves a GitHub author fills the link.
+//   • A subsequent pass with a different GitHub login never overwrites it.
+//   • The /address ownership check must honour whatever contributorId the
+//     reconcile produced, not the raw GitHub identity on the PR.
+// ---------------------------------------------------------------------------
+
+describe("POST /:id/editor-questions/:questionId/address — ownership after reconciliation", () => {
+  // Scenario: PR #99 arrived via GitHub with author login "alice".
+  //   resolveContributor({ login: "alice", ... }) → { id: 55, platformIdentity: "platform:7" }
+  //   reconcile upserted the proposal with contributorId: 55.
+  //   A subsequent reconcile pass (e.g. re-run or webhook replay) with the
+  //   same author cannot change this link (COALESCE preserves 55).
+
+  const reconciledProposal = {
+    id: 200,
+    storyworldId: 1,
+    pathId: 10,
+    prNumber: 99,
+    state: "returned-with-notes",
+    contributorId: 55, // filled by the reconcile upsert
+    submittedAt: new Date().toISOString(),
+    decidedAt: null,
+  };
+
+  // contributor.id returned when the /address handler looks up "platform:7"
+  const reconciledContributor = { id: 55 };
+  // contributor.id returned when a different user (platform:9) queries
+  const unrelatedContributor = { id: 77 };
+
+  const originalQuestion = {
+    id: 9,
+    proposalId: 200,
+    reviewCommentId: 901,
+    body: "Does the witness remember correctly?",
+    addressedAt: null,
+  };
+
+  let app: Express;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capture.reset();
+    mockDb.__reset();
+    app = buildApp();
+  });
+
+  it("allows the reconciled contributor to mark a question addressed", async () => {
+    // user 7 owns contributor 55, which the reconcile linked to this proposal
+    capture.userId = 7;
+
+    mockDb.__pushSelectRows([reconciledProposal]);
+    mockDb.__pushSelectRows([reconciledContributor]);
+    mockDb.__pushUpdate("other", [{ ...originalQuestion, addressedAt: new Date() }]);
+
+    const res = await request(app)
+      .post("/200/editor-questions/9/address")
+      .send({ addressed: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.body).toBe(originalQuestion.body);
+    expect(res.body.addressedAt).toBeTruthy();
+    expect(capture.editorQuestionUpdate?.addressedAt).toBeInstanceOf(Date);
+  });
+
+  it("allows the reconciled contributor to unmark a question", async () => {
+    capture.userId = 7;
+
+    mockDb.__pushSelectRows([reconciledProposal]);
+    mockDb.__pushSelectRows([reconciledContributor]);
+    mockDb.__pushUpdate("other", [{ ...originalQuestion, addressedAt: null }]);
+
+    const res = await request(app)
+      .post("/200/editor-questions/9/address")
+      .send({ addressed: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.body).toBe(originalQuestion.body);
+    expect(res.body.addressedAt).toBeNull();
+    expect(capture.editorQuestionUpdate).toEqual({ addressedAt: null });
+  });
+
+  it("rejects an unrelated contributor and leaves the question unchanged", async () => {
+    // user 9 has contributor id 77, which does not match the reconciled link (55)
+    capture.userId = 9;
+
+    mockDb.__pushSelectRows([reconciledProposal]);
+    mockDb.__pushSelectRows([unrelatedContributor]);
+
+    const res = await request(app)
+      .post("/200/editor-questions/9/address")
+      .send({ addressed: true });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toContain("Only the proposal contributor");
+    // No DB write was attempted
+    expect(capture.editorQuestionUpdate).toBeNull();
+    // In-memory question fixture is unmodified (addressed status preserved)
+    expect(originalQuestion.body).toBe("Does the witness remember correctly?");
+    expect(originalQuestion.addressedAt).toBeNull();
+  });
+
+});
+
+// ---------------------------------------------------------------------------
+// Tests: editor-question address — GitHub-link bridge
+//
+// Reconcile creates contributor rows with:
+//   platformIdentity = github:<login>
+//   githubIdentity   = github:<login>
+//
+// The primary lookup (platform:<userId>) cannot reach these rows. The bridge
+// resolves ownership through user_github_links → contributors.githubIdentity.
+//
+// Security constraint: the bridge requires the stable GitHub numeric user ID
+// stored on the proposal (githubUserId) to match user_github_links.githubUserId.
+// This prevents a GitHub username rename or account reuse from granting access.
+//
+// The bridge is tried whenever the platform contributor does NOT match the
+// proposal's contributorId — including when the user has a platform contributor
+// for other proposals but a reconcile-linked contributor for this one.
+// ---------------------------------------------------------------------------
+
+describe("POST /:id/editor-questions/:questionId/address — GitHub-link bridge", () => {
+  // PR #55 reconciled: contributes contributor 55 (github:alice, stable ID "gh-alice-1").
+  const bridgeProposal = {
+    id: 200,
+    storyworldId: 1,
+    pathId: 10,
+    prNumber: 55,
+    state: "returned-with-notes",
+    contributorId: 55,
+    githubUserId: "gh-alice-1", // stable GitHub numeric user ID stored at reconcile
+    submittedAt: new Date().toISOString(),
+    decidedAt: null,
+  };
+  const bridgeQuestion = {
+    id: 9,
+    proposalId: 200,
+    body: "Can you expand the cave scene?",
+    addressedAt: null,
+    createdAt: new Date().toISOString(),
+  };
+
+  let app: Express;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capture.reset();
+    mockDb.__reset();
+    app = buildApp();
+  });
+
+  it("lets a user with a linked GitHub account address a reconciled contributor question", async () => {
+    // user 7 has no platform contributor; GitHub link stable ID matches proposal
+    // githubUserId → bridge authorizes directly via proposal.contributorId (55).
+    // No contributor-by-username DB lookup is made (mutable username not used).
+    capture.userId = 7;
+    mockDb.__pushSelectRows([bridgeProposal]);
+    mockDb.__pushSelectRows([]);                                              // platform contributor — not found
+    mockDb.__pushSelectRows([{ githubUsername: "alice", githubUserId: "gh-alice-1" }]); // user_github_links
+    mockDb.__pushUpdate("other", [{ ...bridgeQuestion, addressedAt: new Date() }]);
+
+    const res = await request(app)
+      .post("/200/editor-questions/9/address")
+      .send({ addressed: true });
+
+    expect(res.status).toBe(200);
+    expect(capture.editorQuestionUpdate?.addressedAt).toBeInstanceOf(Date);
+  });
+
+  it("lets a user with a nonmatching platform contributor use the bridge", async () => {
+    // user 7 has platform contributor 33 (from narration submissions) that does NOT
+    // match proposal.contributorId (55). The bridge is entered because 33 ≠ 55,
+    // and the stable-ID match authorizes via proposal.contributorId directly.
+    capture.userId = 7;
+    mockDb.__pushSelectRows([bridgeProposal]);
+    mockDb.__pushSelectRows([{ id: 33 }]);                                    // platform contributor — exists but wrong id
+    mockDb.__pushSelectRows([{ githubUsername: "alice", githubUserId: "gh-alice-1" }]); // user_github_links
+    mockDb.__pushUpdate("other", [{ ...bridgeQuestion, addressedAt: new Date() }]);
+
+    const res = await request(app)
+      .post("/200/editor-questions/9/address")
+      .send({ addressed: true });
+
+    expect(res.status).toBe(200);
+    expect(capture.editorQuestionUpdate?.addressedAt).toBeInstanceOf(Date);
+  });
+
+  it("lets a renamed GitHub account (same stable ID) address a question after reconcile", async () => {
+    // alice renamed from "alice" to "alice-new" on GitHub. Reconciliation has run
+    // and created a new contributor row for github:alice-new. The proposal's
+    // contributorId still points to the original contributor 55 (COALESCE preserved
+    // it). The bridge verifies the stable GitHub user ID, which is unchanged, and
+    // authorizes via proposal.contributorId directly — not via the mutable new
+    // username — so the rename does not lock alice out permanently.
+    capture.userId = 7;
+    mockDb.__pushSelectRows([bridgeProposal]);
+    mockDb.__pushSelectRows([]);                                              // platform contributor — not found
+    mockDb.__pushSelectRows([{ githubUsername: "alice-new", githubUserId: "gh-alice-1" }]); // user_github_links (new login, same stable ID)
+    mockDb.__pushUpdate("other", [{ ...bridgeQuestion, addressedAt: new Date() }]);
+
+    const res = await request(app)
+      .post("/200/editor-questions/9/address")
+      .send({ addressed: true });
+
+    expect(res.status).toBe(200);
+    expect(capture.editorQuestionUpdate?.addressedAt).toBeInstanceOf(Date);
+  });
+
+  it("rejects a user whose linked stable GitHub user ID does not match the proposal author", async () => {
+    // user 9 links to mallory (stable ID "gh-mallory-99") which differs from the
+    // proposal's githubUserId ("gh-alice-1"). The stable-ID guard denies access
+    // before any contributor authorization, preventing username-rename bypass.
+    capture.userId = 9;
+    mockDb.__pushSelectRows([bridgeProposal]);
+    mockDb.__pushSelectRows([]);                                              // platform contributor — not found
+    mockDb.__pushSelectRows([{ githubUsername: "mallory", githubUserId: "gh-mallory-99" }]); // user_github_links
+
+    const res = await request(app)
+      .post("/200/editor-questions/9/address")
+      .send({ addressed: true });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/only the proposal contributor/i);
+    expect(capture.editorQuestionUpdate).toBeNull();
+  });
+
+  it("rejects a user with no platform contributor and no GitHub link", async () => {
+    // user 99 has neither a platform contributor nor a linked GitHub account
+    capture.userId = 99;
+    mockDb.__pushSelectRows([bridgeProposal]);
+    mockDb.__pushSelectRows([]);   // platform contributor — not found
+    mockDb.__pushSelectRows([]);   // user_github_links — not found (bridge skipped)
+
+    const res = await request(app)
+      .post("/200/editor-questions/9/address")
+      .send({ addressed: true });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/only the proposal contributor/i);
+    expect(capture.editorQuestionUpdate).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Tests: submitted → under-review
 // ---------------------------------------------------------------------------
 
