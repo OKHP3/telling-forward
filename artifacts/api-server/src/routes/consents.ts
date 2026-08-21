@@ -43,7 +43,22 @@ export async function hasActiveConsent(
       ),
     )
     .limit(1);
-  return Boolean(record);
+  if (!record) return false;
+
+  // Revocation is append-only: the original grant remains in the ledger for
+  // auditability, while the revocation points back to it. A caller must not
+  // be able to replay the old granted record ID after it has been revoked.
+  const [revocation] = await db
+    .select({ id: consentRecordsTable.id })
+    .from(consentRecordsTable)
+    .where(
+      and(
+        eq(consentRecordsTable.supersedesConsentId, record.id),
+        eq(consentRecordsTable.status, "revoked"),
+      ),
+    )
+    .limit(1);
+  return !revocation;
 }
 
 function publicRecord(record: typeof consentRecordsTable.$inferSelect) {

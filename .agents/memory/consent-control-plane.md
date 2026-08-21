@@ -7,4 +7,4 @@ Consent records are a private control-plane exception: the latest record for a u
 
 **Why:** Identity-linked policy choices and withdrawal timing must not be published in the creative repository, while the product still needs auditable server-side gates.
 
-**How to apply:** Derive the required action from the endpoint, verify ownership/scope/status/version server-side, and keep CIE/PIE derivative consent disabled until its separate decision is resolved.
+**How to apply:** Derive the required action from the endpoint, verify ownership/scope/status/version server-side, reject any grant superseded by an append-only revocation, and keep CIE/PIE derivative consent disabled until its separate decision is resolved.
