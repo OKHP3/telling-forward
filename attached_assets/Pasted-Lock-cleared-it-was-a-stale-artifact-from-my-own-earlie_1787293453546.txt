@@ -1,0 +1,59 @@
+Lock cleared (it was a stale artifact from my own earlier timed-out `git status`, not another process — no live git process was running and the file's owner matched this session). Now checking the actual working-tree state before touching anything.
+
+Both files landed on disk. Now staging only these two paths and committing, then pushing to origin main.
+
+Both docs are drafted and written to the right paths in your local clone — `docs/adr/0014-storyworld-creation-boundary.md` and `docs/design/nav-restructure-prompt.md`. Files are sent to you above too.
+
+I couldn't get the commit through yet. Hit a real blocker, not a permissions thing:
+
+**The repo has a `.git/index.lock` that keeps reappearing.** First one was stale (owned by a `git status` of mine that timed out at 45s on this repo — it's slow to stat over the mounted path). I cleared it, then thirty seconds later a second lock appeared before my `git add` ran, and no git process shows up in the VM's process list. Two honest explanations: my first timed-out `git status` is actually still running in the background past its tool-call timeout and keeps taking/releasing the lock, or something on the Windows side (VS Code, GitHub Desktop, a sync tool) is touching the repo right now. I can't tell which from here.
+
+**Separately, and unrelated to the lock:** this repo already has roughly 1,063 files showing as modified and uncommitted, going back before this session (`.agents/memory/*`, `.agents/skills/*`, `docs/adr/README.md`, `docs/design/README.md`, and more). That matches what earlier sessions flagged and left alone as out of scope. I did not touch any of it. I only staged the two new files by exact path, never `git add -A`, so none of that gets swept into this commit whenever it goes through.
+
+I stopped instead of retrying the lock-clear again, since forcing past a lock that might belong to a live process is how repos get corrupted.
+
+**Your call:**
+
+| Option | What it means |
+|---|---|
+| Retry now (recommended) | I check for the lock again and push if it's clear. Good if nothing on your machine is actively mid-git-operation. |
+| You check first | Close VS Code's git panel / GitHub Desktop / anything touching this repo, confirm nothing's running, then tell me to go. |
+| Skip the auto-commit | You commit these two files yourself from your end whenever it's convenient. They're already sitting on disk in the right spot. |
+
+Say the word and I'll retry immediately.
+
+Now clearing the stale lock and pushing both files.
+
+Committed locally as `92d73ab`. Pushing to origin now.
+
+Both pieces are done, with one real snag on the git side.
+
+**ADR-0014 confirmed and committed.** Framing (b2) is now Accepted: storyworld creation stays GitHub-native (steward hand-copies the Storyworld Kit into a new repo, exactly as `content/pilot-storyworld/README.md` already instructs), and the application's job is to add an explicit "register this storyworld" step that reads `storyworld.json` back into Postgres. Repo creation itself stays out of the app. That's locked into `docs/adr/0014-storyworld-creation-boundary.md`, alongside the Replit nav-restructure prompt in `docs/design/nav-restructure-prompt.md`.
+
+**Commit made, push didn't go through.** Local `main` now sits one commit ahead of `origin/main` (`92d73ab`, 2 files, 205 insertions). The push failed with `403 from proxy after CONNECT` — this bridge to your machine has no network route to github.com, only file access. That matches what your own project memory already flagged about this repo: pushes have always had to happen from a real local git client, not this bridge. You'll need to run `git push origin main` yourself (terminal, VS Code, or GitHub Desktop) to land it on GitHub. Everything's staged and clean to do that; nothing else got swept in.
+
+Also: getting the commit through required clearing a stuck `.git/index.lock` a few times (this bridge can't delete files, only rename them out of the way), so you'll see four harmless `*.stale-<timestamp>` files sitting in `.git/`. Safe to delete whenever, they're not tracked and don't affect anything.
+
+On the markdown rendering idea, you're right, and better than right: the plumbing's already half-built.
+
+`artifacts/reader/src/pages/path.tsx` already parses scene markdown with `marked` and sanitizes it with `DOMPurify` before rendering. What's missing isn't a renderer, it's a themed skin on top of one that already works.
+
+| Option | What it is | Effort | Fit here |
+|---|---|---|---|
+| Fork [github-markdown-css](https://github.com/sindresorhus/github-markdown-css) | MIT stylesheet replicating GitHub's own README rendering, still active (v5.1.0 on npm/jsDelivr) | Low — drop in, retheme per reader skin | Best match to "on-brand, GitHub's own visual language" — re-skin its CSS variables per theme (Editorial, Terminal, Archive, Dispatch, Transmission) instead of writing typography rules from scratch |
+| Tailwind `@tailwindcss/typography` (`prose` classes) | Official Tailwind plugin for styled markdown output, already installed in the Author App's `package.json` | Low-medium — confirm it's added to the Reader App too, then theme via CSS variables per skin | Most idiomatic given the stack (Tailwind + shadcn already everywhere); less "GitHub flavor," more "your own design system" |
+| Swap to [react-markdown](https://github.com/remarkjs/react-markdown) + `remark-gfm` | Full remark/rehype pipeline, per-node-type custom React components | Higher — replaces `marked`, not additive | Only worth it if you want per-element custom rendering (e.g. a capsule reference rendered as a styled chip). Not needed just to theme prose. |
+| GitHub's actual engine, `cmark-gfm` | The C library behind github.com's own rendering | Not practical | Skip — it's what `github-markdown-css` is already reverse-engineered from |
+
+**Recommendation:** don't touch `marked`/`DOMPurify`, they're doing their job. Fork `github-markdown-css` as the base, and either apply it directly with theme-specific CSS variable overrides per reader skin, or blend it with `@tailwindcss/typography` if you want the Reader App fully inside your existing design-token system rather than importing GitHub's variable names. Either way this is a styling task, not a rendering-engine task, which is a much smaller lift than it sounded like walking in.
+
+**Next actions**
+- Push `92d73ab` to origin from your own machine
+- Confirm whether `@tailwindcss/typography` is already in `artifacts/reader/package.json` (I only confirmed it in `artifacts/web`)
+- Decide fork-github-markdown-css vs. Tailwind-typography-native before either gets built, since they don't compose cleanly if you do both
+- Scope the `registerStoryworld` endpoint ADR-0014 now authorizes
+
+Sources:
+- [sindresorhus/github-markdown-css](https://github.com/sindresorhus/github-markdown-css)
+- [github-markdown-css on npm](https://www.npmjs.com/package/github-markdown-css)
+- [remarkjs/react-markdown](https://github.com/remarkjs/react-markdown)
