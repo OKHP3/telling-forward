@@ -12,7 +12,13 @@ for (const filename of ['package-lock.json', 'yarn.lock']) {
   }
 }
 
-if (!String(process.env.npm_config_user_agent ?? '').startsWith('pnpm/')) {
+const packageManagerUserAgent = String(process.env.npm_config_user_agent ?? '');
+const packageManagerExecutable = String(process.env.npm_execpath ?? '');
+const isPnpm =
+  packageManagerUserAgent.startsWith('pnpm/') ||
+  /(?:^|[/\\])pnpm(?:\.c?js)?$/.test(packageManagerExecutable);
+
+if (!isPnpm) {
   console.error('Use pnpm instead');
   process.exit(1);
 }

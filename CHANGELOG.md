@@ -6,6 +6,21 @@ Format: plain dated entries per task or meaningful change, newest first.
 
 ---
 
+## 2026-08-20
+
+### Restore portable pnpm validation (Task #74)
+
+Restored local Mac validation without changing the Replit/Linux deployment
+contract.
+
+- Retained Darwin optional binaries for esbuild, Rollup, Tailwind, Lightning
+  CSS, and Expo tooling while keeping non-Replit platform exclusions.
+- Made the pnpm-only install guard recognize pnpm through its lifecycle
+  executable when the user-agent variable is unavailable.
+- Mocked the unused OpenAI integration in the capsule authorization unit test,
+  and the authentication rate-limit integration test, so they no longer need
+  a provisioned integration endpoint merely to load their routes under test.
+
 ## 2026-08-19
 
 ### Design consent and moderation safeguards for public contribution (Task #73)

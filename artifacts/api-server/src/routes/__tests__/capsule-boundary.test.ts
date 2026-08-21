@@ -84,6 +84,8 @@ vi.mock("@workspace/api-zod", () => {
   };
 });
 
+vi.mock("@workspace/integrations-openai-ai-server", () => ({ openai: {} }));
+
 // ---------------------------------------------------------------------------
 // Static import of the router (runs after mocks are hoisted)
 // ---------------------------------------------------------------------------

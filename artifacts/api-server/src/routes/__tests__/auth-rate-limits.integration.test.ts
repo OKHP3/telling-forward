@@ -120,6 +120,8 @@ vi.mock("rate-limit-redis", () => ({
   RedisStore: vi.fn(),
 }));
 
+vi.mock("@workspace/integrations-openai-ai-server", () => ({ openai: {} }));
+
 const originalNodeEnv = process.env["NODE_ENV"];
 const originalRedisUrl = process.env["REDIS_URL"];
 const originalSessionSecret = process.env["SESSION_SECRET"];
