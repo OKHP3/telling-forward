@@ -9,6 +9,7 @@ import {
   useLogout,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useUnreadCount } from "@/hooks/use-unread-count";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
@@ -27,6 +28,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     },
   });
   const user = meData?.user ?? null;
+  const { data: unreadCount = 0 } = useUnreadCount(!!user);
 
   async function handleLogout() {
     await logoutMutation.mutateAsync();
@@ -84,10 +86,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </div>
                 <Link
                   href="/inbox"
-                  aria-label="Story updates"
-                  title="Story updates"
+                  aria-label={
+                    unreadCount > 0
+                      ? `Story updates — ${unreadCount} unread`
+                      : "Story updates"
+                  }
+                  title={
+                    unreadCount > 0
+                      ? `Story updates — ${unreadCount} unread`
+                      : "Story updates"
+                  }
                   className={cn(
-                    "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
+                    "relative flex h-7 w-7 items-center justify-center rounded-md transition-colors",
                     location === "/inbox"
                       ? "bg-accent/60 text-foreground"
                       : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
@@ -95,6 +105,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   data-testid="link-inbox"
                 >
                   <Bell className="h-4 w-4" />
+                  {unreadCount > 0 && (
+                    <span
+                      className="pointer-events-none absolute -right-1 -top-1 flex min-w-[1.1rem] items-center justify-center rounded-full border border-background bg-primary px-0.5 text-[9px] font-bold leading-none text-primary-foreground"
+                      style={{ height: "1.1rem" }}
+                      aria-hidden="true"
+                      data-testid="inbox-unread-count"
+                    >
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
                 </Link>
                 <Link
                   href="/settings"

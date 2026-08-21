@@ -6,6 +6,7 @@ import {
   getGetMeQueryKey,
   useGetMe,
 } from "@workspace/api-client-react";
+import { useInvalidateUnreadCount } from "@/hooks/use-unread-count";
 
 type Notification = {
   id: number;
@@ -23,6 +24,7 @@ export function ContributorInbox() {
   });
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const invalidateUnreadCount = useInvalidateUnreadCount();
 
   useEffect(() => {
     if (!meData?.user) {
@@ -60,6 +62,7 @@ export function ContributorInbox() {
             : item,
         ),
       );
+      void invalidateUnreadCount();
     }
   }
 

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, desc, eq, isNull, or } from "drizzle-orm";
 import {
   db,
   contributorsTable,
@@ -41,6 +41,39 @@ async function contributorIdsForUser(userId: number): Promise<number[]> {
     ]),
   ];
 }
+
+// GET /api/me/notifications/unread-count — lightweight poll for the nav badge.
+router.get("/notifications/unread-count", requireAuth, async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  try {
+    const contributorIds = await contributorIdsForUser(userId);
+    if (contributorIds.length === 0) {
+      res.json({ count: 0 });
+      return;
+    }
+    const rows = await db
+      .select({ id: contributorNotificationsTable.id })
+      .from(contributorNotificationsTable)
+      .where(
+        and(
+          isNull(contributorNotificationsTable.readAt),
+          or(
+            ...contributorIds.map((id) =>
+              eq(contributorNotificationsTable.contributorId, id),
+            ),
+          ),
+        ),
+      );
+    res.json({ count: rows.length });
+  } catch (err) {
+    req.log.error({ err, userId }, "unread notifications count error");
+    res.status(500).json({ error: "Failed to load notification count" });
+  }
+});
 
 // GET /api/me/notifications — the calm, contributor-facing inbox.
 router.get("/notifications", requireAuth, async (req, res) => {
