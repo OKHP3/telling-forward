@@ -13,6 +13,7 @@ import {
 import { requireAuth } from "../middlewares/auth";
 import { sendVerificationEmail, sendPasswordResetEmail, isEmailConfigured } from "../lib/email";
 import { createRateLimitRedisStore } from "../lib/rate-limit-redis";
+import { destroyUserSessions } from "../lib/session";
 
 const router = Router();
 
@@ -604,6 +605,17 @@ router.post("/reset-password", resetPasswordLimiter, async (req, res) => {
 
   if (!resetUserId) {
     res.status(400).json({ error: "Reset link is invalid or has expired" });
+    return;
+  }
+
+  try {
+    await destroyUserSessions(resetUserId);
+  } catch (err) {
+    req.log.error(
+      { err, userId: resetUserId },
+      "Password reset completed but session invalidation failed",
+    );
+    res.status(500).json({ error: "Password updated but active sessions could not be ended" });
     return;
   }
 

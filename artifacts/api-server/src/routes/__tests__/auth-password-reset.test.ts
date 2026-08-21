@@ -36,6 +36,8 @@ const testState = vi.hoisted(() => ({
   user: null as MockUser | null,
   resetToken: null as MockResetToken | null,
   sentResetTokens: [] as string[],
+  sessions: [] as Array<{ sid: string; userId: number }>,
+  sessionDeleteCalls: [] as Array<{ query: string; params: unknown[] }>,
   lastResetDeleteCondition: null as unknown,
   concurrentDeleteBarrier: null as {
     waiting: number;
@@ -211,6 +213,16 @@ vi.mock("../../lib/email", () => ({
 }));
 
 vi.mock("@workspace/db", () => ({
+  pool: {
+    query: vi.fn(async (query: string, params: unknown[] = []) => {
+      testState.sessionDeleteCalls.push({ query, params });
+      const userId = Number(params[0]);
+      testState.sessions = testState.sessions.filter(
+        (session) => session.userId !== userId,
+      );
+      return { rowCount: 1 };
+    }),
+  },
   db: {
     select: vi.fn(() => ({
       from: (table: unknown) => ({
@@ -357,6 +369,11 @@ describe("password reset security", () => {
     testState.user = makeUser();
     testState.resetToken = null;
     testState.sentResetTokens.length = 0;
+    testState.sessions = [
+      { sid: "reset-user-session", userId: 1 },
+      { sid: "unrelated-user-session", userId: 2 },
+    ];
+    testState.sessionDeleteCalls.length = 0;
     testState.lastResetDeleteCondition = null;
     testState.concurrentDeleteBarrier = null;
     delete process.env["REDIS_URL"];
@@ -401,12 +418,36 @@ describe("password reset security", () => {
     expect(attempts.filter((response) => response.status === 200)).toHaveLength(1);
     expect(attempts.filter((response) => response.status === 400)).toHaveLength(1);
     expect(testState.resetToken).toBeNull();
+    expect(testState.sessionDeleteCalls).toHaveLength(1);
+    expect(testState.sessions).toEqual([
+      { sid: "unrelated-user-session", userId: 2 },
+    ]);
     expect(["hash:winning-password", "hash:losing-password"]).toContain(
       testState.user?.passwordHash,
     );
     const successfulPassword =
       firstAttempt.status === 200 ? "hash:winning-password" : "hash:losing-password";
     expect(testState.user?.passwordHash).toBe(successfulPassword);
+  });
+
+  it("ends the reset user's sessions while preserving unrelated users' sessions", async () => {
+    const rawToken = "session-invalidation-reset-token";
+    seedResetToken(rawToken, new Date(Date.now() + 60 * 60 * 1000));
+
+    const response = await request(app)
+      .post("/api/auth/reset-password")
+      .send({ token: rawToken, newPassword: "new-password" });
+
+    expect(response.status).toBe(200);
+    expect(testState.sessionDeleteCalls).toEqual([
+      {
+        query: "DELETE FROM sessions WHERE sess->>'userId' = $1",
+        params: ["1"],
+      },
+    ]);
+    expect(testState.sessions).toEqual([
+      { sid: "unrelated-user-session", userId: 2 },
+    ]);
   });
 
   it("rejects a reset token whose expiry is in the past", async () => {
