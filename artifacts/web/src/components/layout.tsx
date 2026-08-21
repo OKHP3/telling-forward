@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { BookOpen, Settings, LogOut } from "lucide-react";
+import { Bell, BookOpen, Settings, LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import {
@@ -82,6 +82,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   </span>
                   <span className="hidden sm:inline-block text-sm">{user.displayName}</span>
                 </div>
+                <Link
+                  href="/inbox"
+                  aria-label="Story updates"
+                  title="Story updates"
+                  className={cn(
+                    "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
+                    location === "/inbox"
+                      ? "bg-accent/60 text-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
+                  )}
+                  data-testid="link-inbox"
+                >
+                  <Bell className="h-4 w-4" />
+                </Link>
                 <Link
                   href="/settings"
                   aria-label="Settings"

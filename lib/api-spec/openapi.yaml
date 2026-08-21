@@ -143,6 +143,50 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /me/notifications:
+    get:
+      operationId: listContributorNotifications
+      tags: [narrate]
+      summary: List the current contributor's notifications
+      description: >
+        Returns calm plain-language updates for the authenticated contributor.
+        Technical failures, raw GitHub events, and maintainer triage are not
+        exposed through this inbox.
+      responses:
+        "200":
+          description: Contributor notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContributorNotification"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /me/notifications/{id}/read:
+    post:
+      operationId: markContributorNotificationRead
+      tags: [narrate]
+      summary: Mark one contributor notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContributorNotification"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Notification not found for this contributor
+
   /consents:
     get:
       operationId: listConsentRecords
@@ -1431,6 +1475,41 @@ components:
             Current contributor-facing status. Mobile narrations are accepted
             when their durable Git-backed record is created; submitted and
             under-review PRs are pending, while returned PRs are returned.
+
+    ContributorNotification:
+      type: object
+      required:
+        - id
+        - contributorId
+        - proposalId
+        - kind
+        - title
+        - body
+        - eventKey
+        - createdAt
+      properties:
+        id:
+          type: integer
+        contributorId:
+          type: integer
+        proposalId:
+          type: integer
+        kind:
+          type: string
+          enum: [received, being-reviewed, creative-question, official-story, alternate-path]
+        title:
+          type: string
+        body:
+          type: string
+        eventKey:
+          type: string
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
 
     ConsentRecord:
       type: object

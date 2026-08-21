@@ -53,6 +53,7 @@ import {
   type GitHubPullRequest,
 } from "../lib/github";
 import { logger } from "../lib/logger";
+import { emitContributorNotification } from "../lib/contributor-notifications";
 import {
   buildAcceptanceDecisionNote,
   buildAcceptanceIntentNote,
@@ -279,6 +280,12 @@ router.post(
         { proposalId: proposal.id, prevState: proposal.state },
         "Proposal marked under review",
       );
+      await emitContributorNotification({
+        contributorId: proposal.contributorId,
+        proposalId: proposal.id,
+        kind: "being-reviewed",
+        eventKey: `proposal:${proposal.id}:being-reviewed`,
+      });
       res.json(MarkProposalUnderReviewResponse.parse(updated));
     } catch (err) {
       req.log.error({ err }, "markProposalUnderReview error");
@@ -643,6 +650,12 @@ router.post(
         proposal: updatedProposal,
         provenanceRecordId: provenanceRecordId ?? 0,
       });
+      await emitContributorNotification({
+        contributorId: proposal.contributorId,
+        proposalId: proposal.id,
+        kind: "official-story",
+        eventKey: `proposal:${proposal.id}:official-story:${mergeCommitSha}`,
+      });
       res.json(responsePayload);
     } catch (err) {
       if (err instanceof ConcurrentModificationError) {
@@ -812,6 +825,13 @@ router.post(
         { proposalId: proposal.id, reviewId },
         "Proposal returned with editor question",
       );
+      await emitContributorNotification({
+        contributorId: proposal.contributorId,
+        proposalId: proposal.id,
+        kind: "creative-question",
+        eventKey: `editor-question:${reviewId}`,
+        body: "A human steward left a creative question for your scene.",
+      });
 
       res.json(ReturnProposalResponse.parse(updatedProposal));
     } catch (err) {

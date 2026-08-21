@@ -31,6 +31,7 @@ import {
   type GitHubCommit,
 } from "../lib/github";
 import { logger } from "../lib/logger";
+import { emitContributorNotification } from "../lib/contributor-notifications";
 import { proposalSyncConflictSet } from "../lib/proposal-state-sync";
 import {
   contributorAttributionsForPath,
@@ -381,6 +382,30 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
         gh.listPullRequestComments(owner, repo, pr.number),
       ]);
       const acceptedPr = details ?? pr;
+      if (proposal) {
+        if (acceptedPr.merged && acceptedPr.mergeCommitSha) {
+          await emitContributorNotification({
+            contributorId: proposal.contributorId,
+            proposalId: proposal.id,
+            kind: "official-story",
+            eventKey: `proposal:${proposal.id}:official-story:${acceptedPr.mergeCommitSha}`,
+          });
+        } else if (acceptedPr.state === "closed") {
+          await emitContributorNotification({
+            contributorId: proposal.contributorId,
+            proposalId: proposal.id,
+            kind: "alternate-path",
+            eventKey: `proposal:${proposal.id}:alternate-path:${proposal.prNumber}`,
+          });
+        } else {
+          await emitContributorNotification({
+            contributorId: proposal.contributorId,
+            proposalId: proposal.id,
+            kind: "received",
+            eventKey: `proposal:${proposal.id}:received`,
+          });
+        }
+      }
       const decisionNote =
         acceptedPr.merged && acceptedPr.mergeCommitSha
           ? comments

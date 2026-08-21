@@ -204,6 +204,25 @@ export async function ensureSchema(): Promise<void> {
     ALTER TABLE editor_questions
       ADD COLUMN IF NOT EXISTS addressed_at TIMESTAMPTZ;
 
+    CREATE TABLE IF NOT EXISTS contributor_notifications (
+      id             SERIAL      PRIMARY KEY,
+      contributor_id INTEGER     NOT NULL REFERENCES contributors(id),
+      proposal_id    INTEGER     NOT NULL REFERENCES proposals(id),
+      kind           TEXT        NOT NULL CHECK (
+        kind IN ('received', 'being-reviewed', 'creative-question',
+                 'official-story', 'alternate-path')
+      ),
+      title          TEXT        NOT NULL,
+      body           TEXT        NOT NULL,
+      event_key      TEXT        NOT NULL UNIQUE,
+      read_at        TIMESTAMPTZ,
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_contributor_notifications_contributor_created
+      ON contributor_notifications (contributor_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_contributor_notifications_proposal
+      ON contributor_notifications (proposal_id);
+
     CREATE TABLE IF NOT EXISTS stewards (
       id            SERIAL      PRIMARY KEY,
       storyworld_id INTEGER     NOT NULL REFERENCES storyworlds(id),

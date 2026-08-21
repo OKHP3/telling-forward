@@ -44,6 +44,7 @@ import {
   verifyAcceptanceDecisionNote,
   writeAcceptedProvenance,
 } from "../lib/provenance";
+import { emitContributorNotification } from "../lib/contributor-notifications";
 
 // ---------------------------------------------------------------------------
 // HMAC signature verification
@@ -526,6 +527,31 @@ async function handlePullRequest(payload: PullRequestPayload): Promise<void> {
     });
   }
 
+  if (proposal) {
+    if (pr.merged && payload.pull_request.merge_commit_sha) {
+      await emitContributorNotification({
+        contributorId: proposal.contributorId,
+        proposalId: proposal.id,
+        kind: "official-story",
+        eventKey: `proposal:${proposal.id}:official-story:${payload.pull_request.merge_commit_sha}`,
+      });
+    } else if (action === "closed" && isClosed) {
+      await emitContributorNotification({
+        contributorId: proposal.contributorId,
+        proposalId: proposal.id,
+        kind: "alternate-path",
+        eventKey: `proposal:${proposal.id}:alternate-path:${pr.number}`,
+      });
+    } else if (action === "opened") {
+      await emitContributorNotification({
+        contributorId: proposal.contributorId,
+        proposalId: proposal.id,
+        kind: "received",
+        eventKey: `proposal:${proposal.id}:received`,
+      });
+    }
+  }
+
   logger.info(
     { owner, repo, prNumber: pr.number, proposalState, pathState },
     "pull_request: upserted proposal and path state",
@@ -612,6 +638,12 @@ async function handlePullRequestReview(
       target: editorQuestionsTable.reviewCommentId,
       set: { body: review.body },
     });
+  await emitContributorNotification({
+    contributorId: proposal.contributorId,
+    proposalId: proposal.id,
+    kind: "creative-question",
+    eventKey: `editor-question:${review.id}`,
+  });
 
   logger.info(
     { reviewId: review.id, proposalId: proposal.id },

@@ -9,6 +9,7 @@ import adminRouter from "./admin";
 import meRouter from "./me";
 import consentsRouter from "./consents";
 import moderationRouter from "./moderation";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -19,6 +20,7 @@ router.use("/proposals", proposalsRouter);
 router.use("/", transcribeRouter);
 router.use("/admin", adminRouter);
 router.use("/me", meRouter);
+router.use("/me", notificationsRouter);
 router.use("/consents", consentsRouter);
 router.use(moderationRouter);
 

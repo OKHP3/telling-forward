@@ -206,6 +206,50 @@ export const editorQuestionsTable = pgTable("editor_questions", {
 },
 (t) => [index("idx_editor_questions_proposal").on(t.proposalId)]);
 
+// Plain-language contributor inbox entries. Technical and maintainer events
+// intentionally do not use this table.
+export const contributorNotificationKindEnum = [
+  "received",
+  "being-reviewed",
+  "creative-question",
+  "official-story",
+  "alternate-path",
+] as const;
+export type ContributorNotificationKind =
+  (typeof contributorNotificationKindEnum)[number];
+
+export const contributorNotificationsTable = pgTable(
+  "contributor_notifications",
+  {
+    id: serial("id").primaryKey(),
+    contributorId: integer("contributor_id")
+      .notNull()
+      .references(() => contributorsTable.id),
+    proposalId: integer("proposal_id")
+      .notNull()
+      .references(() => proposalsTable.id),
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    eventKey: text("event_key").notNull().unique(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("idx_contributor_notifications_contributor_created").on(
+      t.contributorId,
+      t.createdAt,
+    ),
+    index("idx_contributor_notifications_proposal").on(t.proposalId),
+    check(
+      "contributor_notifications_kind_check",
+      sql`${t.kind} IN ('received', 'being-reviewed', 'creative-question', 'official-story', 'alternate-path')`,
+    ),
+  ],
+);
+
 // Application-level authority, cross-checked against GitHub branch protection
 export const stewardsTable = pgTable("stewards", {
   id: serial("id").primaryKey(),
@@ -300,6 +344,18 @@ export const selectEditorQuestionSchema =
   createSelectSchema(editorQuestionsTable);
 export type InsertEditorQuestion = z.infer<typeof insertEditorQuestionSchema>;
 export type EditorQuestion = typeof editorQuestionsTable.$inferSelect;
+
+export const insertContributorNotificationSchema = createInsertSchema(
+  contributorNotificationsTable,
+).omit({ id: true, createdAt: true });
+export const selectContributorNotificationSchema = createSelectSchema(
+  contributorNotificationsTable,
+);
+export type InsertContributorNotification = z.infer<
+  typeof insertContributorNotificationSchema
+>;
+export type ContributorNotification =
+  typeof contributorNotificationsTable.$inferSelect;
 
 export const insertStewardSchema = createInsertSchema(stewardsTable).omit({
   id: true,

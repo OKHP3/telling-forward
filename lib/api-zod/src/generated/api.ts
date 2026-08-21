@@ -101,6 +101,31 @@ export const ListMyContributionsResponse = zod.array(
 );
 
 /**
+ * Plain-language contributor updates. Technical failures and maintainer triage
+ * are intentionally not represented here.
+ */
+export const ListContributorNotificationsResponseItem = zod.object({
+  id: zod.number(),
+  contributorId: zod.number(),
+  proposalId: zod.number(),
+  kind: zod.enum([
+    "received",
+    "being-reviewed",
+    "creative-question",
+    "official-story",
+    "alternate-path",
+  ]),
+  title: zod.string(),
+  body: zod.string(),
+  eventKey: zod.string(),
+  readAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const ListContributorNotificationsResponse = zod.array(
+  ListContributorNotificationsResponseItem,
+);
+
+/**
  * @summary List the current user's active consent choices
  */
 export const ListConsentRecordsResponseItem = zod.object({
