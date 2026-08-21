@@ -56,6 +56,10 @@ SCENE:
 JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
 
 
+class MalformedModelOutputError(ValueError):
+    """Raised when the model response cannot be trusted as capsule data."""
+
+
 def load_model(model_path: Path):
     """Deferred import: keeps this script importable/testable (see the
     prompt-formatting and JSON-extraction unit tests) without requiring
@@ -82,6 +86,34 @@ def extract_json_array(raw_output: str) -> list[dict]:
         return []
     if not isinstance(parsed, list):
         return []
+    return parsed
+
+
+def parse_model_output_strict(raw_output: str) -> list[dict]:
+    """Parse model output without turning failure into a misleading success.
+
+    ``extract_json_array`` remains a small lenient helper for callers that
+    only need to inspect a response. The production workflow uses this strict
+    path: malformed JSON or even one invalid candidate stops the run before
+    any Issue can be filed.
+    """
+    match = JSON_ARRAY_RE.search(raw_output)
+    if not match:
+        raise MalformedModelOutputError("Model response did not contain a JSON array")
+    try:
+        parsed = json.loads(match.group(0))
+    except json.JSONDecodeError as exc:
+        raise MalformedModelOutputError("Model response contained invalid JSON") from exc
+    if not isinstance(parsed, list):
+        raise MalformedModelOutputError("Model response JSON was not an array")
+    if any(not isinstance(candidate, dict) for candidate in parsed):
+        raise MalformedModelOutputError("Model response array contained a non-object")
+    invalid = [index for index, candidate in enumerate(parsed) if not validate_capsule(candidate)]
+    if invalid:
+        raise MalformedModelOutputError(
+            "Model response contained invalid capsule candidate(s) at index "
+            + ", ".join(str(index) for index in invalid)
+        )
     return parsed
 
 
@@ -112,12 +144,11 @@ def extract_capsules_for_scene(llm, scene_text: str, chapter_title: str) -> list
         max_tokens=800,
     )
     raw_text = response["choices"][0]["message"]["content"]
-    candidates = extract_json_array(raw_text)
-    valid = [c for c in candidates if validate_capsule(c)]
-    for c in valid:
+    candidates = parse_model_output_strict(raw_text)
+    for c in candidates:
         c["sourceExcerpt"] = scene_text[:2000]
         c.setdefault("_chapterTitle", chapter_title)
-    return valid
+    return candidates
 
 
 def main() -> int:
@@ -136,18 +167,35 @@ def main() -> int:
         print(f"Model file not found: {model_path}", file=sys.stderr)
         return 1
 
-    segments = json.loads(segments_path.read_text(encoding="utf-8"))
-    llm = load_model(model_path)
+    try:
+        segments = json.loads(segments_path.read_text(encoding="utf-8"))
+        if not isinstance(segments, dict) or not isinstance(segments.get("chapters"), list):
+            raise ValueError("segments JSON must contain a chapters array")
+        llm = load_model(model_path)
+    except Exception as exc:
+        print(f"Could not initialize capsule extraction: {exc}", file=sys.stderr)
+        return 2
 
     all_capsules: list[dict] = []
-    for chapter in segments["chapters"]:
-        for scene_text in chapter["scenes"]:
-            capsules = extract_capsules_for_scene(llm, scene_text, chapter["title"])
-            all_capsules.extend(capsules)
-            print(
-                f"  {chapter['title']}: {len(capsules)} capsule(s) from a "
-                f"{len(scene_text)}-character scene",
-            )
+    try:
+        for chapter in segments["chapters"]:
+            if not isinstance(chapter, dict) or not isinstance(chapter.get("scenes"), list):
+                raise ValueError("segments JSON contains an invalid chapter")
+            for scene_text in chapter["scenes"]:
+                if not isinstance(scene_text, str):
+                    raise ValueError("segments JSON contains a non-text scene")
+                capsules = extract_capsules_for_scene(llm, scene_text, chapter["title"])
+                all_capsules.extend(capsules)
+                print(
+                    f"  {chapter['title']}: {len(capsules)} capsule(s) from a "
+                    f"{len(scene_text)}-character scene",
+                )
+    except MalformedModelOutputError as exc:
+        print(f"Capsule extraction refused malformed model output: {exc}", file=sys.stderr)
+        return 2
+    except Exception as exc:
+        print(f"Capsule extraction failed before Issues could be filed: {exc}", file=sys.stderr)
+        return 2
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(all_capsules, indent=2), encoding="utf-8")

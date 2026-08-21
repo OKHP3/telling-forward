@@ -81,7 +81,10 @@ app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 // Every other endpoint is capped at 64 KB; large payloads are rejected before
 // they are buffered, preventing memory-exhaustion via oversized request bodies.
 app.use((req, res, next) => {
-  const limit = req.path === "/api/transcribe" ? "20mb" : "64kb";
+  const isManuscriptUpload =
+    req.path.startsWith("/api/storyworlds/") &&
+    req.path.endsWith("/manuscript-ingestion");
+  const limit = req.path === "/api/transcribe" || isManuscriptUpload ? "20mb" : "64kb";
   express.json({ limit })(req, res, next);
 });
 app.use(express.urlencoded({ extended: true }));

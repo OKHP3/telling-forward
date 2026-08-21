@@ -10,12 +10,6 @@
 # the free monthly allotment on private repos. No AI API key is read, no
 # AI provider is called, nothing here bills the platform owner.
 #
-# NOT YET RUN on a real GitHub Actions runner — verify end to end,
-# including actual wall-clock time, before relying on this in production.
-# The manuscript path, model revision pin, and trigger event below are
-# best-effort scaffolding pending confirmation of how uploads actually
-# reach this workflow (see the ADR's open items).
-
 name: Manuscript ingestion (Tier 1)
 
 on:
@@ -33,6 +27,18 @@ on:
         description: "Storyworld repo name"
         required: true
         type: string
+      ref:
+        description: "Branch containing the private intake file"
+        required: true
+        type: string
+      upload_id:
+        description: "Stable upload identifier used for retry/concurrency"
+        required: true
+        type: string
+
+concurrency:
+  group: manuscript-ingestion-${{ inputs.owner }}-${{ inputs.repo }}-${{ inputs.upload_id }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -41,10 +47,8 @@ permissions:
 env:
   # Pinned to a specific Hugging Face revision (commit hash), not "main" or
   # "latest" — reproducibility without committing the weight file itself.
-  # Placeholder: replace with the actual commit hash of the GGUF revision
-  # you intend to ship before this workflow is trusted in production.
-  HF_MODEL_REPO: "onnx-community/Phi-4-mini-instruct-GGUF"
-  HF_MODEL_REVISION: "REPLACE_WITH_PINNED_COMMIT_SHA"
+  HF_MODEL_REPO: "unsloth/Phi-4-mini-instruct-GGUF"
+  HF_MODEL_REVISION: "78eb92a46fc37e6b524df991ed9aca9bc6aa7b80"
   HF_MODEL_FILE: "Phi-4-mini-instruct-Q4_K_M.gguf"
 
 jobs:
@@ -53,6 +57,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Install pandoc
         run: sudo apt-get update && sudo apt-get install -y pandoc
@@ -63,6 +69,9 @@ jobs:
 
       - name: Install ingestion dependencies
         run: pip install -r .github/scripts/ingestion/requirements.txt
+
+      - name: Verify ingestion contract
+        run: pytest -q .github/scripts/ingestion/test_ingestion.py
 
       # Cache keyed on the pinned revision, so the ~2-4 GB GGUF file only
       # downloads once per revision, not once per workflow run. This is

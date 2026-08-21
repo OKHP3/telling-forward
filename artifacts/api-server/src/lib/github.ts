@@ -82,10 +82,18 @@ export interface CreateCommitParams {
   repo: string;
   branch: string;
   /** Map of file path → UTF-8 content */
-  files: Record<string, string>;
+  files: Record<string, string | { content: string; encoding: "utf-8" | "base64" }>;
   message: string;
   authorName: string;
   authorEmail: string;
+}
+
+export interface DispatchWorkflowParams {
+  owner: string;
+  repo: string;
+  workflowId: string;
+  ref: string;
+  inputs: Record<string, string>;
 }
 
 export interface MergePullRequestParams {
@@ -232,6 +240,7 @@ export interface GitHubClientInterface {
   }): Promise<void>;
   createBranch(params: CreateBranchParams): Promise<void>;
   createCommit(params: CreateCommitParams): Promise<string>;
+  dispatchWorkflow(params: DispatchWorkflowParams): Promise<void>;
   /**
    * Merge a pull request into its base branch.
    * Section 6.3: "Accept into canon"
@@ -910,12 +919,14 @@ class OctokitGitHubClient implements GitHubClientInterface {
 
     // 3. Create blobs for each file
     const treeItems = await Promise.all(
-      Object.entries(files).map(async ([path, content]) => {
+      Object.entries(files).map(async ([path, file]) => {
+        const content = typeof file === "string" ? file : file.content;
+        const encoding = typeof file === "string" ? "utf-8" : file.encoding;
         const { data: blob } = await this.octokit.rest.git.createBlob({
           owner,
           repo,
           content,
-          encoding: "utf-8",
+          encoding,
         });
         return {
           path,
@@ -955,6 +966,16 @@ class OctokitGitHubClient implements GitHubClientInterface {
     });
 
     return newCommit.sha;
+  }
+
+  async dispatchWorkflow(params: DispatchWorkflowParams): Promise<void> {
+    await this.octokit.rest.actions.createWorkflowDispatch({
+      owner: params.owner,
+      repo: params.repo,
+      workflow_id: params.workflowId,
+      ref: params.ref,
+      inputs: params.inputs,
+    });
   }
 }
 

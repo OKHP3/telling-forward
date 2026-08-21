@@ -567,6 +567,52 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /storyworlds/{id}/manuscript-ingestion:
+    post:
+      operationId: queueManuscriptIngestion
+      tags: [storyworlds]
+      summary: Queue an owned manuscript for draft capsule extraction
+      description: >
+        Commits an authorized steward's DOCX, EPUB, or PDF to the private intake
+        path and dispatches the pinned repository workflow. The workflow creates
+        only GitHub Issue capsules labeled state:draft; human promotion remains
+        the only path from a capsule to a scene.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueueManuscriptIngestionBody"
+      responses:
+        "202":
+          description: Manuscript committed and workflow queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueueManuscriptIngestionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not a steward for this storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: GitHub commit or workflow dispatch failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /storyworlds/{id}/capsules/{capsuleId}:
     patch:
       operationId: updateCapsule
@@ -1730,6 +1776,41 @@ components:
       required:
         - title
         - type
+
+    QueueManuscriptIngestionBody:
+      type: object
+      description: >
+        Owner-controlled manuscript upload. Base64 is used because this API
+        intentionally accepts only authenticated steward requests.
+      properties:
+        filename:
+          type: string
+          description: Original filename; must end in .docx, .epub, or .pdf.
+        contentBase64:
+          type: string
+          format: byte
+          description: Base64-encoded manuscript, limited to 15 MiB decoded.
+        uploadId:
+          type: string
+          minLength: 8
+          maxLength: 64
+          pattern: "^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$"
+          description: Stable client-generated id used for retry-safe intake naming.
+      required: [filename, contentBase64, uploadId]
+
+    QueueManuscriptIngestionResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [queued]
+        manuscriptPath:
+          type: string
+        commitSha:
+          type: string
+        capsules:
+          type: string
+      required: [status, manuscriptPath, commitSha, capsules]
 
     UpdateCapsuleBody:
       type: object

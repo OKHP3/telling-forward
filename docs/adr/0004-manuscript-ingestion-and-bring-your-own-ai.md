@@ -129,9 +129,10 @@ contract and legacy-label handling are in
   extracted capsules as draft GitHub Issues using the workflow's own
   default token.
 - `.github/workflows/manuscript-ingestion.yml` — wires the above together,
-  triggered by `workflow_dispatch` pending a decision on the real upload
-  trigger (see "Still open," below). Caches the pinned model revision via
-  `actions/cache` rather than committing it.
+  triggered by an authenticated steward-owned API upload that commits to the
+  private intake path and dispatches `workflow_dispatch` on the same branch.
+  Caches the pinned model revision via `actions/cache` rather than committing
+  it, and carries the upload id for retry/concurrency control.
 - `artifacts/mcp-server/` — the Tier-2 MCP server. Three tools:
   `get_capsule_schema`, `read_canon`, `create_draft_capsule`. Uses a
   user-supplied `GITHUB_TOKEN`, never the platform's `GITHUB_PAT`.
@@ -157,10 +158,21 @@ unit-tested against a messy simulated model response (chatty preamble
 before a JSON array), an empty-array response, non-JSON garbage, and an
 invalid capsule shape; all four cases behave as intended, and the
 garbage/invalid cases fail closed rather than silently producing
-malformed capsules. The prompt template and llama-cpp-python integration
-have **not** been run against the real Phi-4-mini-instruct weights — no
+malformed capsules. The production path now refuses the entire scene/run when
+any model candidate is malformed, so no misleading partial batch can reach
+GitHub. The prompt template and llama-cpp-python integration have **not** been
+run against the real Phi-4-mini-instruct weights in this workspace — no
 wall-clock number exists yet for how long Tier 1 takes on real Actions
 hardware.
+
+The four owned-input fixture checks now pass locally (DOCX, EPUB, text PDF,
+and scanned/image-only PDF rejection), alongside malformed-model and draft
+Issue contract checks. The Author App API path is steward-only, bounds uploads
+to 15 MiB decoded, commits binary content with the platform identity, and
+dispatches the pinned workflow; its response is explicitly `queued`, and
+capsules remain retrievable through the existing GitHub-backed Concept Board
+after the workflow completes. Human promotion remains the only capsule-to-
+scene path.
 
 `artifacts/mcp-server` was smoke-tested end to end with a real MCP client
 (the SDK's own `Client` + `StdioClientTransport`, not a mock): the server
@@ -179,12 +191,14 @@ This ADR should not move to Accepted until:
 2. The project owner weighs the evidence in Discrepancy 2 and either
    updates ADR-0003's status or explicitly leaves it Open with this
    evidence noted.
-3. The actual upload trigger for `manuscript-ingestion.yml` is decided —
-   right now it's `workflow_dispatch` as a placeholder, not wired into how
-   a contributor would really submit a file through the Author App.
-4. `HF_MODEL_REVISION` in the workflow is replaced with a real pinned
-   commit hash, and one real Actions run produces an actual wall-clock
-   number before that number appears in any user-facing copy.
+3. ~~The actual upload trigger is decided~~ — **Resolved for the private
+   pilot.** A steward-only Author App route commits to
+   `intake/manuscripts/` and dispatches the workflow with the same branch and
+   upload id.
+4. `HF_MODEL_REVISION` is now a real pinned commit hash. One real Actions run
+   against an owner-controlled Storyworld Kit repository is still required to
+   produce an actual wall-clock number before that number appears in any
+   user-facing copy.
 5. File placement is confirmed: this pass put the Python ingestion
    scripts under `.github/scripts/ingestion/` on the reasoning that
    they're CI-only and not part of the pnpm/TypeScript workspace, and put

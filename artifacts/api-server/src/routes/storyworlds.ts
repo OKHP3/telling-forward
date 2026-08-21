@@ -46,6 +46,9 @@ const CAPSULE_TYPE_LABELS = {
   event:     { name: "capsule:event",     color: "d4c5f9", description: "Event capsule" },
 } as const;
 
+const MANUSCRIPT_EXTENSIONS = new Set([".docx", ".epub", ".pdf"]);
+const MAX_MANUSCRIPT_BYTES = 15 * 1024 * 1024;
+
 // GitHub only supports exact label filtering, while the canonical contract
 // recognizes capsule types from every supported creation path, not just types
 // the Author App can create directly.
@@ -876,6 +879,131 @@ router.get("/:id/capsules", requireAuth, async (req, res) => {
     res.status(502).json({ error: "Failed to load capsules from GitHub" });
   }
 });
+
+// POST /api/storyworlds/:id/manuscript-ingestion
+//
+// A steward-owned trigger: the binary is committed to the storyworld's
+// private intake path by the platform identity, then the repository workflow
+// converts it and files only state:draft capsule Issues. Contributors never
+// receive arbitrary GitHub write credentials and this route never promotes a
+// capsule to a scene.
+router.post(
+  "/:id/manuscript-ingestion",
+  requireAuth,
+  requireStewardForStoryworld,
+  async (req, res) => {
+    const id = parseInt(parseParam(req.params["id"]), 10);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid storyworld id" });
+      return;
+    }
+
+    const { filename, contentBase64, uploadId } = req.body as Record<
+      string,
+      unknown
+    >;
+    if (
+      typeof filename !== "string" ||
+      typeof contentBase64 !== "string" ||
+      typeof uploadId !== "string" ||
+      !/^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$/.test(uploadId)
+    ) {
+      res.status(400).json({
+        error: "filename, contentBase64, and an 8-64 character uploadId are required",
+      });
+      return;
+    }
+
+    const safeFilename = filename.trim().split(/[\\/]/).pop() ?? "";
+    const extension = safeFilename.slice(safeFilename.lastIndexOf(".")).toLowerCase();
+    if (
+      safeFilename !== filename.trim() ||
+      safeFilename.length < 2 ||
+      !MANUSCRIPT_EXTENSIONS.has(extension)
+    ) {
+      res.status(400).json({ error: "Only DOCX, EPUB, and PDF manuscripts are supported" });
+      return;
+    }
+
+    let manuscriptBytes: Buffer;
+    try {
+      manuscriptBytes = Buffer.from(contentBase64, "base64");
+    } catch {
+      res.status(400).json({ error: "contentBase64 is not valid base64" });
+      return;
+    }
+    if (
+      manuscriptBytes.length === 0 ||
+      manuscriptBytes.length > MAX_MANUSCRIPT_BYTES ||
+      manuscriptBytes.toString("base64").replace(/=+$/, "") !==
+        contentBase64.replace(/\s/g, "").replace(/=+$/, "")
+    ) {
+      res.status(400).json({
+        error: `The manuscript must be valid base64 and no larger than ${MAX_MANUSCRIPT_BYTES} bytes`,
+      });
+      return;
+    }
+
+    const [world] = await db
+      .select({
+        repoOwner: storyworldsTable.repoOwner,
+        repoName: storyworldsTable.repoName,
+        canonBranchRef: storyworldsTable.canonBranchRef,
+      })
+      .from(storyworldsTable)
+      .where(eq(storyworldsTable.id, id))
+      .limit(1);
+    if (!world) {
+      res.status(404).json({ error: "Storyworld not found" });
+      return;
+    }
+
+    const manuscriptPath = `intake/manuscripts/${uploadId}-${safeFilename}`;
+    const platformAuthorName = process.env["PLATFORM_GIT_AUTHOR_NAME"] ?? "Telling Forward";
+    const platformAuthorEmail =
+      process.env["PLATFORM_GIT_AUTHOR_EMAIL"] ?? "noreply@tellingforward.app";
+
+    try {
+      const gh = getGitHubClient();
+      const commitSha = await gh.createCommit({
+        owner: world.repoOwner,
+        repo: world.repoName,
+        branch: world.canonBranchRef,
+        files: {
+          [manuscriptPath]: {
+            content: manuscriptBytes.toString("base64"),
+            encoding: "base64",
+          },
+        },
+        message: `ingest: queue manuscript ${uploadId}`,
+        authorName: platformAuthorName,
+        authorEmail: platformAuthorEmail,
+      });
+      await gh.dispatchWorkflow({
+        owner: world.repoOwner,
+        repo: world.repoName,
+        workflowId: "manuscript-ingestion.yml",
+        ref: world.canonBranchRef,
+        inputs: {
+          manuscript_path: manuscriptPath,
+          owner: world.repoOwner,
+          repo: world.repoName,
+          ref: world.canonBranchRef,
+          upload_id: uploadId,
+        },
+      });
+      res.status(202).json({
+        status: "queued",
+        manuscriptPath,
+        commitSha,
+        capsules: "draft GitHub Issues after workflow completion",
+      });
+    } catch (err) {
+      req.log.error({ err, storyworldId: id, manuscriptPath }, "manuscript ingestion dispatch failed");
+      res.status(502).json({ error: "Could not queue manuscript ingestion" });
+    }
+  },
+);
 
 // POST /api/storyworlds/:id/capsules
 router.post("/:id/capsules", requireAuth, requireStewardForStoryworld, async (req, res) => {
