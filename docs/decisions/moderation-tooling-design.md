@@ -2,10 +2,12 @@
 
 ## Status
 
-**Design complete; enforcement not approved.** This records the Stage 0–1
-design required by open question 15.15. It does not authorize a moderation
-queue, public reporting surface, database migration, automated classifier, or
-public contribution launch.
+**Private-pilot policy approved; public reporting enforcement not approved.**
+This records the Stage 0–1 design required by open question 15.15. The
+community rules and operating policy are recorded in
+`public-reporting-policy-and-launch.md`; that policy does not authorize a
+public report route, public contribution, automated classifier, or public
+contribution launch.
 
 ## Context
 
@@ -57,6 +59,11 @@ the following:
 Published community rules, a clear report route, and an identified steward are
 also launch prerequisites. Tooling alone cannot substitute for a stated
 moderation policy.
+
+The approved policy and launch boundary are recorded in
+`docs/decisions/public-reporting-policy-and-launch.md`. The current pilot
+deliberately satisfies only the private steward-desk portion; the public report
+route remains declined until its separate launch conditions are evidenced.
 
 ## Rationale
 
@@ -218,19 +225,16 @@ The following are excluded from batch finalization:
 - Automated spam, NSFW, or plagiarism signals can be biased or wrong and must
   remain review aids.
 - Appeals, response times, and cross-storyworld escalation need owner policy
-  before launch.
+  before launch. Those commitments are now defined by
+  `public-reporting-policy-and-launch.md`; they do not by themselves authorize
+  public intake.
 
-## Not yet decided
+## Deferred implementation decisions
 
-- Community standards, prohibited-content definitions, age rules, and legal
-  reporting obligations.
-- Appeals process, response-time targets, steward escalation, and how a
-  disabled steward is replaced.
-- Whether reports can be anonymous and what anti-abuse controls they require.
-- Similarity-check providers, evidence thresholds, and any human review policy
-  for plagiarism claims.
-- Retention and deletion schedules for private moderation notes.
-- Any remediation process for already accepted or displayed content.
+- The public route's technical design, including the separately approved
+  anonymous-report mechanism if one is ever desired.
+- Similarity-check providers and evidence thresholds for plagiarism review.
+- Remediation for already accepted or displayed content.
 
 ## References
 

@@ -235,6 +235,22 @@ deletion, orphaning, or derivative permission from `withdrawn`.
 
 Every accepted-into-canon event must produce a durable, queryable provenance record: source path, contributor(s), reviewing steward, timestamp, and the resulting canon commit SHA. This is required by `CONTRIBUTING.md`'s attribution and rights-tracking commitments, not optional polish — it is the record any future adaptation-rights conversation would need to point to.
 
+### 7.5 Reporting and moderation launch boundary
+
+The private steward desk is storyworld-scoped and may receive internal cases.
+The approved community rules, prohibited-content definitions, reporter-safety
+requirements, appeals, escalation, retention, and replacement-steward policy
+are defined in
+[`docs/decisions/public-reporting-policy-and-launch.md`](decisions/public-reporting-policy-and-launch.md).
+
+**Launch decision (2026-08-20):** the public contribution report surface is
+declined for the current private pilot. No public report route, anonymous
+report intake, untrusted evidence upload, or public contribution opening may
+be inferred from the existence of private moderation tooling. A future launch
+requires the explicit gates in the decision record, including deployed
+retention/recovery behavior, primary and backup steward coverage, abuse
+controls, appeals, and route-level isolation evidence.
+
 ---
 
 ## 8. Data model requirements
