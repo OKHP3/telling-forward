@@ -138,6 +138,10 @@ recovery before creating these tables. The case's public-facing state, when
 needed, is limited to a safe, plain-language outcome such as “submission
 restricted.”
 
+The private-pilot recovery boundary and the explicit owner/legal decisions
+still required for retention, export, and deletion are recorded in
+`docs/operations/private-control-plane-recovery.md`.
+
 ## Workflow and lifecycle interaction
 
 ### Triage

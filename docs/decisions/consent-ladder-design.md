@@ -190,6 +190,10 @@ access controls, export, deletion handling, and recovery before this table is
 created. GitHub remains canonical for the creative content and its provenance;
 the consent ledger only governs whether future product actions may use it.
 
+The private-pilot recovery boundary and unresolved retention/export/deletion
+decisions are recorded in
+`docs/operations/private-control-plane-recovery.md`.
+
 ## Revocation, withdrawal, and preservation
 
 A contributor can revoke an action consent from their consent settings or

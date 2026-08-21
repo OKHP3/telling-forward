@@ -111,6 +111,9 @@ Creative content, authorship, editorial review, and canon decisions must be
 recoverable from GitHub-native records. Private consent and moderation records
 are an explicit application-owned control-plane exception. They require their
 own backup, access-control, retention, export, deletion, and recovery design.
+The pilot recovery contract is documented in
+`docs/operations/private-control-plane-recovery.md`; it must be exercised
+against an owner-controlled database before public launch.
 
 The preservation choices for withdrawal, attribution removal, restriction,
 archival, and deletion are defined separately in
