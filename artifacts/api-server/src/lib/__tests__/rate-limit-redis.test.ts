@@ -91,6 +91,9 @@ describe("rate-limit Redis store", () => {
 
     await initializeRateLimitRedis();
     expect(mocks.instances[0]?.ping).toHaveBeenCalledOnce();
+    expect(mocks.logger.info).toHaveBeenCalledWith(
+      "Rate-limit Redis connection ready",
+    );
   });
 
   it("refuses startup when the configured Redis service cannot be reached", async () => {
