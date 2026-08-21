@@ -52,6 +52,30 @@ import {
 
 const router: IRouter = Router();
 
+type ReconcileChangeAction = "created" | "updated" | "preserved" | "skipped";
+type ReconcileEntity =
+  | "path"
+  | "contribution"
+  | "proposal"
+  | "provenance";
+
+interface ReconcileChange {
+  entity: ReconcileEntity;
+  githubId: string;
+  state?: string;
+  reason?: string;
+}
+
+type ReconcileChanges = Record<ReconcileChangeAction, ReconcileChange[]>;
+
+function recordChange(
+  changes: ReconcileChanges,
+  action: ReconcileChangeAction,
+  change: ReconcileChange,
+): void {
+  changes[action].push(change);
+}
+
 async function indexCommitForPath(
   world: { id: number; repoOwner: string; repoName: string },
   path: { id: number },
@@ -174,6 +198,16 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
     editor_questions_upserted: 0,
     provenance_records_upserted: 0,
   };
+  const changes: ReconcileChanges = {
+    created: [],
+    updated: [],
+    preserved: [],
+    skipped: [],
+  };
+  const reconciledPaths = new Map<
+    string,
+    { id: number; state: string | null }
+  >();
 
   try {
     // -----------------------------------------------------------------------
@@ -191,7 +225,18 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
 
     for (const branch of branches) {
       const isCanon = branch.name === canonRef;
-      await db
+      const existingPathRows = await db
+        .select({ id: storyPathsTable.id, state: storyPathsTable.state })
+        .from(storyPathsTable)
+        .where(
+          and(
+            eq(storyPathsTable.storyworldId, world.id),
+            eq(storyPathsTable.branchRef, branch.name),
+          ),
+        )
+        .limit(1);
+      const existingPath = existingPathRows[0];
+      const [path] = await db
         .insert(storyPathsTable)
         .values({
           storyworldId: world.id,
@@ -204,8 +249,20 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
           set: { updatedAt: new Date() },
           // Note: branch-only reconciliation does NOT overwrite state here;
           // PR reconciliation below drives the state for proposed/published paths.
-        });
+        })
+        .returning({ id: storyPathsTable.id, state: storyPathsTable.state });
       summary["paths_upserted"] = (summary["paths_upserted"] ?? 0) + 1;
+      recordChange(changes, existingPath ? "updated" : "created", {
+        entity: "path",
+        githubId: `branch:${branch.name}`,
+        state: isCanon ? "open" : "personal",
+      });
+      if (path) {
+        reconciledPaths.set(branch.name, {
+          id: path.id,
+          state: path.state,
+        });
+      }
     }
 
     // -----------------------------------------------------------------------
@@ -213,18 +270,7 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
     // reachable from a branch would incorrectly credit inherited canon work.
     // -----------------------------------------------------------------------
     for (const branch of branches) {
-      const pathRows = await db
-        .select()
-        .from(storyPathsTable)
-        .where(
-          and(
-            eq(storyPathsTable.storyworldId, world.id),
-            eq(storyPathsTable.branchRef, branch.name),
-          ),
-        )
-        .limit(1);
-
-      const path = pathRows[0];
+      const path = reconciledPaths.get(branch.name);
       if (!path) continue;
 
       const baseRef = baseRefByHead.get(branch.name) ?? canonRef;
@@ -241,6 +287,10 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
           (summary["commits_fetched"] ?? 0) + narrationCommits.length;
         for (const commit of narrationCommits) {
           await indexCommitForPath(world, path, commit, gh);
+          recordChange(changes, "updated", {
+            entity: "contribution",
+            githubId: `commit:${commit.sha}`,
+          });
           summary["contributions_upserted"] =
             (summary["contributions_upserted"] ?? 0) + 1;
         }
@@ -256,6 +306,10 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
 
       for (const commit of commits) {
         await indexCommitForPath(world, path, commit, gh);
+        recordChange(changes, "updated", {
+          entity: "contribution",
+          githubId: `commit:${commit.sha}`,
+        });
         summary["contributions_upserted"] =
           (summary["contributions_upserted"] ?? 0) + 1;
       }
@@ -310,7 +364,27 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
         })
         .returning();
 
-      if (!path) continue;
+      if (!path) {
+        recordChange(changes, "skipped", {
+          entity: "path",
+          githubId: `branch:${pr.headRef}`,
+          state: pathState,
+          reason: "GitHub pull request path could not be indexed",
+        });
+        continue;
+      }
+      const pathOutcomePreserved =
+        !isTerminalEvent &&
+        (path.state === "published-canon" ||
+          path.state === "published-alternate");
+      recordChange(changes, pathOutcomePreserved ? "preserved" : "updated", {
+        entity: "path",
+        githubId: `branch:${pr.headRef}`,
+        state: pathState,
+        ...(pathOutcomePreserved
+          ? { reason: "Preserved terminal local path outcome" }
+          : {}),
+      });
       summary["paths_state_updated"] = (summary["paths_state_updated"] ?? 0) + 1;
       const basePathRows = await db
         .select({ id: storyPathsTable.id })
@@ -371,7 +445,28 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
         .returning();
 
       summary["proposals_upserted"] = (summary["proposals_upserted"] ?? 0) + 1;
-      if (!proposal) continue;
+      if (!proposal) {
+        recordChange(changes, "skipped", {
+          entity: "proposal",
+          githubId: `pr:${pr.number}`,
+          state: proposalState,
+          reason: "Proposal upsert returned no indexed record",
+        });
+        continue;
+      }
+      const proposalOutcomePreserved = proposal.state !== proposalState;
+      recordChange(
+        changes,
+        proposalOutcomePreserved ? "preserved" : "updated",
+        {
+          entity: "proposal",
+          githubId: `pr:${pr.number}`,
+          state: proposal.state,
+          ...(proposalOutcomePreserved
+            ? { reason: "Preserved terminal or active editorial local outcome" }
+            : {}),
+        },
+      );
 
       // A pull request remains queryable after its source branch is deleted, so
       // it is the reliable reconstruction source for every saved moment,
@@ -570,6 +665,11 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
             ? new Date(acceptedPr.mergedAt)
             : (decidedAt ?? new Date()),
         });
+        recordChange(changes, "updated", {
+          entity: "provenance",
+          githubId: `merge-commit:${acceptedPr.mergeCommitSha}`,
+          state: "accepted-into-canon",
+        });
         summary["provenance_records_upserted"] =
           (summary["provenance_records_upserted"] ?? 0) + 1;
       }
@@ -579,7 +679,7 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
       { storyworldId: storyworld_id, owner, repo, summary },
       "Reconciliation complete",
     );
-    res.json({ ok: true, storyworld_id, owner, repo, summary });
+    res.json({ ok: true, storyworld_id, owner, repo, summary, changes });
   } catch (err) {
     logger.error({ err, storyworldId: storyworld_id }, "Reconciliation error");
     res.status(500).json({ error: "Reconciliation failed" });

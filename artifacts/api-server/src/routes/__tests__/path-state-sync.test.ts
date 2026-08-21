@@ -716,6 +716,29 @@ describe("admin reconcile — GitHub fixture rebuild", () => {
       editor_questions_upserted: 1,
       provenance_records_upserted: 1,
     });
+    expect(res.body.changes.updated).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          entity: "path",
+          githubId: "branch:main",
+          state: "open",
+        }),
+        expect.objectContaining({
+          entity: "contribution",
+          githubId: "commit:narration-sha-001",
+        }),
+        expect.objectContaining({
+          entity: "proposal",
+          githubId: "pr:42",
+          state: "accepted-into-canon",
+        }),
+        expect.objectContaining({
+          entity: "provenance",
+          githubId: "merge-commit:merge-sha-001",
+          state: "accepted-into-canon",
+        }),
+      ]),
+    );
     expect(mockProvenance.indexNarrationCommit).toHaveBeenCalledWith(
       1, 10, fixtureNarration, "# Recovered scene\n\nRecovered body\n",
     );
@@ -988,6 +1011,15 @@ describe("admin reconcile — protected proposal outcomes", () => {
       );
       expect(proposalPersistence.state).toBe(protectedState);
       expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
+      expect(res.body.changes.preserved).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            entity: "proposal",
+            githubId: "pr:42",
+            state: protectedState,
+          }),
+        ]),
+      );
     },
   );
 
