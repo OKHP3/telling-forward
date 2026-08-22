@@ -32,6 +32,7 @@ jobs:
         run: pnpm --filter @workspace/web update mermaid --latest
       - name: Validate the refreshed visualizer
         run: |
+          pnpm exec tsc --build lib/api-client-react/tsconfig.json
           pnpm --filter @workspace/web typecheck
           PORT=3000 BASE_PATH=/ pnpm --filter @workspace/web build
       - name: Open a validated refresh pull request
