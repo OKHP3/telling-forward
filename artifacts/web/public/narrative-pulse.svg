@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Telling Forward narrative pulse</title>
+  <desc id="desc">A light background with story particles connected by gently pulsing bonds.</desc>
+  <defs>
+    <radialGradient id="field" cx="55%" cy="45%" r="72%">
+      <stop offset="0" stop-color="#fffdf9"/>
+      <stop offset="1" stop-color="#f6f2ee"/>
+    </radialGradient>
+    <radialGradient id="amberGlow">
+      <stop offset="0" stop-color="#fff9df" stop-opacity="1"/>
+      <stop offset="0.22" stop-color="#e6a03c" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#e6a03c" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="softGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="7"/>
+    </filter>
+    <filter id="mineral" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="12" result="noise"/>
+      <feColorMatrix in="noise" type="saturate" values="0" result="mono"/>
+      <feComponentTransfer in="mono" result="faint"><feFuncA type="table" tableValues="0 0.06"/></feComponentTransfer>
+      <feBlend in="SourceGraphic" in2="faint" mode="multiply"/>
+    </filter>
+  </defs>
+  <style>
+    .bond { fill: none; stroke-linecap: round; }
+    .quiet { stroke: #1c3a34; stroke-opacity: .36; stroke-width: 2; }
+    .warm { stroke: #c46a2c; stroke-opacity: .68; stroke-width: 2.5; }
+    .signal { stroke: #e6a03c; stroke-width: 4; stroke-dasharray: 18 96; animation: travel 4.8s linear infinite; }
+    .signal.second { animation-delay: -2.1s; animation-duration: 6.1s; }
+    .node { animation: breathe 3.8s ease-in-out infinite; transform-origin: center; }
+    .node.delayed { animation-delay: -1.7s; }
+    .node.slow { animation-delay: -2.8s; animation-duration: 5.4s; }
+    .halo { animation: halo 3.8s ease-out infinite; transform-origin: center; }
+    .halo.delayed { animation-delay: -1.7s; }
+    @keyframes travel { to { stroke-dashoffset: -228; } }
+    @keyframes breathe { 0%, 100% { opacity: .6; } 48% { opacity: 1; } }
+    @keyframes halo { 0%, 72%, 100% { opacity: 0; transform: scale(.4); } 35% { opacity: .42; transform: scale(1); } }
+    @media (prefers-reduced-motion: reduce) { .signal, .node, .halo { animation: none; } }
+  </style>
+  <rect width="1600" height="900" fill="url(#field)"/>
+  <g filter="url(#mineral)" opacity=".7">
+    <path d="M-80 160C230 250 350 140 610 300S1040 510 1680 130" class="bond quiet"/>
+    <path d="M-40 720C290 530 480 760 790 570S1210 230 1650 410" class="bond quiet"/>
+    <path d="M100 70C350 310 540 350 730 435S1120 690 1540 830" class="bond quiet"/>
+    <path d="M40 380C330 280 470 470 690 430S1020 270 1420 140" class="bond warm"/>
+    <path d="M230 820C480 610 630 630 820 460S1150 340 1500 510" class="bond warm"/>
+  </g>
+  <g>
+    <path d="M40 380C330 280 470 470 690 430S1020 270 1420 140" class="bond signal"/>
+    <path d="M230 820C480 610 630 630 820 460S1150 340 1500 510" class="bond signal second"/>
+  </g>
+  <g transform="translate(690 430)">
+    <circle r="84" fill="url(#amberGlow)" filter="url(#softGlow)" class="halo"/>
+    <circle r="44" fill="url(#amberGlow)" class="halo"/>
+    <circle r="13" fill="#e6a03c" class="node"/>
+    <circle r="5" fill="#fffdf9"/>
+  </g>
+  <g transform="translate(820 460)">
+    <circle r="72" fill="url(#amberGlow)" filter="url(#softGlow)" class="halo delayed"/>
+    <circle r="10" fill="#c46a2c" class="node delayed"/>
+    <circle r="3" fill="#fffdf9"/>
+  </g>
+  <g transform="translate(1120 330)">
+    <circle r="62" fill="url(#amberGlow)" filter="url(#softGlow)" class="halo delayed"/>
+    <circle r="8" fill="#1c3a34" class="node slow"/>
+  </g>
+  <g fill="#1c3a34" opacity=".7">
+    <circle cx="380" cy="310" r="7"/><circle cx="490" cy="416" r="5"/><circle cx="1040" cy="285" r="6"/>
+    <circle cx="1260" cy="228" r="5"/><circle cx="1220" cy="596" r="7"/><circle cx="550" cy="670" r="5"/>
+  </g>
+  <g fill="#5b3a27" opacity=".75">
+    <path d="M294 528l12-16 18 6 2 20-18 10-18-8z"/><path d="M1316 458l13-13 15 9-2 19-19 5-13-12z"/>
+  </g>
+</svg>
