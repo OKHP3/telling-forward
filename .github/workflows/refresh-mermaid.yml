@@ -45,6 +45,9 @@ jobs:
           branch="automation/refresh-mermaid"
           git config user.name "telling-forward-dependency-bot"
           git config user.email "telling-forward-dependency-bot@users.noreply.github.com"
+          if git ls-remote --exit-code origin "refs/heads/$branch" >/dev/null 2>&1; then
+            git fetch origin "$branch"
+          fi
           git switch --create "$branch" || git switch "$branch"
           git add artifacts/web/package.json pnpm-lock.yaml
           git commit -m "chore(web): refresh Mermaid"
