@@ -1,0 +1,32 @@
+@layer components {
+  .tf-frame {
+    --paper: #F6F2EE;
+    --teal: #1C3A34;
+    --espresso: #2A2320;
+    --rust: #5B3A27;
+    --orange: #C46A2C;
+    --amber: #E6A03C;
+    min-height: 100%;
+    color: var(--espresso);
+    background: var(--paper);
+    font-family: "DM Sans", sans-serif;
+    overflow: hidden;
+  }
+  .tf-mono { font-family: "JetBrains Mono", monospace; }
+  .tf-display { font-family: "Alfa Slab One", Georgia, serif; }
+  .tf-nucleus { border-radius: 50%; box-shadow: 0 0 0 7px rgba(230,160,60,.16), 0 8px 18px rgba(42,35,32,.16); }
+  .tf-fragment { transform: rotate(18deg); border-radius: 4px 11px 5px 10px; }
+  .tf-bond { position: absolute; height: 1px; background: var(--teal); opacity: .46; transform-origin: left center; }
+  .tf-strand { position: absolute; height: 2px; border-radius: 999px; background: linear-gradient(90deg, transparent, var(--teal), var(--amber), transparent); opacity: .75; }
+  .tf-grid { background-image: linear-gradient(rgba(28,58,52,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(28,58,52,.05) 1px, transparent 1px); background-size: 22px 22px; }
+  .tf-button { border: 0; cursor: pointer; transition: transform 180ms ease, box-shadow 180ms ease; }
+  .tf-button:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(42,35,32,.14); }
+  @media (prefers-reduced-motion: reduce) {
+    .tf-button { transition: none; }
+    .tf-pulse, .tf-gather { animation: none !important; }
+  }
+  @keyframes tfPulse { 0%,100% { transform: scale(1); opacity: .76; } 50% { transform: scale(1.12); opacity: 1; } }
+  @keyframes tfGather { 0%,100% { transform: translate(0,0); } 50% { transform: translate(8px,-5px); } }
+  .tf-pulse { animation: tfPulse 3.4s ease-in-out infinite; transform-origin: center; }
+  .tf-gather { animation: tfGather 4s ease-in-out infinite; }
+}

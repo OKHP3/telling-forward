@@ -1,5 +1,5 @@
 @layer theme, base, components, utilities;
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=DM+Sans:opsz,wght@9..40,400..700&family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
@@ -68,8 +68,22 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* LIGHT MODE: Literary Parchment */
+/* LIGHT MODE: Telling Forward paper field */
 :root {
+  --tf-paper: #F6F2EE;
+  --tf-teal: #1C3A34;
+  --tf-espresso: #2A2320;
+  --tf-rust: #5B3A27;
+  --tf-orange: #C46A2C;
+  --tf-amber: #E6A03C;
+
+  --tf-nucleus: var(--tf-rust); /* capsule, seed, cluster center */
+  --tf-bond: var(--tf-teal); /* fine path line, relationship indicator */
+  --tf-strand: color-mix(in oklch, var(--tf-teal) 80%, var(--tf-espresso)); /* story path, sequence */
+  --tf-fracture: var(--tf-orange); /* disrupt/invert opening, generative */
+  --tf-gold-connection: var(--tf-amber); /* accepted connection, resolution moment */
+  --tf-fragment: var(--tf-rust); /* small recoverable unit */
+
   --button-outline: rgba(0, 0, 0, 0.1);
   --badge-outline: rgba(0, 0, 0, 0.05);
 
@@ -77,55 +91,56 @@
   --elevate-1: rgba(0, 0, 0, 0.03);
   --elevate-2: rgba(0, 0, 0, 0.08);
 
-  --background: 40 33% 97%;
-  --foreground: 24 10% 15%;
+  --background: 30 31% 95%;
+  --foreground: 18 14% 15%;
 
-  --border: 35 20% 85%;
+  --border: 22 40% 25%;
 
-  --card: 40 33% 99%;
-  --card-foreground: 24 10% 15%;
-  --card-border: 35 20% 85%;
+  --card: 30 31% 98%;
+  --card-foreground: 18 14% 15%;
+  --card-border: 22 40% 25%;
 
-  --sidebar: 40 33% 95%;
-  --sidebar-foreground: 24 10% 15%;
-  --sidebar-border: 35 20% 85%;
-  --sidebar-primary: 15 50% 45%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 35 25% 92%;
-  --sidebar-accent-foreground: 24 10% 15%;
-  --sidebar-ring: 15 50% 45%;
+  --sidebar: 168 35% 17%;
+  --sidebar-foreground: 30 31% 95%;
+  --sidebar-border: 168 35% 17%;
+  --sidebar-primary: 24 63% 47%;
+  --sidebar-primary-foreground: 18 14% 15%;
+  --sidebar-accent: 22 40% 25%;
+  --sidebar-accent-foreground: 30 31% 95%;
+  --sidebar-ring: 35 77% 57%;
 
-  --popover: 40 33% 99%;
-  --popover-foreground: 24 10% 15%;
-  --popover-border: 35 20% 85%;
+  --popover: 30 31% 98%;
+  --popover-foreground: 18 14% 15%;
+  --popover-border: 22 40% 25%;
 
-  --primary: 15 50% 45%;
-  --primary-foreground: 0 0% 100%;
+  --primary: 24 63% 47%;
+  --primary-foreground: 18 14% 15%;
 
-  --secondary: 35 25% 92%;
-  --secondary-foreground: 24 10% 25%;
+  --secondary: 168 35% 17%;
+  --secondary-foreground: 30 31% 95%;
 
-  --muted: 35 20% 90%;
-  --muted-foreground: 24 10% 40%;
+  --muted: 30 20% 88%;
+  --muted-foreground: 18 14% 15%;
 
-  --accent: 35 25% 92%;
-  --accent-foreground: 24 10% 15%;
+  --accent: 35 77% 57%;
+  --accent-foreground: 18 14% 15%;
 
-  --destructive: 0 60% 50%;
-  --destructive-foreground: 0 0% 100%;
+  --destructive: 22 40% 25%;
+  --destructive-foreground: 30 31% 95%;
 
-  --input: 35 20% 85%;
-  --ring: 15 50% 45%;
+  --input: 22 40% 25%;
+  --ring: 35 77% 57%;
 
-  --chart-1: 15 50% 45%;
-  --chart-2: 24 10% 25%;
-  --chart-3: 35 20% 40%;
-  --chart-4: 40 33% 60%;
-  --chart-5: 0 60% 50%;
+  --chart-1: 24 63% 47%;
+  --chart-2: 168 35% 17%;
+  --chart-3: 22 40% 25%;
+  --chart-4: 35 77% 57%;
+  --chart-5: 18 14% 15%;
 
-  --app-font-sans: 'Plus Jakarta Sans', sans-serif;
-  --app-font-serif: 'Fraunces', serif;
-  --app-font-mono: Menlo, monospace;
+  --app-font-sans: 'DM Sans', sans-serif;
+  /* Alfa Slab One is reserved for rare decisive display moments, never body, navigation, or form labels. */
+  --app-font-serif: 'Alfa Slab One', serif;
+  --app-font-mono: 'JetBrains Mono', monospace;
   
   --radius: 0.25rem;
 
@@ -147,51 +162,51 @@
   --elevate-1: rgba(255, 255, 255, 0.04);
   --elevate-2: rgba(255, 255, 255, 0.09);
 
-  --background: 220 20% 12%;
-  --foreground: 40 20% 90%;
+  --background: 18 14% 15%;
+  --foreground: 30 31% 95%;
 
-  --border: 220 20% 20%;
+  --border: 22 40% 25%;
 
-  --card: 220 20% 15%;
-  --card-foreground: 40 20% 90%;
-  --card-border: 220 20% 20%;
+  --card: 18 14% 19%;
+  --card-foreground: 30 31% 95%;
+  --card-border: 22 40% 25%;
 
-  --sidebar: 220 20% 14%;
-  --sidebar-foreground: 40 20% 90%;
-  --sidebar-border: 220 20% 20%;
-  --sidebar-primary: 15 50% 55%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 220 20% 20%;
-  --sidebar-accent-foreground: 40 20% 90%;
-  --sidebar-ring: 15 50% 55%;
+  --sidebar: 168 35% 12%;
+  --sidebar-foreground: 30 31% 95%;
+  --sidebar-border: 22 40% 25%;
+  --sidebar-primary: 24 63% 47%;
+  --sidebar-primary-foreground: 18 14% 15%;
+  --sidebar-accent: 22 40% 25%;
+  --sidebar-accent-foreground: 30 31% 95%;
+  --sidebar-ring: 35 77% 57%;
 
-  --popover: 220 20% 15%;
-  --popover-foreground: 40 20% 90%;
-  --popover-border: 220 20% 20%;
+  --popover: 18 14% 19%;
+  --popover-foreground: 30 31% 95%;
+  --popover-border: 22 40% 25%;
 
-  --primary: 15 50% 55%;
-  --primary-foreground: 0 0% 100%;
+  --primary: 24 63% 47%;
+  --primary-foreground: 18 14% 15%;
 
-  --secondary: 220 20% 20%;
-  --secondary-foreground: 40 20% 85%;
+  --secondary: 168 35% 17%;
+  --secondary-foreground: 30 31% 95%;
 
-  --muted: 220 20% 18%;
-  --muted-foreground: 40 10% 65%;
+  --muted: 22 25% 22%;
+  --muted-foreground: 30 31% 95%;
 
-  --accent: 220 20% 20%;
-  --accent-foreground: 40 20% 90%;
+  --accent: 35 77% 57%;
+  --accent-foreground: 18 14% 15%;
 
-  --destructive: 0 60% 60%;
-  --destructive-foreground: 0 0% 100%;
+  --destructive: 22 40% 25%;
+  --destructive-foreground: 30 31% 95%;
 
-  --input: 220 20% 25%;
-  --ring: 15 50% 55%;
+  --input: 22 40% 25%;
+  --ring: 35 77% 57%;
 
-  --chart-1: 15 50% 55%;
-  --chart-2: 40 20% 85%;
-  --chart-3: 40 10% 65%;
-  --chart-4: 220 20% 30%;
-  --chart-5: 0 60% 60%;
+  --chart-1: 24 63% 47%;
+  --chart-2: 30 31% 95%;
+  --chart-3: 35 77% 57%;
+  --chart-4: 168 35% 17%;
+  --chart-5: 22 40% 25%;
 }
 
 @layer base {

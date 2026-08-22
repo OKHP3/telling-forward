@@ -1,0 +1,8 @@
+import { BrandMark, GrammarField, StatusPill } from "./_shared";
+
+export function ReaderEntryA() {
+  return <main className="tf-frame relative min-h-[520px] overflow-hidden"><div className="absolute inset-0 bg-cover bg-center opacity-80" style={{ backgroundImage: "url('/__mockup/images/telling-forward/social-x.png')" }} /><div className="absolute inset-0 bg-gradient-to-r from-[#F6F2EE] via-[#F6F2EE]/92 to-transparent" /><GrammarField />
+    <header className="relative z-10 flex items-center justify-between px-8 py-6"><div className="flex items-center gap-2 text-[#1C3A34]"><BrandMark /><span className="tf-display text-[14px]">telling forward</span></div><span className="tf-mono text-[9px] uppercase tracking-[.16em] text-[#5B3A27]">reader / entry</span></header>
+    <section className="relative z-10 max-w-[390px] px-8 pt-8"><StatusPill tone="teal">editorial path</StatusPill><h1 className="tf-display mt-5 text-[38px] leading-[1.07] text-[#1C3A34]">The Long<br /><span className="text-[#5B3A27]">Return</span></h1><p className="mt-4 text-[14px] leading-relaxed text-[#2A2320]/78">A city remembers the people who leave it.</p><div className="mt-8 flex items-center gap-3"><button className="tf-button rounded-full bg-[#1C3A34] px-5 py-3 text-[11px] font-bold text-[#F6F2EE]">Read the canon →</button><span className="tf-mono text-[9px] uppercase tracking-[.1em] text-[#2A2320]/65">path 01 / canon</span></div></section>
+  </main>;
+}

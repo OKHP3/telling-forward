@@ -1,5 +1,5 @@
 @layer theme, base, clerk, components, utilities;
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=DM+Sans:opsz,wght@9..40,400..700&family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&display=swap');
 @import 'tailwindcss';
 @import '@clerk/themes/shadcn.css';
 @import 'tw-animate-css';
@@ -69,8 +69,22 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* LIGHT MODE - Literary Parchment */
+/* LIGHT MODE - Telling Forward paper field */
 :root {
+  --tf-paper: #F6F2EE;
+  --tf-teal: #1C3A34;
+  --tf-espresso: #2A2320;
+  --tf-rust: #5B3A27;
+  --tf-orange: #C46A2C;
+  --tf-amber: #E6A03C;
+
+  --tf-nucleus: var(--tf-rust); /* capsule, seed, cluster center */
+  --tf-bond: var(--tf-teal); /* fine path line, relationship indicator */
+  --tf-strand: color-mix(in oklch, var(--tf-teal) 80%, var(--tf-espresso)); /* story path, sequence */
+  --tf-fracture: var(--tf-orange); /* disrupt/invert opening, generative */
+  --tf-gold-connection: var(--tf-amber); /* accepted connection, resolution moment */
+  --tf-fragment: var(--tf-rust); /* small recoverable unit */
+
   --button-outline: rgba(0, 0, 0, 0.1);
   --badge-outline: rgba(0, 0, 0, 0.05);
 
@@ -79,55 +93,55 @@
   --elevate-1: rgba(0, 0, 0, 0.03);
   --elevate-2: rgba(0, 0, 0, 0.08);
 
-  /* Literary Parchment Theme */
-  --background: 40 33% 96%;
-  --foreground: 0 0% 10%;
-  --border: 40 10% 85%;
+  --background: 30 31% 95%;
+  --foreground: 18 14% 15%;
+  --border: 22 40% 25%;
 
-  --card: 40 33% 98%;
-  --card-foreground: 0 0% 10%;
-  --card-border: 40 10% 85%;
+  --card: 30 31% 98%;
+  --card-foreground: 18 14% 15%;
+  --card-border: 22 40% 25%;
 
-  --sidebar: 40 33% 94%;
-  --sidebar-foreground: 0 0% 10%;
-  --sidebar-border: 40 10% 85%;
-  --sidebar-primary: 0 41% 39%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 40 20% 90%;
-  --sidebar-accent-foreground: 0 0% 10%;
-  --sidebar-ring: 0 41% 39%;
+  --sidebar: 168 35% 17%;
+  --sidebar-foreground: 30 31% 95%;
+  --sidebar-border: 168 35% 17%;
+  --sidebar-primary: 24 63% 47%;
+  --sidebar-primary-foreground: 18 14% 15%;
+  --sidebar-accent: 22 40% 25%;
+  --sidebar-accent-foreground: 30 31% 95%;
+  --sidebar-ring: 35 77% 57%;
 
-  --popover: 40 33% 98%;
-  --popover-foreground: 0 0% 10%;
-  --popover-border: 40 10% 85%;
+  --popover: 30 31% 98%;
+  --popover-foreground: 18 14% 15%;
+  --popover-border: 22 40% 25%;
 
-  --primary: 0 41% 39%; /* Terracotta/Burgundy */
-  --primary-foreground: 0 0% 100%;
+  --primary: 24 63% 47%;
+  --primary-foreground: 18 14% 15%;
 
-  --secondary: 40 20% 90%;
-  --secondary-foreground: 0 0% 15%;
+  --secondary: 168 35% 17%;
+  --secondary-foreground: 30 31% 95%;
 
-  --muted: 40 15% 92%;
-  --muted-foreground: 40 10% 45%;
+  --muted: 30 20% 88%;
+  --muted-foreground: 18 14% 15%;
 
-  --accent: 40 20% 90%;
-  --accent-foreground: 0 0% 15%;
+  --accent: 35 77% 57%;
+  --accent-foreground: 18 14% 15%;
 
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 100%;
+  --destructive: 22 40% 25%;
+  --destructive-foreground: 30 31% 95%;
 
-  --input: 40 10% 85%;
-  --ring: 0 41% 39%;
+  --input: 22 40% 25%;
+  --ring: 35 77% 57%;
 
-  --chart-1: 0 41% 39%;
-  --chart-2: 140 33% 27%;
-  --chart-3: 217 41% 39%;
-  --chart-4: 38 41% 75%;
-  --chart-5: 0 0% 40%;
+  --chart-1: 24 63% 47%;
+  --chart-2: 168 35% 17%;
+  --chart-3: 22 40% 25%;
+  --chart-4: 35 77% 57%;
+  --chart-5: 18 14% 15%;
 
-  --app-font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --app-font-serif: 'Fraunces', Georgia, serif;
-  --app-font-mono: Menlo, monospace;
+  --app-font-sans: 'DM Sans', system-ui, sans-serif;
+  /* Alfa Slab One is reserved for rare decisive display moments, never body, navigation, or form labels. */
+  --app-font-serif: 'Alfa Slab One', Georgia, serif;
+  --app-font-mono: 'JetBrains Mono', monospace;
   --radius: 0.25rem;
   
   --shadow-2xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.05);
@@ -158,50 +172,50 @@
   --elevate-1: rgba(255, 255, 255, 0.04);
   --elevate-2: rgba(255, 255, 255, 0.09);
 
-  /* Literary Parchment Dark (muted charcoal) */
-  --background: 0 0% 12%;
-  --foreground: 40 20% 85%;
-  --border: 0 0% 20%;
+  /* Dark support mode stays espresso-adjacent; orange and amber keep their transformation meanings. */
+  --background: 18 14% 15%;
+  --foreground: 30 31% 95%;
+  --border: 22 40% 25%;
 
-  --card: 0 0% 15%;
-  --card-foreground: 40 20% 85%;
-  --card-border: 0 0% 20%;
+  --card: 18 14% 19%;
+  --card-foreground: 30 31% 95%;
+  --card-border: 22 40% 25%;
 
-  --sidebar: 0 0% 10%;
-  --sidebar-foreground: 40 20% 85%;
-  --sidebar-border: 0 0% 20%;
-  --sidebar-primary: 0 35% 45%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 0 0% 20%;
-  --sidebar-accent-foreground: 40 20% 85%;
-  --sidebar-ring: 0 35% 45%;
+  --sidebar: 168 35% 12%;
+  --sidebar-foreground: 30 31% 95%;
+  --sidebar-border: 22 40% 25%;
+  --sidebar-primary: 24 63% 47%;
+  --sidebar-primary-foreground: 18 14% 15%;
+  --sidebar-accent: 22 40% 25%;
+  --sidebar-accent-foreground: 30 31% 95%;
+  --sidebar-ring: 35 77% 57%;
 
-  --popover: 0 0% 15%;
-  --popover-foreground: 40 20% 85%;
-  --popover-border: 0 0% 20%;
+  --popover: 18 14% 19%;
+  --popover-foreground: 30 31% 95%;
+  --popover-border: 22 40% 25%;
 
-  --primary: 0 35% 45%;
-  --primary-foreground: 0 0% 100%;
+  --primary: 24 63% 47%;
+  --primary-foreground: 18 14% 15%;
 
-  --secondary: 0 0% 20%;
-  --secondary-foreground: 40 20% 85%;
+  --secondary: 168 35% 17%;
+  --secondary-foreground: 30 31% 95%;
 
-  --muted: 0 0% 18%;
-  --muted-foreground: 40 10% 60%;
+  --muted: 22 25% 22%;
+  --muted-foreground: 30 31% 95%;
 
-  --accent: 0 0% 20%;
-  --accent-foreground: 40 20% 85%;
+  --accent: 35 77% 57%;
+  --accent-foreground: 18 14% 15%;
 
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 100%;
+  --destructive: 22 40% 25%;
+  --destructive-foreground: 30 31% 95%;
 
-  --input: 0 0% 25%;
-  --ring: 0 35% 45%;
-  --chart-1: 0 35% 45%;
-  --chart-2: 140 30% 35%;
-  --chart-3: 217 35% 45%;
-  --chart-4: 38 30% 65%;
-  --chart-5: 0 0% 60%;
+  --input: 22 40% 25%;
+  --ring: 35 77% 57%;
+  --chart-1: 24 63% 47%;
+  --chart-2: 30 31% 95%;
+  --chart-3: 35 77% 57%;
+  --chart-4: 168 35% 17%;
+  --chart-5: 22 40% 25%;
 
   --shadow-2xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.2);
   --shadow-xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.2);
@@ -222,9 +236,9 @@
     --reader-canon-indicator: hsl(140 33% 30%);
     --reader-alternate-indicator: hsl(217 41% 40%);
     --reader-draft-indicator: hsl(33 30% 36%);
-    --reader-font-body: var(--app-font-serif);
+    --reader-font-body: var(--app-font-sans);
     --reader-font-ui: var(--app-font-sans);
-    --reader-font-mono: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+    --reader-font-mono: var(--app-font-mono);
     --reader-body-size: 1.125rem;
     --reader-line-length: 68ch;
     --reader-leading: 1.8;
@@ -243,13 +257,13 @@
    * type scale and the shape-plus-label canon/alternate/draft system.
    */
   [data-reader-theme="editorial"] {
-    --reader-bg: hsl(40 33% 96%);
-    --reader-text: hsl(0 0% 10%);
-    --reader-text-muted: hsl(40 10% 38%);
-    --reader-accent: hsl(0 41% 39%);
-    --reader-canon-indicator: hsl(140 33% 30%);
-    --reader-alternate-indicator: hsl(217 41% 40%);
-    --reader-draft-indicator: hsl(33 30% 36%);
+    --reader-bg: var(--tf-paper);
+    --reader-text: var(--tf-espresso);
+    --reader-text-muted: color-mix(in oklch, var(--tf-espresso) 72%, var(--tf-paper));
+    --reader-accent: hsl(24 63% 47%);
+    --reader-canon-indicator: var(--tf-teal);
+    --reader-alternate-indicator: var(--tf-amber);
+    --reader-draft-indicator: var(--tf-rust);
   }
 
   [data-reader-theme="terminal"] {

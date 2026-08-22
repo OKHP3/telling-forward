@@ -1,0 +1,10 @@
+import { BrandMark, GrammarField, StatusPill } from "./_shared";
+
+export function AuthorHomeB() {
+  return <main className="tf-frame relative min-h-[520px] overflow-hidden bg-[#F6F2EE]">
+    <div className="absolute inset-0 bg-cover bg-center opacity-25" style={{ backgroundImage: "url('/__mockup/images/telling-forward/background-desktop.png')" }} /><GrammarField expressive />
+    <header className="relative z-10 flex items-center justify-between border-b border-[#F6F2EE]/25 bg-[#1C3A34]/95 px-7 py-4 text-[#F6F2EE]"><div className="flex items-center gap-3"><BrandMark warm /><span className="tf-display text-[15px]">telling forward</span></div><div className="tf-mono text-[9px] uppercase tracking-[.15em] opacity-70">home / worlds</div></header>
+    <section className="relative z-10 mx-7 mt-7 max-w-[430px]"><StatusPill tone="orange">active transformation</StatusPill><h1 className="tf-display mt-5 text-[37px] leading-[1.06] text-[#1C3A34]">Make room<br />for the next<br /><span className="text-[#C46A2C]">possibility.</span></h1><p className="mt-4 max-w-[300px] text-[12px] leading-relaxed text-[#2A2320]/70">Your material is moving. Follow the strands, gather what belongs together, and keep the trace.</p><button className="tf-button mt-6 rounded-full bg-[#C46A2C] px-5 py-3 text-[11px] font-bold text-[#F6F2EE]">Enter a storyworld →</button></section>
+    <div className="absolute bottom-7 right-8 z-10 w-[220px] rounded-2xl border border-[#1C3A34]/20 bg-[#F6F2EE]/88 p-4 backdrop-blur-sm"><div className="tf-mono mb-3 text-[8px] uppercase tracking-[.15em] text-[#5B3A27]">living index</div><div className="flex items-center gap-2"><i className="tf-nucleus h-4 w-4" style={{ background: "#E6A03C" }} /><div><div className="text-[12px] font-bold">The Long Return</div><div className="text-[10px] text-[#2A2320]/60">3 fragments converging</div></div></div><div className="mt-4 flex justify-between"><StatusPill tone="amber">gathering</StatusPill><span className="tf-mono text-[9px] text-[#2A2320]/55">07 units</span></div></div>
+  </main>;
+}
