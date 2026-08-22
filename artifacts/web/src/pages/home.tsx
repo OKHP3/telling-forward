@@ -9,6 +9,18 @@ export function Home() {
   return (
     <div className="space-y-10">
       <section className="tf-hero rounded-[1.25rem]" aria-labelledby="hero-title">
+        <picture className="pointer-events-none absolute inset-0 -z-[2] block">
+          <source
+            media="(prefers-reduced-motion: reduce)"
+            srcSet={`${import.meta.env.BASE_URL}background-desktop-2560x1440.png`}
+          />
+          <img
+            src={`${import.meta.env.BASE_URL}narrative-pulse.svg`}
+            alt=""
+            className="h-full w-full object-cover"
+            aria-hidden="true"
+          />
+        </picture>
         <div className="tf-hero-copy space-y-5">
           <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--tf-rust)]">
             <span className="tf-nucleus" aria-hidden="true" />

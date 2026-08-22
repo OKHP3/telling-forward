@@ -57,44 +57,44 @@ const TYPE_META = {
   character: {
     icon:  User,
     label: CAPSULE_TYPE_LABELS.character,
-    card:  "border-l-blue-400 dark:border-l-blue-500",
-    badge: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-300 dark:bg-blue-950/40 dark:border-blue-800",
-    dot:   "bg-blue-400",
+    card:  "tf-capsule-character",
+    badge: "tf-capsule-badge",
+    dot:   "bg-[var(--tf-rust)]",
   },
   arc: {
     icon:  Flag,
     label: CAPSULE_TYPE_LABELS.arc,
-    card:  "border-l-amber-400 dark:border-l-amber-500",
-    badge: "text-amber-800 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-950/40 dark:border-amber-800",
-    dot:   "bg-amber-400",
+    card:  "tf-capsule-arc",
+    badge: "tf-capsule-badge",
+    dot:   "bg-[var(--tf-amber)]",
   },
   event: {
     icon:  Zap,
     label: CAPSULE_TYPE_LABELS.event,
-    card:  "border-l-purple-400 dark:border-l-purple-500",
-    badge: "text-purple-700 bg-purple-50 border-purple-200 dark:text-purple-400 dark:bg-purple-950/40 dark:border-purple-800",
-    dot:   "bg-purple-400",
+    card:  "tf-capsule-event",
+    badge: "tf-capsule-badge",
+    dot:   "bg-[var(--tf-orange)]",
   },
   "arc-beat": {
     icon:  Flag,
     label: CAPSULE_TYPE_LABELS["arc-beat"],
-    card:  "border-l-orange-400 dark:border-l-orange-500",
-    badge: "text-orange-800 bg-orange-50 border-orange-200 dark:text-orange-300 dark:bg-orange-950/40 dark:border-orange-800",
-    dot:   "bg-orange-400",
+    card:  "tf-capsule-beat",
+    badge: "tf-capsule-badge",
+    dot:   "bg-[var(--tf-orange)]",
   },
   "planned-event": {
     icon:  Zap,
     label: CAPSULE_TYPE_LABELS["planned-event"],
-    card:  "border-l-violet-400 dark:border-l-violet-500",
-    badge: "text-violet-800 bg-violet-50 border-violet-200 dark:text-violet-300 dark:bg-violet-950/40 dark:border-violet-800",
-    dot:   "bg-violet-400",
+    card:  "tf-capsule-planned",
+    badge: "tf-capsule-badge",
+    dot:   "bg-[var(--tf-rust)]",
   },
   motif: {
     icon:  Sparkles,
     label: CAPSULE_TYPE_LABELS.motif,
-    card:  "border-l-emerald-400 dark:border-l-emerald-500",
-    badge: "text-emerald-800 bg-emerald-50 border-emerald-200 dark:text-emerald-300 dark:bg-emerald-950/40 dark:border-emerald-800",
-    dot:   "bg-emerald-400",
+    card:  "tf-capsule-motif",
+    badge: "tf-capsule-badge",
+    dot:   "bg-[var(--tf-amber)]",
   },
 } as const;
 
@@ -211,7 +211,6 @@ function CapsuleCard({
   const qc        = useQueryClient();
   const [, navigate] = useLocation();
   const meta     = TYPE_META[capsule.type as CapsuleType] ?? TYPE_META.character;
-  const TypeIcon = meta.icon;
 
   // ── Edit state ────────────────────────────────────────────────────────────
   const [editing,     setEditing]     = useState(false);
@@ -361,7 +360,7 @@ function CapsuleCard({
   return (
     <div
       className={cn(
-        "group bg-card border border-l-4 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-md",
+        "tf-capsule-shell group bg-card border rounded-xl overflow-hidden transition-all duration-300 hover:shadow-md",
         meta.card,
         expanded ? "col-span-full shadow-lg" : "cursor-pointer hover:border-primary/40",
       )}
@@ -370,8 +369,8 @@ function CapsuleCard({
       {/* ── Card header (always visible) ───────────────────────────────── */}
       <div className={cn("p-4 flex items-start justify-between gap-3", expanded && "border-b border-border/40")}>
         <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-md border", meta.badge)}>
-            <TypeIcon className="h-4 w-4" />
+          <div className="tf-nucleus-mark shrink-0" aria-hidden="true">
+            <span />
           </div>
           <div className="flex-1 min-w-0">
             {editing ? (
@@ -587,7 +586,7 @@ function CapsuleCard({
                   e.stopPropagation();
                   navigate(`/worlds/${worldId}/scene-writer/${capsule.id}`);
                 }}
-                className="flex items-center gap-2 h-9 px-3 rounded-lg border border-primary/40 bg-primary/5 text-primary text-sm font-medium hover:bg-primary/10 transition-colors whitespace-nowrap"
+                 className="tf-action-promote flex items-center gap-2 h-9 px-3 rounded-lg border text-sm font-medium hover:brightness-95 transition-colors whitespace-nowrap"
               >
                 <Sparkles className="h-3.5 w-3.5 shrink-0" />
                 Promote
@@ -601,7 +600,7 @@ function CapsuleCard({
                   void handleInvert();
                 }}
                 disabled={isActing}
-                className="flex items-center gap-2 h-9 px-3 rounded-lg border border-border/60 text-muted-foreground text-sm hover:bg-accent/40 hover:text-foreground transition-colors disabled:opacity-50"
+                 className="tf-action-invert flex items-center gap-2 h-9 px-3 rounded-lg border text-sm font-medium hover:brightness-95 transition-colors disabled:opacity-50"
               >
                 <FlipHorizontal2 className="h-3.5 w-3.5 shrink-0" />
                 Invert
@@ -615,7 +614,7 @@ function CapsuleCard({
                   setActiveAction("disrupt");
                 }}
                 disabled={isActing}
-                className="flex items-center gap-2 h-9 px-3 rounded-lg border border-border/60 text-muted-foreground text-sm hover:bg-accent/40 hover:text-foreground transition-colors disabled:opacity-50"
+                 className="tf-action-disrupt flex items-center gap-2 h-9 px-3 rounded-lg border text-sm font-medium hover:brightness-95 transition-colors disabled:opacity-50"
               >
                 <Shuffle className="h-3.5 w-3.5 shrink-0" />
                 Disrupt
@@ -957,7 +956,7 @@ export function ConceptBoard({
 
       {/* Board */}
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="tf-capsule-field grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-32 rounded-xl border border-border/40 bg-secondary/20 animate-pulse" />
           ))}

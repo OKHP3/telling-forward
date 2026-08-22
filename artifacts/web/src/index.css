@@ -279,7 +279,7 @@
   position: absolute;
   inset: 0;
   z-index: -2;
-  background: url("/narrative-pulse.svg") center / cover no-repeat;
+  background: var(--tf-paper);
 }
 .tf-hero::after {
   content: "";
@@ -392,7 +392,7 @@
   box-shadow: inset 3px 0 0 var(--tf-gold-connection);
 }
 @media (prefers-reduced-motion: reduce) {
-  .tf-hero::before { background-image: url("/background-desktop-2560x1440.png"); }
+  .tf-hero::before { background-image: none; }
 }
 @media (max-width: 640px) {
   .tf-hero { min-height: 22rem; }
