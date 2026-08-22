@@ -45,9 +45,25 @@ Any future adaptation deal would require a clear chain of rights. Participation 
 
 ## Repository status
 
-This repository is an early concept and prototype seed. The product model, contribution rules, agent skills, and content governance are expected to evolve through documented experiments.
+This repository contains a substantive Stage 0–1 prototype, not a bare scaffold. The checkout includes a private Author App, a reader application, configured companion reader surfaces, an API and PostgreSQL index, an Expo mobile client scaffold, GitHub-backed provenance and reconciliation code, proposal-state safeguards, and API/core-flow tests.
 
-Terms such as **open canon**, **world steward**, **story lineage**, **contributor pool**, and **support credits** describe ideas under consideration, not features or promises currently implemented.
+The current product model is deliberately split between two primary apps:
+
+- **Author App** (`artifacts/web`) — the canonical workspace for storyworld setup, concept-board work, scene writing, proposals, and steward operations.
+- **Reader** (`artifacts/reader`) — the Editorial reading experience for discovering storyworlds, reading paths, and distinguishing canon, alternate, and draft states.
+
+Archive, Broadsheet, Signal/Noise, and Scriptorium are configured companion reader-oriented surfaces with their own visual treatments. `artifacts/mockup-sandbox` remains design-only. These are checkout and workspace capabilities; no production deployment or external route availability is claimed here.
+
+The approved visual system is paper-first and editorial: Paper `#F6F2EE`, Teal `#1C3A34`, Espresso `#2A2320`, Rust `#5B3A27`, Orange `#C46A2C`, and Amber `#E6A03C`, with DM Sans for working voice, JetBrains Mono for structured detail, and Alfa Slab One reserved for display moments.
+
+Authentication and identity are also settled at the current boundary: the web reader's password sessions and Clerk identities coexist at protected API boundaries, while optional GitHub identity linking supports attribution. GitHub remains the durable creative/provenance source; PostgreSQL is a rebuildable application index. Consent and moderation remain design boundaries for the private pilot, not delivered public-launch safeguards.
+
+Capability states in this README are intentionally conservative:
+
+- **Implemented in checkout** does not mean production-deployed.
+- **Provisional** means local or test evidence exists, but participant, device, or production acceptance is still missing.
+- **Not yet deployed** means no published revision and route smoke evidence has been recorded.
+- **Intentionally deferred** means it is not available for the current pilot, including public contribution, untrusted uploads, rights-sensitive derivatives, monetization, and automatic canon decisions.
 
 ## Important content boundary
 

@@ -6,11 +6,11 @@
 |---|---|
 | **Repository** | [OKHP3/telling-forward](https://github.com/OKHP3/telling-forward) |
 | **Suite** | OverKill Hill P³ |
-| **Status** | Draft requirements, written against the current repo scaffold |
-| **Date** | 2026-08-17 |
+| **Status** | Capability baseline: implemented-in-checkout, provisional, deferred, and not-yet-deployed states are called out below |
+| **Date** | 2026-08-22 |
 | **Related docs** | `README.md`, `docs/MISSION.md`, `CONTRIBUTING.md`, `CONTENT-LICENSE.md`, `AGENTS.md`, `replit.md` |
 
-This document was written from the actual state of the repo, not from a blank concept. Claims are labeled **Confirmed** (verified against a file in the repo), **Recommended** (a decision this document is proposing), or **Open question** (unresolved, needs a project-owner call). Don't let a stale copy of this doc drift from the code; re-verify before relying on it.
+This document is a dated capability baseline, not a blank-slate product brief. Claims use these states: **Implemented (checkout)** means the capability exists in the current source and is supported by tests or direct inspection; **Provisional** means it is usable locally but lacks participant, device, or production acceptance; **Not yet deployed** means the configured artifact has no verified published revision or route evidence; **Intentionally deferred** means the owner has explicitly kept it out of the current pilot. **Recommended** and **Open question** identify future choices rather than delivered capability.
 
 ---
 
@@ -40,7 +40,7 @@ Pulled directly from the repo as of this writing:
 - **GitHub workspace sync is built**: every Replit commit auto-pushes to `github.com/OKHP3/telling-forward` via a `post-commit` git hook, authenticated through `scripts/git-askpass.sh` reading a `GITHUB_PAT` Replit secret. The token never touches git config, files, or process arguments. Separately, the checkout now contains a GitHub-backed application read/write and reconciliation layer; live GitHub repository exercise remains an evidence gap.
 - **Product implementation exists in the data, API, and client layers.** `lib/db/src/schema/`, `lib/api-spec/openapi.yaml`, `artifacts/api-server`, `artifacts/web`, and `artifacts/mobile` contain storyworld, path, contribution, proposal, provenance, authentication, reader, steward, capsule, and narration capabilities with automated API tests. `artifacts/mockup-sandbox` remains a design sandbox and is not a production frontend.
 
-Everything in this document past this point is new design built on that foundation.
+The checkout is now a substantive Stage 0–1 prototype. The requirements below distinguish what is implemented in checkout from what is only configured, provisional, not yet deployed, or intentionally deferred.
 
 ---
 
@@ -135,7 +135,7 @@ flowchart TB
 2. **Sync layer** listens to GitHub webhooks (`push`, `pull_request`, `pull_request_review`, `issue_comment`) and supports reconciliation against the REST/GraphQL API, because webhooks can be missed or arrive out of order. The checkout contains this prototype layer; live GitHub repository and deployment evidence remain separate gates.
 3. **Data layer** is a read-optimized cache and query index, not a second source of truth. Every row traces back to a GitHub object (commit SHA, PR number, branch ref) so the cache can be rebuilt from GitHub at any time.
 4. **Application API** is the Express 5 + OpenAPI + Orval + Zod pipeline. It serves the cached, human-shaped view to clients and proxies writes (new contribution, submit for canon, steward decision) back through Octokit so GitHub remains authoritative. Private consent and moderation records remain application-owned control-plane data when those designs are implemented.
-5. **Clients** are the React 19/Vite web app (primary), an Expo mobile client scaffold with discovery, reading, narration, and offline-cache capability, and several configured reader-oriented web surfaces. Mobile product scope and production deployment evidence remain open. A separate GitHub Pages discovery SPA remains optional.
+5. **Clients** are the React 19/Vite Author App (`artifacts/web`), the Editorial Reader (`artifacts/reader`), companion reader-oriented web surfaces, and an Expo mobile client scaffold with discovery, reading, narration, and offline-cache capability. The Author App package decision is settled; product acceptance and production deployment evidence remain open. A separate GitHub Pages discovery SPA remains optional.
 
 ---
 
@@ -323,7 +323,7 @@ Directly answering the "Vite, Tailwind, TypeScript, Playwright" question: here's
 | Database | PostgreSQL | — | Confirmed |
 | Build/bundle (server) | esbuild | 0.27.3 (pinned) | Confirmed |
 | Runtime | Node.js | 24 | Confirmed |
-| Mobile | Expo / React Native | — | **Scaffolded and implemented in checkout; product scope and production acceptance remain open** |
+| Mobile | Expo / React Native | — | **Implemented in checkout; provisional; product scope, device acceptance, and production deployment remain open** |
 | E2E testing | **Not present** | — | **Gap.** No Playwright or Cypress browser harness is configured |
 | Unit/integration testing | **Present for API and core flows** | Vitest route and library tests under `artifacts/api-server/src/**/__tests__` | Expand coverage and keep the generated API contract aligned |
 | API mocking for tests | Mock Service Worker (`msw`) | listed in `pnpm-workspace.yaml`'s `allowBuilds` map | **Reserved but unused** — the dependency is pre-approved for pnpm's build-script allowlist, but nothing consumes it yet |
@@ -375,11 +375,11 @@ The primary decisions log is `docs/decisions/open-questions.md`. The items below
 |---|---|---|
 | 15.1 | One repo per storyworld | **Decided 2026-08-19** — one repo per storyworld, Storyworld Kit template |
 | 15.2 | Contributor identity model | **Decided 2026-08-19** — app-native identity sufficient for Stage 0–1; full model is Stage 2/3 |
-| 15.3 | Production web app package | **Decided 2026-08-19** — `artifacts/web` is the canonical Author App candidate |
+| 15.3 | Production web app package | **Decided 2026-08-19** — `artifacts/web` is the canonical Author App |
 | 15.4 | Code license | **Decided 2026-08-19** — proprietary/all-rights-reserved placeholder; root `LICENSE` file added |
 | 15.5 | `attached_assets/` boundary | **Decided 2026-08-19** — `content/pilot-storyworld/` is the authorized location for pilot source material |
 | 15.6 | GitHub App vs. PAT | **Decided 2026-08-19** — migrate to GitHub App; PAT is Stage 1 tech debt |
-| 15.7 | Mobile scope and timing | Open |
+| 15.7 | Mobile scope and timing | **Open** — Expo client is scaffolded and implemented in checkout; product acceptance and timing remain unresolved |
 | 15.11 | Four-vs-six submission states | **Decided 2026-08-19** — six-state model locked; four-state references are stale |
 | 15.12 | Capsules table / term ledger | **Decided 2026-08-19** — no capsules table; GitHub Issues with `capsule:*` labels are canonical |
 | 15.14 | Per-action consent ladder | **Decided 2026-08-19** — design only in Stage 0–1 |
@@ -418,12 +418,12 @@ Mirrors the staged model already stated in `README.md`, mapped to this document'
 
 Open questions 15.1–15.6 and 15.11–15.12 were decided on 2026-08-19 by Jamie Hill (PRD Build Directive v1). The following remain as active build or evidence work for Stage 0–1:
 
-- [ ] Build the Storyworld Kit GitHub template repo (PRD §7.1).
+- [x] Add the checked-in Storyworld Kit baseline to `content/pilot-storyworld/` (implemented in checkout, 2026-08-19); a live GitHub template repository remains not yet deployed/verified.
 - [x] Normalize the capsule Issue label contract across API, MCP server, and ingestion pipeline (Task #71, merged).
 - [x] Fix the canon acceptance state bug — accepting a proposal must not set path to `published-alternate` (Task #70, merged).
 - [x] Implement proposal restriction, withdrawal, and archive lifecycle (Task #72, merged).
 - [x] Design the per-action consent ladder and baseline moderation tooling (Task #73, merged; enforcement remains unapproved).
-- [ ] Migrate platform GitHub integration from PAT to GitHub App (PRD §7.9).
+- [ ] Migrate platform GitHub integration from PAT to GitHub App (intentionally pending Stage 1 pilot evidence).
 - [ ] Add Vitest + MSW tests for proposal state transitions and sync job idempotency.
-- [ ] Record production deployment identity and run external route smoke tests for the configured reader, writer, API, and mobile surfaces.
+- [ ] Record production deployment identity and run external route smoke tests for the configured reader, writer, API, and mobile surfaces (not yet deployed).
 - [ ] Build the Stage 0/1 traceability matrix and dated capability inventory required by the attainable roadmap.

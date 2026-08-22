@@ -58,16 +58,16 @@ Only then: commercial or adaptation programmes
 
 **Promise:** a worldbuilder can turn their own raw material into reviewable capsules, create a structured storyworld from a kit, and publish a basic reader edition without hand-configuring GitHub.
 
-| Requirement slice | Includes | Durable outcome |
-| --- | --- | --- |
-| One template repository | The checked-in `content/pilot-storyworld/` Storyworld Kit baseline: manifest, README, canon policy, contribution policy, provenance convention, issue/PR templates, canonical labels, CODEOWNERS template, branch-protection prerequisites, and structural-only Actions validation. | A reusable repository blueprint that can be checked before a private pilot is opened. |
-| World initialization | Guided configuration or documented setup that creates a world from the template. | A repository with world-specific settings committed to it. |
-| Private Writer's Workbench | Direct creation and editing of character, arc, scene, event, setting, motif, question, and vision capsules. | A private, versioned Concept Board. |
-| Safe ingestion design baseline | Manual capture plus synthetic or demonstrably owned fixtures; rules-only extraction/segmentation design, source hash/provenance, draft candidate capsules, and failure handling. Real untrusted uploads remain gated by Stage 0. | An inspectable ingestion record that never auto-promotes work or places a private raw source in Git or a reader build. |
-| CME review | Compare candidate capsules to source excerpts, correct/merge/split/reject them, and add approved capsules to the board. | Human-approved draft capsules tied to their sources. |
-| Basic reader edition | Render selected scenes as readable full text, with title, attribution, canon state, and content notes. | A deployable static or service-hosted edition. |
-| Steward setup | Assign initial owner/steward roles and configure canonical branch protection. | A governed review boundary. |
-| Export | Produce a portable archive and a readable edition export. | A worldbuilder can leave with their material. |
+| Requirement slice | Includes | Durable outcome | Current status |
+| --- | --- | --- | --- |
+| One template repository | The checked-in `content/pilot-storyworld/` Storyworld Kit baseline: manifest, README, canon policy, contribution policy, provenance convention, issue/PR templates, canonical labels, CODEOWNERS template, branch-protection prerequisites, and structural-only Actions validation. | A reusable repository blueprint that can be checked before a private pilot is opened. | **Implemented in checkout, 2026-08-19**; live template-repository exercise remains unverified |
+| World initialization | Guided configuration or documented setup that creates a world from the template. | A repository with world-specific settings committed to it. | **Provisional** |
+| Private Writer's Workbench | Direct creation and editing of character, arc, scene, event, setting, motif, question, and vision capsules. | A private, versioned Concept Board. | **Implemented in checkout, 2026-08-21** |
+| Safe ingestion design baseline | Manual capture plus synthetic or demonstrably owned fixtures; rules-only extraction/segmentation design, source hash/provenance, draft candidate capsules, and failure handling. Real untrusted uploads remain gated by Stage 0. | An inspectable ingestion record that never auto-promotes work or places a private raw source in Git or a reader build. | **Implemented in checkout, 2026-08-21; provisional** |
+| CME review | Compare candidate capsules to source excerpts, correct/merge/split/reject them, and add approved capsules to the board. | Human-approved draft capsules tied to their sources. | **Provisional** |
+| Basic reader edition | Render selected scenes as readable full text, with title, attribution, canon state, and content notes. | A deployable static or service-hosted edition. | **Implemented in checkout, 2026-08-22; not yet deployed** |
+| Steward setup | Assign initial owner/steward roles and configure canonical branch protection. | A governed review boundary. | **Implemented in checkout; provisional** |
+| Export | Produce a portable archive and a readable edition export. | A worldbuilder can leave with their material. | **Not yet evidenced** |
 
 **Success test:** one real worldbuilder manually captures or uses demonstrably owned, non-sensitive fixtures, approves at least five capsules on a private Concept Board, opens a repository, publishes an initial story seed, changes a scene, and publishes a new reader edition without direct developer assistance. The acceptance card records the agreed format/size limits, provenance fields, approval audit fields, performance budget, recovery expectation, and every intentionally deferred requirement.
 
