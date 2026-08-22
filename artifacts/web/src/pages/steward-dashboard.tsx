@@ -241,7 +241,7 @@ function ProposalCard({
 
   return (
     <div
-      className="rounded-xl border border-border/60 bg-card overflow-hidden"
+      className={cn("rounded-xl border bg-card overflow-hidden", proposal.state === "accepted-into-canon" && "tf-gold-connection")}
       data-testid={`card-proposal-${proposal.id}`}
     >
       <div className="p-5 space-y-3">
@@ -619,7 +619,7 @@ export function StewardDashboard() {
   ) ?? [];
 
   return (
-    <div className="max-w-3xl mx-auto space-y-10">
+    <div className="tf-strand max-w-3xl mx-auto space-y-10">
       {/* Breadcrumb */}
       <Link
         href={`/worlds/${worldId}`}
@@ -632,7 +632,7 @@ export function StewardDashboard() {
 
       <header className="space-y-2">
         <div className="flex items-center gap-3">
-          <ShieldCheck className="h-7 w-7 text-primary" />
+          <span className="tf-nucleus-mark" aria-hidden="true"><span /></span>
           <h1 className="text-3xl font-serif font-medium text-foreground" data-testid="text-dashboard-title">
             Steward Panel
           </h1>

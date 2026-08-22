@@ -338,7 +338,7 @@ export function SceneWriter() {
   const TypeIcon = meta.icon;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="tf-strand max-w-5xl mx-auto space-y-8">
       <nav className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link
           href={`/worlds/${worldId}`}
@@ -361,7 +361,7 @@ export function SceneWriter() {
 
       <header className="space-y-1.5">
         <div className="flex items-center gap-2.5">
-          <Sparkles className="h-6 w-6 text-primary shrink-0" />
+          <span className="tf-nucleus" aria-hidden="true" />
           <h1 className="font-serif text-3xl font-medium text-foreground">
             Scene Writer
           </h1>
@@ -371,6 +371,13 @@ export function SceneWriter() {
             ? "Generate an agent-assisted opening scene from this capsule, then shape it into your own prose."
             : "Use this prompt as a starting point, then write the scene in your own words."}
         </p>
+        <div className="flex items-center gap-2 pt-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--tf-rust)]/35 bg-[var(--tf-rust)]/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--tf-rust)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--tf-orange)]" aria-hidden="true" />
+            Draft
+          </span>
+          <span className="text-xs text-muted-foreground">Working scene · reference <code className="font-mono">capsule-{capsule.id}</code></span>
+        </div>
       </header>
 
       <div className="max-w-2xl space-y-2">

@@ -250,3 +250,153 @@
     pointer-events: none;
   }
 }
+
+/* Telling Forward surface grammar */
+.tf-editorial-header {
+  background: var(--tf-teal);
+  color: var(--tf-paper);
+  border-bottom: 1px solid color-mix(in srgb, var(--tf-amber) 55%, var(--tf-teal));
+}
+
+.tf-editorial-header a,
+.tf-editorial-header button { color: var(--tf-paper); }
+.tf-editorial-header .tf-nav-active {
+  background: color-mix(in srgb, var(--tf-paper) 14%, transparent);
+  color: var(--tf-paper);
+}
+.tf-bond-divider { border-color: color-mix(in srgb, var(--tf-teal) 42%, transparent); }
+
+.tf-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 19rem;
+  border: 1px solid color-mix(in srgb, var(--tf-teal) 28%, transparent);
+  background: var(--tf-paper);
+}
+.tf-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: url("/narrative-pulse.svg") center / cover no-repeat;
+}
+.tf-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--tf-paper) 97%, transparent) 0%, color-mix(in srgb, var(--tf-paper) 84%, transparent) 48%, color-mix(in srgb, var(--tf-paper) 25%, transparent) 100%);
+}
+.tf-hero-copy { max-width: 34rem; padding: clamp(1.5rem, 5vw, 3.5rem); }
+
+.tf-nucleus {
+  display: inline-flex;
+  width: 0.7rem;
+  height: 0.7rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--tf-amber);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--tf-orange) 18%, transparent);
+}
+.tf-nucleus-mark {
+  position: relative;
+  display: inline-flex;
+  width: 2.4rem;
+  height: 2.4rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--tf-amber) 70%, var(--tf-rust));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tf-amber) 18%, var(--tf-paper));
+}
+.tf-nucleus-mark::before,
+.tf-nucleus-mark::after {
+  content: "";
+  position: absolute;
+  width: 1.2rem;
+  height: 1px;
+  background: color-mix(in srgb, var(--tf-rust) 65%, transparent);
+}
+.tf-nucleus-mark::after { transform: rotate(60deg); }
+.tf-nucleus-mark::before { transform: rotate(-60deg); }
+.tf-nucleus-mark > span {
+  position: relative;
+  z-index: 1;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--tf-orange);
+}
+
+.tf-capsule-field { position: relative; }
+.tf-capsule-field::before {
+  content: "";
+  position: absolute;
+  inset: 1.25rem 28%;
+  z-index: -1;
+  border-top: 1px solid color-mix(in srgb, var(--tf-bond) 24%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--tf-bond) 18%, transparent);
+  transform: rotate(-4deg);
+  pointer-events: none;
+}
+.tf-capsule-shell {
+  border-color: color-mix(in srgb, var(--tf-bond) 30%, var(--tf-paper));
+  border-left: 3px solid var(--tf-nucleus);
+  background: color-mix(in srgb, var(--tf-paper) 94%, var(--tf-amber));
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--tf-teal) 7%, transparent);
+}
+.tf-capsule-character { --tf-nucleus: var(--tf-rust); }
+.tf-capsule-arc { --tf-nucleus: var(--tf-amber); }
+.tf-capsule-event { --tf-nucleus: var(--tf-orange); }
+.tf-capsule-beat { --tf-nucleus: var(--tf-orange); }
+.tf-capsule-planned { --tf-nucleus: var(--tf-rust); }
+.tf-capsule-motif { --tf-nucleus: var(--tf-amber); }
+.tf-capsule-badge {
+  color: var(--tf-espresso);
+  border-color: color-mix(in srgb, var(--tf-nucleus) 52%, transparent);
+  background: color-mix(in srgb, var(--tf-nucleus) 18%, var(--tf-paper));
+}
+.tf-action-promote {
+  color: var(--tf-espresso);
+  border-color: color-mix(in srgb, var(--tf-amber) 70%, var(--tf-rust));
+  background: color-mix(in srgb, var(--tf-amber) 24%, var(--tf-paper));
+}
+.tf-action-invert {
+  color: var(--tf-espresso);
+  border-color: color-mix(in srgb, var(--tf-amber) 72%, transparent);
+  background: color-mix(in srgb, var(--tf-amber) 10%, transparent);
+}
+.tf-action-disrupt {
+  color: var(--tf-rust);
+  border-color: color-mix(in srgb, var(--tf-orange) 65%, transparent);
+  background: color-mix(in srgb, var(--tf-orange) 10%, transparent);
+}
+.tf-strand {
+  position: relative;
+  border-left: 2px solid var(--tf-strand);
+  padding-left: 1.25rem;
+}
+.tf-strand::before {
+  content: "";
+  position: absolute;
+  top: 0.35rem;
+  bottom: 0.35rem;
+  left: -3px;
+  width: 4px;
+  border-radius: 999px;
+  background: var(--tf-amber);
+}
+.tf-gold-connection {
+  border-color: color-mix(in srgb, var(--tf-gold-connection) 65%, var(--tf-paper));
+  box-shadow: inset 3px 0 0 var(--tf-gold-connection);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tf-hero::before { background-image: url("/background-desktop-2560x1440.png"); }
+}
+@media (max-width: 640px) {
+  .tf-hero { min-height: 22rem; }
+  .tf-hero::after {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--tf-paper) 96%, transparent) 0%, color-mix(in srgb, var(--tf-paper) 72%, transparent) 100%);
+  }
+}

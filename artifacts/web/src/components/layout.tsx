@@ -36,14 +36,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] flex flex-col font-sans">
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto max-w-5xl px-4 h-16 flex items-center justify-between">
+      <header className="tf-editorial-header sticky top-0 z-50 w-full">
+        <div className="container mx-auto max-w-6xl px-4 h-16 flex items-center justify-between">
           {/* Wordmark */}
           <Link href="/" className="flex items-center gap-3 transition-colors hover:opacity-80" data-testid="link-home">
-            <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-primary/10 text-primary">
-              <BookOpen className="h-4 w-4" />
+            <div className="tf-nucleus-mark h-8 w-8 border-0 bg-transparent shadow-none">
+              <span aria-hidden="true" />
             </div>
-            <span className="font-serif text-xl font-medium tracking-tight text-primary">
+            <span className="font-sans text-sm font-semibold tracking-[0.18em] uppercase text-[var(--tf-paper)]">
               Telling Forward
             </span>
           </Link>
@@ -53,8 +53,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <Link
               href="/"
               className={cn(
-                "px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
-                location === "/" ? "text-foreground bg-accent/50" : "text-muted-foreground hover:text-foreground hover:bg-accent/30"
+                 "px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
+                 location === "/" ? "tf-nav-active" : "opacity-75 hover:opacity-100 hover:bg-white/10"
               )}
               data-testid="link-nav-storyworlds"
             >
@@ -64,7 +64,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               href="/submissions"
               className={cn(
                 "px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
-                location === "/submissions" ? "text-foreground bg-accent/50" : "text-muted-foreground hover:text-foreground hover:bg-accent/30"
+                 location === "/submissions" ? "tf-nav-active" : "opacity-75 hover:opacity-100 hover:bg-white/10"
               )}
               data-testid="link-nav-submissions"
             >
@@ -163,12 +163,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="flex-1 container mx-auto max-w-5xl px-4 py-8 md:py-12">
+      <main className="tf-bond-divider flex-1 container mx-auto max-w-6xl border-l border-r px-4 py-8 md:py-12">
         {children}
       </main>
 
-      <footer className="border-t border-border/40 py-8 md:py-12 mt-12">
-        <div className="container mx-auto max-w-5xl px-4 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+      <footer className="border-t border-[color-mix(in_srgb,var(--tf-teal)_28%,transparent)] py-8 md:py-12 mt-12">
+        <div className="container mx-auto max-w-6xl px-4 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <BookOpen className="h-4 w-4 opacity-50" />
             <span>© {new Date().getFullYear()} Telling Forward</span>
