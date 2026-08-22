@@ -398,7 +398,7 @@
   position: absolute;
   inset: 0;
   z-index: -2;
-  background: url("/background-desktop-2560x1440.png") center / cover no-repeat;
+  background: var(--reader-entry-bg-desktop) center / cover no-repeat;
   opacity: 0.72;
 }
 [data-reader-theme="editorial"] .reader-entry-hero::after {
@@ -430,7 +430,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   [data-reader-theme="editorial"] .reader-entry-hero::before {
-    background-image: url("/background-mobile-1290x2796.png");
+    background-image: var(--reader-entry-bg-mobile);
   }
 }
 @media (max-width: 640px) {

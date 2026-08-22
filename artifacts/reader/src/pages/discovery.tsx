@@ -8,7 +8,13 @@ export default function DiscoveryPage() {
   return (
     <ReaderLayout>
       <div className="w-full max-w-[var(--reader-line-length)]">
-        <header className="reader-entry-hero mb-20 md:mb-32 animate-reveal">
+        <header
+          className="reader-entry-hero mb-20 md:mb-32 animate-reveal"
+          style={{
+            "--reader-entry-bg-desktop": `url("${import.meta.env.BASE_URL}background-desktop-2560x1440.png")`,
+            "--reader-entry-bg-mobile": `url("${import.meta.env.BASE_URL}background-mobile-1290x2796.png")`,
+          } as React.CSSProperties}
+        >
           <div className="reader-entry-copy">
             <p className="mb-5 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-[var(--tf-rust)]">
               <span className="reader-nucleus" aria-hidden="true" />
