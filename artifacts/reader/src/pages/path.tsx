@@ -137,7 +137,7 @@ export default function PathReaderPage() {
           </h1>
 
           {/* Path-type indicator */}
-          <div className="flex items-center gap-3">
+          <div className="reader-strand flex items-center gap-3">
             {isCanonPath && (
               <>
                 <span className="inline-block w-2 h-2 rotate-45" style={{ backgroundColor: "var(--reader-canon-indicator)" }} aria-hidden="true" />

@@ -384,3 +384,57 @@
 .animate-reveal-delay-1 { animation-delay: 0.1s; }
 .animate-reveal-delay-2 { animation-delay: 0.2s; }
 .animate-reveal-delay-3 { animation-delay: 0.3s; }
+
+/* Editorial reader surface: atmosphere stays behind the story, never competes with it. */
+[data-reader-theme="editorial"] .reader-entry-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-block: 1px solid color-mix(in srgb, var(--tf-teal) 24%, transparent);
+  padding: clamp(2.5rem, 8vw, 7rem) clamp(1.25rem, 6vw, 5rem);
+}
+[data-reader-theme="editorial"] .reader-entry-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: url("/background-desktop-2560x1440.png") center / cover no-repeat;
+  opacity: 0.72;
+}
+[data-reader-theme="editorial"] .reader-entry-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(90deg, var(--tf-paper) 0%, color-mix(in srgb, var(--tf-paper) 90%, transparent) 44%, color-mix(in srgb, var(--tf-paper) 34%, transparent) 100%);
+}
+.reader-entry-copy { max-width: 40rem; }
+.reader-nucleus {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: var(--tf-amber);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--tf-orange) 18%, transparent);
+}
+.reader-strand {
+  border-left: 1px solid var(--tf-strand);
+  padding-left: 1rem;
+}
+.reader-canon-seam { border-left: 3px solid var(--tf-amber); }
+.reader-alternate-seam { border-left: 2px solid var(--tf-orange); }
+.reader-reference {
+  font-family: var(--reader-font-mono);
+  font-size: 0.72em;
+  letter-spacing: 0.02em;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-reader-theme="editorial"] .reader-entry-hero::before {
+    background-image: url("/background-mobile-1290x2796.png");
+  }
+}
+@media (max-width: 640px) {
+  [data-reader-theme="editorial"] .reader-entry-hero::after {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--tf-paper) 94%, transparent), color-mix(in srgb, var(--tf-paper) 62%, transparent));
+  }
+}

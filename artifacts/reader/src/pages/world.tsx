@@ -98,13 +98,13 @@ export default function WorldLandingPage() {
           <div className="space-y-24 md:space-y-32">
             {canonPaths.length > 0 && (
               <section className="animate-reveal animate-reveal-delay-1">
-                <h2 className="text-xs font-semibold tracking-[0.2em] uppercase mb-8 pb-4 border-b border-border/40 flex items-center gap-3" style={{ color: "var(--reader-canon-indicator)" }}>
+                <h2 className="reader-strand text-xs font-semibold tracking-[0.2em] uppercase mb-8 pb-4 border-b border-border/40 flex items-center gap-3" style={{ color: "var(--reader-canon-indicator)" }}>
                   <span className="inline-block w-2 h-2 rotate-45 shrink-0 bg-current" aria-hidden="true" />
                   Canon
                 </h2>
                 <div className="flex flex-col gap-6">
                   {canonPaths.map(path => (
-                    <Link key={path.id} href={`/worlds/${worldId}/paths/${path.id}`} data-testid={`link-canon-path-${path.id}`} className="group block relative outline-none">
+                    <Link key={path.id} href={`/worlds/${worldId}/paths/${path.id}`} data-testid={`link-canon-path-${path.id}`} className="reader-canon-seam group block relative outline-none pl-4">
                       <div className="absolute -inset-y-4 -inset-x-6 md:-inset-x-8 z-0 scale-95 opacity-0 transition-all duration-500 ease-out bg-[color-mix(in_srgb,var(--reader-canon-indicator)_8%,transparent)] group-hover:scale-100 group-hover:opacity-100 group-focus-visible:scale-100 group-focus-visible:opacity-100 rounded-lg" />
                       <div className="relative z-10 flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 sm:gap-4">
                         <h3 className="text-2xl md:text-3xl transition-colors duration-300 group-hover:[color:var(--reader-canon-indicator)] font-normal" style={{ fontFamily: "var(--reader-font-body)" }}>
@@ -122,13 +122,13 @@ export default function WorldLandingPage() {
 
             {alternatePaths.length > 0 && (
               <section className="animate-reveal animate-reveal-delay-2">
-                <h2 className="text-xs font-semibold tracking-[0.2em] uppercase mb-8 pb-4 border-b border-border/40 flex items-center gap-3" style={{ color: "var(--reader-alternate-indicator)" }}>
+                <h2 className="reader-strand text-xs font-semibold tracking-[0.2em] uppercase mb-8 pb-4 border-b border-border/40 flex items-center gap-3" style={{ color: "var(--reader-alternate-indicator)" }}>
                   <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-current" aria-hidden="true" />
                   Alternate Paths
                 </h2>
                 <div className="flex flex-col gap-6">
                   {alternatePaths.map(path => (
-                    <Link key={path.id} href={`/worlds/${worldId}/paths/${path.id}`} data-testid={`link-alternate-path-${path.id}`} className="group block relative outline-none">
+                    <Link key={path.id} href={`/worlds/${worldId}/paths/${path.id}`} data-testid={`link-alternate-path-${path.id}`} className="reader-alternate-seam group block relative outline-none pl-4">
                       <div className="absolute -inset-y-4 -inset-x-6 md:-inset-x-8 z-0 scale-95 opacity-0 transition-all duration-500 ease-out bg-[color-mix(in_srgb,var(--reader-alternate-indicator)_8%,transparent)] group-hover:scale-100 group-hover:opacity-100 group-focus-visible:scale-100 group-focus-visible:opacity-100 rounded-lg" />
                       <div className="relative z-10 flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 sm:gap-4">
                         <h3 className="text-xl md:text-2xl transition-colors duration-300 group-hover:[color:var(--reader-alternate-indicator)] font-normal" style={{ fontFamily: "var(--reader-font-body)" }}>

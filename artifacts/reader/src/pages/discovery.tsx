@@ -8,16 +8,22 @@ export default function DiscoveryPage() {
   return (
     <ReaderLayout>
       <div className="w-full max-w-[var(--reader-line-length)]">
-        <header className="mb-20 md:mb-32 animate-reveal">
+        <header className="reader-entry-hero mb-20 md:mb-32 animate-reveal">
+          <div className="reader-entry-copy">
+            <p className="mb-5 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-[var(--tf-rust)]">
+              <span className="reader-nucleus" aria-hidden="true" />
+              A living story field
+            </p>
           <h1
-            className="text-4xl md:text-5xl lg:text-6xl tracking-tight mb-6 font-light"
-            style={{ fontFamily: "var(--reader-font-body)" }}
+            className="text-4xl md:text-5xl lg:text-6xl tracking-tight mb-6 font-normal"
+            style={{ fontFamily: "var(--app-font-serif)" }}
           >
             Storyworlds
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground leading-relaxed" style={{ fontFamily: "var(--reader-font-body)" }}>
             Explore collaborative fictions, told forward.
           </p>
+          </div>
         </header>
 
         {isLoading && (
@@ -51,17 +57,17 @@ export default function DiscoveryPage() {
               style={{ animationDelay: `${(idx + 1) * 0.1}s` }}
             >
               <article className="relative" data-testid={`card-storyworld-${world.id}`}>
-                <div className="absolute -inset-y-6 -inset-x-8 md:-inset-x-12 z-0 scale-95 opacity-0 transition-all duration-500 ease-out bg-muted/30 group-hover:scale-100 group-hover:opacity-100 group-focus-visible:scale-100 group-focus-visible:opacity-100 group-focus-visible:ring-2 group-focus-visible:ring-ring rounded-lg" />
+                <div className="absolute -inset-y-6 -inset-x-8 md:-inset-x-12 z-0 scale-95 opacity-0 transition-all duration-500 ease-out bg-[color-mix(in_srgb,var(--tf-amber)_12%,transparent)] group-hover:scale-100 group-hover:opacity-100 group-focus-visible:scale-100 group-focus-visible:opacity-100 group-focus-visible:ring-2 group-focus-visible:ring-[var(--tf-teal)] rounded-lg" />
                 <div className="relative z-10">
                   <header className="flex flex-col md:flex-row md:items-baseline justify-between gap-2 md:gap-6 mb-4">
                     <h2
-                      className="text-2xl md:text-3xl lg:text-4xl font-normal group-hover:text-primary transition-colors duration-300"
+                      className="text-2xl md:text-3xl lg:text-4xl font-normal group-hover:text-[var(--tf-rust)] transition-colors duration-300"
                       style={{ fontFamily: "var(--reader-font-body)" }}
                     >
                       {world.title}
                     </h2>
                     <span
-                      className="text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase shrink-0"
+                      className="reader-strand text-xs font-semibold tracking-[0.1em] text-[var(--tf-teal)] uppercase shrink-0"
                       data-testid={`text-world-activity-${world.id}`}
                     >
                       Updated {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(world.updatedAt))}

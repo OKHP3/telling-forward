@@ -38,12 +38,12 @@ export function ReaderLayout({
         color: "var(--reader-text)",
       }}
     >
-      <header className="w-full border-b border-border/40 mb-12 md:mb-20 shrink-0">
+      <header className="w-full border-b border-[color-mix(in_srgb,var(--tf-teal)_30%,transparent)] bg-[color-mix(in_srgb,var(--tf-paper)_90%,transparent)] mb-12 md:mb-20 shrink-0">
         <div className="mx-auto max-w-[var(--reader-line-length)] px-6 h-20 flex items-center justify-between">
           <Link
             href="/"
             data-testid="link-discovery-home"
-            className="text-xs font-semibold tracking-[0.15em] uppercase hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background rounded-sm"
+            className="text-xs font-semibold tracking-[0.15em] uppercase text-[var(--tf-teal)] hover:text-[var(--tf-rust)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tf-orange)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--tf-paper)] rounded-sm"
           >
             Telling Forward
           </Link>
@@ -52,7 +52,7 @@ export function ReaderLayout({
             {user ? (
               <>
                 <span
-                  className="text-xs font-medium text-muted-foreground hidden sm:block tracking-wide"
+                  className="text-xs font-medium text-[var(--tf-teal)] hidden sm:block tracking-wide"
                   data-testid="text-signed-in-user"
                 >
                   {user.displayName}
@@ -60,7 +60,7 @@ export function ReaderLayout({
                 <button
                   onClick={() => logout()}
                   data-testid="button-sign-out"
-                  className="text-xs font-semibold tracking-[0.1em] uppercase text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background rounded-sm"
+                  className="text-xs font-semibold tracking-[0.1em] uppercase text-[var(--tf-teal)] hover:text-[var(--tf-rust)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tf-orange)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--tf-paper)] rounded-sm"
                 >
                   Sign out
                 </button>
@@ -69,7 +69,7 @@ export function ReaderLayout({
               <Link
                 href="/sign-in"
                 data-testid="link-sign-in"
-                className="text-xs font-semibold tracking-[0.1em] uppercase text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background rounded-sm"
+                className="text-xs font-semibold tracking-[0.1em] uppercase text-[var(--tf-teal)] hover:text-[var(--tf-rust)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tf-orange)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--tf-paper)] rounded-sm"
               >
                 Sign in
               </Link>
