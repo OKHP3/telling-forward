@@ -19,6 +19,9 @@ portable summaries; the document heading holds the full decision title.
 - [ADR-0011: Provenance and process artifacts](0011-provenance-and-process-artifacts.md)
 - [ADR-0012: Scene-purpose framing](0012-scene-purpose-framing-from-synopsis-discipline.md)
 - [ADR-0013: GitHub-native boundary and donor primitives](0013-github-native-boundary-and-donor-primitives.md)
+- [ADR-0014: Storyworld creation boundary](0014-storyworld-creation-boundary.md)
+- [ADR-0015: Reader interest signal](0015-reader-interest-signal.md)
+- [ADR-0016: Structural transposition and classics seed library](0016-structural-transposition-and-classics-seed-library.md)
 
 ## Filename transition
 
