@@ -151,15 +151,15 @@ storyworld rather than a public-domain one, what consent, attribution, or
 license model governs it? This is 15.10's question at a different scale, an
 entire second sellable product instead of one derivative capsule, and
 deserves its own decision rather than inheriting 15.10's eventual answer by
-default. See `docs/decisions/open-questions.md` 15.17.
+default. See `docs/decisions/open-questions.md` 15.20.
 
 **Public-domain sourcing verification process.** Before any classics
 storyworld is registered, what concrete verification step confirms a given
 text's public-domain status (publication year, author death year,
 jurisdiction, specific-edition copyright) and records that verification
 against the storyworld's provenance record? This is a process/diligence
-question, not a consent question, logging it separately from 15.17. See
-`docs/decisions/open-questions.md` 15.18.
+question, not a consent question, logging it separately from 15.20. See
+`docs/decisions/open-questions.md` 15.21.
 
 ## Related decisions
 
@@ -168,4 +168,4 @@ question, not a consent question, logging it separately from 15.17. See
 - [ADR-0005: Reader state, provenance, and contributor signals](0005-reader-state-provenance-signals.md), item 4
 - [ADR-0013: GitHub-native boundary and donor primitives](0013-github-native-boundary-and-donor-primitives.md)
 - [ADR-0014: Storyworld creation boundary](0014-storyworld-creation-boundary.md)
-- [Open questions log](../decisions/open-questions.md), 15.10, 15.17, 15.18
+- [Open questions log](../decisions/open-questions.md), 15.10, 15.20, 15.21

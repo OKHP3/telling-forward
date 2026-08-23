@@ -70,11 +70,11 @@ engagement across an entire branch; a per-capsule signal is finer-grained
 (a specific character beat or arc capsule within a path) and may better
 match how the Concept Board already treats capsules as the atomic unit.
 This needs an explicit decision before design work starts, logging it rather
-than assuming either answer. See `docs/decisions/open-questions.md` 15.16.
+than assuming either answer. See `docs/decisions/open-questions.md` 15.19.
 
 ## Related decisions
 
 - [ADR-0005: Reader state, provenance, and contributor signals](0005-reader-state-provenance-signals.md), item 3
 - [ADR-0008: Reader consent and contribution](0008-reader-consent-and-contribution.md)
 - `docs/decisions/consent-ladder-design.md` (open question 15.14)
-- [Open questions log](../decisions/open-questions.md), 15.16
+- [Open questions log](../decisions/open-questions.md), 15.19
