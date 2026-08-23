@@ -132,70 +132,113 @@ const router: IRouter = Router();
 // GET /api/storyworlds
 router.get("/", async (req, res) => {
   try {
-      const rows = await db
-        .select()
-        .from(proposalsTable)
-        .where(eq(proposalsTable.storyworldId, params.data.id))
-        .orderBy(desc(proposalsTable.submittedAt));
+    const rows = await db
+      .select({
+        id: storyworldsTable.id,
+        repoOwner: storyworldsTable.repoOwner,
+        repoName: storyworldsTable.repoName,
+        title: storyworldsTable.title,
+        stewardId: storyworldsTable.stewardId,
+        canonBranchRef: storyworldsTable.canonBranchRef,
+        seed: storyworldsTable.seed,
+        readerTheme: storyworldsTable.readerTheme,
+        createdAt: storyworldsTable.createdAt,
+        updatedAt: storyworldsTable.updatedAt,
+        pathCount: count(storyPathsTable.id).mapWith(Number),
+        savedMomentCount: sql<number>`(
+          SELECT COUNT(DISTINCT c.id)
+          FROM contributions c
+          WHERE c.storyworld_id = ${storyworldsTable.id}
+        )`.mapWith(Number),
+      })
+      .from(storyworldsTable)
+      .leftJoin(
+        storyPathsTable,
+        eq(storyPathsTable.storyworldId, storyworldsTable.id),
+      )
+      .groupBy(storyworldsTable.id)
+      .orderBy(desc(storyworldsTable.createdAt));
     res.json(rows);
   } catch (err) {
-    req.log.error({ err }, "listContributions DB error");
-    res.status(500).json({ error: "Failed to load contributions" });
+    req.log.error({ err }, "listStoryworlds DB error");
+    res.status(500).json({ error: "Failed to load storyworlds" });
   }
 });
 
-// POST /api/storyworlds/:id/paths/:pathId/contributions
-// Authenticated contributors submit a narrated scene to an open path.
-router.post(
-  "/:id/paths/:pathId/contributions",
+// GET /api/storyworlds/:id
+router.get("/:id", async (req, res) => {
+  const params = GetStoryworldParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid storyworld id" });
+    return;
+  }
+  try {
+    const rows = await db
+      .select({
+        id: storyworldsTable.id,
+        repoOwner: storyworldsTable.repoOwner,
+        repoName: storyworldsTable.repoName,
+        title: storyworldsTable.title,
+        stewardId: storyworldsTable.stewardId,
+        canonBranchRef: storyworldsTable.canonBranchRef,
+        seed: storyworldsTable.seed,
+        readerTheme: storyworldsTable.readerTheme,
+        createdAt: storyworldsTable.createdAt,
+        updatedAt: storyworldsTable.updatedAt,
+        pathCount: count(storyPathsTable.id).mapWith(Number),
+        savedMomentCount: sql<number>`(
+          SELECT COUNT(DISTINCT c.id)
+          FROM contributions c
+          WHERE c.storyworld_id = ${storyworldsTable.id}
+        )`.mapWith(Number),
+      })
+      .from(storyworldsTable)
+      .leftJoin(
+        storyPathsTable,
+        eq(storyPathsTable.storyworldId, storyworldsTable.id),
+      )
+      .where(eq(storyworldsTable.id, params.data.id))
+      .groupBy(storyworldsTable.id)
+      .limit(1);
+    if (!rows.length) {
+      res.status(404).json({ error: "Storyworld not found" });
+      return;
+    }
+    res.json(rows[0]);
+  } catch (err) {
+    req.log.error({ err }, "getStoryworld DB error");
+    res.status(500).json({ error: "Failed to load storyworld" });
+  }
+});
+
+// PATCH /api/storyworlds/:id
+// Stewards maintain the short invitation readers see on discovery cards.
+router.patch(
+  "/:id",
   requireAuth,
+  requireStewardForStoryworld,
   async (req, res): Promise<void> => {
-    const params = ListStoryworldProposalsParams.safeParse(req.params);
+    const params = UpdateStoryworldParams.safeParse(req.params);
     if (!params.success) {
       res.status(400).json({ error: "Invalid storyworld id" });
       return;
     }
-    try {
-      const rows = await db
-        .select()
-        .from(proposalsTable)
-        .where(eq(proposalsTable.storyworldId, params.data.id))
-        .orderBy(desc(proposalsTable.submittedAt));
-    res.json(rows);
-  } catch (err) {
-    req.log.error({ err }, "listContributions DB error");
-    res.status(500).json({ error: "Failed to load contributions" });
-  }
-});
 
-// POST /api/storyworlds/:id/paths/:pathId/contributions
-// Authenticated contributors submit a narrated scene to an open path.
-router.post(
-  "/:id/paths/:pathId/contributions",
-  requireAuth,
-  async (req, res): Promise<void> => {
-    const params = ListStoryworldProposalsParams.safeParse(req.params);
-    if (!params.success) {
-      res.status(400).json({ error: "Invalid storyworld or path id" });
-      return;
-    }
-
-    const body = CreateContributionBody.safeParse(req.body);
+    const body = UpdateStoryworldBody.safeParse(req.body);
     if (!body.success) {
       res.status(400).json({ error: body.error.message });
       return;
     }
 
     try {
-    const [world] = await db
-      .select({
-        repoOwner: storyworldsTable.repoOwner,
-        repoName: storyworldsTable.repoName,
-        canonBranchRef: storyworldsTable.canonBranchRef,
-      })
-      .from(storyworldsTable)
-      .where(eq(storyworldsTable.id, id))
-      .limit(1);
+      const [world] = await db
+        .update(storyworldsTable)
+        .set({
+          seed: body.data.seed,
+          updatedAt: new Date(),
+        })
+        .where(eq(storyworldsTable.id, params.data.id))
+        .returning();
 
       if (!world) {
         res.status(404).json({ error: "Storyworld not found" });
@@ -230,17 +273,64 @@ router.post(
 
 // GET /api/storyworlds/:id/paths
 router.get("/:id/paths", async (req, res) => {
-    const params = ListStoryworldProposalsParams.safeParse(req.params);
-    if (!params.success) {
-      res.status(400).json({ error: "Invalid storyworld id" });
-      return;
-    }
-    try {
-      const rows = await db
-        .select()
-        .from(proposalsTable)
-        .where(eq(proposalsTable.storyworldId, params.data.id))
-        .orderBy(desc(proposalsTable.submittedAt));
+  const params = ListStoryPathsParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid storyworld id" });
+    return;
+  }
+  try {
+    const rows = await db
+      .select()
+      .from(storyPathsTable)
+      .where(eq(storyPathsTable.storyworldId, params.data.id))
+      .orderBy(desc(storyPathsTable.createdAt));
+    res.json(rows);
+  } catch (err) {
+    req.log.error({ err }, "listStoryPaths DB error");
+    res.status(500).json({ error: "Failed to load story paths" });
+  }
+});
+
+// GET /api/storyworlds/:id/paths/:pathId/contributions
+router.get("/:id/paths/:pathId/contributions", async (req, res) => {
+  const params = ListContributionsParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid storyworld or path id" });
+    return;
+  }
+  try {
+    const rows = await db
+      .select({
+        id: contributionsTable.id,
+        storyworldId: contributionsTable.storyworldId,
+        pathId: contributionsTable.pathId,
+        commitSha: contributionsTable.commitSha,
+        contributorId: contributionsTable.contributorId,
+        title: contributionsTable.title,
+        summary: contributionsTable.summary,
+        agentAssisted: contributionsTable.agentAssisted,
+        createdAt: contributionsTable.createdAt,
+        contributorDisplayName: contributorsTable.displayName,
+      })
+      .from(contributionPathMembershipsTable)
+      .innerJoin(
+        contributionsTable,
+        eq(
+          contributionPathMembershipsTable.contributionId,
+          contributionsTable.id,
+        ),
+      )
+      .leftJoin(
+        contributorsTable,
+        eq(contributionsTable.contributorId, contributorsTable.id),
+      )
+      .where(
+        and(
+          eq(contributionsTable.storyworldId, params.data.id),
+          eq(contributionPathMembershipsTable.pathId, params.data.pathId),
+        ),
+      )
+      .orderBy(asc(contributionsTable.createdAt));
     res.json(rows);
   } catch (err) {
     req.log.error({ err }, "listContributions DB error");
@@ -254,31 +344,7 @@ router.post(
   "/:id/paths/:pathId/contributions",
   requireAuth,
   async (req, res): Promise<void> => {
-    const params = ListStoryworldProposalsParams.safeParse(req.params);
-    if (!params.success) {
-      res.status(400).json({ error: "Invalid storyworld id" });
-      return;
-    }
-    try {
-      const rows = await db
-        .select()
-        .from(proposalsTable)
-        .where(eq(proposalsTable.storyworldId, params.data.id))
-        .orderBy(desc(proposalsTable.submittedAt));
-    res.json(rows);
-  } catch (err) {
-    req.log.error({ err }, "listContributions DB error");
-    res.status(500).json({ error: "Failed to load contributions" });
-  }
-});
-
-// POST /api/storyworlds/:id/paths/:pathId/contributions
-// Authenticated contributors submit a narrated scene to an open path.
-router.post(
-  "/:id/paths/:pathId/contributions",
-  requireAuth,
-  async (req, res): Promise<void> => {
-    const params = ListStoryworldProposalsParams.safeParse(req.params);
+    const params = CreateContributionParams.safeParse(req.params);
     if (!params.success) {
       res.status(400).json({ error: "Invalid storyworld or path id" });
       return;
@@ -306,25 +372,15 @@ router.post(
       consentRecordId,
       aiAssistedConsentRecordId,
     } = body.data;
-
-    const {
-      title,
-      content,
-      submissionId,
-      agentAssisted = false,
-      consentRecordId,
-      aiAssistedConsentRecordId,
-    } = body.data;
     try {
-    const [world] = await db
-      .select({
-        repoOwner: storyworldsTable.repoOwner,
-        repoName: storyworldsTable.repoName,
-        canonBranchRef: storyworldsTable.canonBranchRef,
-      })
-      .from(storyworldsTable)
-      .where(eq(storyworldsTable.id, id))
-      .limit(1);
+      const [world] = await db
+        .select({
+          repoOwner: storyworldsTable.repoOwner,
+          repoName: storyworldsTable.repoName,
+        })
+        .from(storyworldsTable)
+        .where(eq(storyworldsTable.id, storyworldId))
+        .limit(1);
 
       if (!world) {
         res.status(404).json({ error: "Storyworld not found" });
@@ -413,21 +469,8 @@ router.post(
       // reconciliation) to reuse the same durable commit after an index write
       // fails instead of creating a duplicate scene.
       const platformIdentity = `platform:${userId}`;
-      const commitSha = await gh.createCommit({
-        owner: world.repoOwner,
-        repo: world.repoName,
-        branch: world.canonBranchRef,
-        files: {
-          [manuscriptPath]: {
-            content: manuscriptBytes.toString("base64"),
-            encoding: "base64",
-          },
-        },
-        message: `ingest: queue manuscript ${uploadId}`,
-        authorName: platformAuthorName,
-        authorEmail: platformAuthorEmail,
-      });
-    const gh = getGitHubClient();
+      let commitSha: string;
+      const gh = getGitHubClient();
       try {
         const existingCommit = (
           await gh.listCommitsForBranch(
@@ -559,7 +602,7 @@ router.post(
 // Deliberately returns product language only; GitHub-native mechanics remain
 // the durable implementation source, not reader-facing vocabulary.
 router.get("/:id/provenance", async (req, res) => {
-    const params = ListStoryworldProposalsParams.safeParse(req.params);
+  const params = GetStoryworldParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "Invalid storyworld id" });
     return;
@@ -784,7 +827,7 @@ router.get(
 // Reports the current user's board-management capability using the same
 // steward-membership predicate that protects every capsule mutation.
 router.get("/:id/capsules/access", requireAuth, async (req, res) => {
-  const id        = parseInt(parseParam(req.params["id"]), 10);
+  const id = parseInt(parseParam(req.params["id"]), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid storyworld id" }); return; }
 
   try {
@@ -800,7 +843,7 @@ router.get("/:id/capsules/access", requireAuth, async (req, res) => {
 // Capsules are shared creative prompts. Any signed-in contributor may browse
 // them, while every mutation route below remains steward-only.
 router.get("/:id/capsules", requireAuth, async (req, res) => {
-  const id        = parseInt(parseParam(req.params["id"]), 10);
+  const id = parseInt(parseParam(req.params["id"]), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid storyworld id" }); return; }
 
   const world = await getStoryworldRepo(id);
@@ -849,7 +892,7 @@ router.post(
   requireAuth,
   requireStewardForStoryworld,
   async (req, res) => {
-  const id        = parseInt(parseParam(req.params["id"]), 10);
+    const id = parseInt(parseParam(req.params["id"]), 10);
     if (isNaN(id)) {
       res.status(400).json({ error: "Invalid storyworld id" });
       return;
@@ -921,7 +964,7 @@ router.post(
       process.env["PLATFORM_GIT_AUTHOR_EMAIL"] ?? "noreply@tellingforward.app";
 
     try {
-    const gh = getGitHubClient();
+      const gh = getGitHubClient();
       const commitSha = await gh.createCommit({
         owner: world.repoOwner,
         repo: world.repoName,
@@ -964,7 +1007,7 @@ router.post(
 
 // POST /api/storyworlds/:id/capsules
 router.post("/:id/capsules", requireAuth, requireStewardForStoryworld, async (req, res) => {
-  const id        = parseInt(parseParam(req.params["id"]), 10);
+  const id = parseInt(parseParam(req.params["id"]), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid storyworld id" }); return; }
 
   const { title, type, roleTag, epiphanyNote } = req.body as Record<string, unknown>;
@@ -1262,26 +1305,33 @@ router.post("/:id/capsules/:capsuleId/disrupt", requireAuth, requireStewardForSt
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-5.6-luna",
-      max_completion_tokens: 512,
+      max_completion_tokens: 1024,
       messages: [
         {
           role: "system",
-          content: `You are a structural fiction analyst. Given a capsule (character, arc, or event), \
-produce its symbolic inversion — not its simple opposite, but its shadow: \
-the version that mirrors its structure while reversing its purpose or charge.
+          content: `You are a disruptive fiction editor. Given a scene and its capsule context, \
+produce the seed of a deliberately discontinuous alternate path.
+The output must NOT summarize or recapitulate the source — it must diverge: \
+introduce a different opening image, a character acting against their stated role, \
+or an event that invalidates the scene's premise.
 Return a JSON object with exactly three fields:
-  "title": the name of the inverted concept (a true shadow, not a simple antonym)
-  "type": same type as the original capsule ("character", "arc", or "event")
-  "epiphanyNote": 2–3 sentences capturing what makes this inversion generatively interesting
+  "title": a short punchy name for the new divergent capsule
+  "type": one of "character", "arc", or "event" — what kind of capsule this disruption seeds
+  "epiphanyNote": 2–4 sentences of raw, vivid insight about this divergent direction
 Return ONLY the JSON object. No markdown fences, no explanation.`,
         },
         {
           role: "user",
-          content: `Capsule to invert: **${capsule.title}**
-Type: ${capsule.type}${capsule.roleTag ? ` · role: ${capsule.roleTag}` : ""}
-${capsule.epiphanyNote ? `\nNotes: ${capsule.epiphanyNote}` : ""}
+          content: `Source capsule: **${capsule.title}** \
+(${capsule.type}${capsule.roleTag ? ` · ${capsule.roleTag}` : ""})
+${capsule.epiphanyNote ? `\nCapsule notes: ${capsule.epiphanyNote}` : ""}
 
-Generate the symbolic inversion.`,
+Accepted scene to disrupt:
+---
+${sourceText.trim().slice(0, 3000)}
+---
+
+Generate the disruption capsule.`,
         },
       ],
     });
@@ -1292,7 +1342,7 @@ Generate the symbolic inversion.`,
     catch { res.status(502).json({ error: "AI returned unexpected format" }); return; }
 
     const validTypes = ["character", "arc", "event"];
-    const type = validTypes.includes(String(parsed.type)) ? parsed.type : capsule.type;
+    const type = validTypes.includes(String(parsed.type)) ? parsed.type : "event";
     res.json({
       title:        String(parsed.title ?? "Disrupted Path"),
       type:         type as "character" | "arc" | "event",
