@@ -32,7 +32,8 @@ The manuscript's Traceability Matrix and Terminology Incursion Ledger track, per
 
 ## Non-goals of this ADR
 
-- Does not reopen ADR-0003, ADR-0004's four-vs-six submission-state discrepancy, or ADR-0005's five open items.
+- Does not reopen ADR-0003, the historical four-state submission sketch
+  superseded by the six-state model, or ADR-0005's five open items.
 - Does not authorize building anything. Item 1 is a documentation change pending owner sign-off on wording; item 2 remains a proposal pending owner review. The `capsules` table dependency is resolved (decision 15.12, 2026-08-19): the ledger, if accepted, would be derived from capsule Issue labels and body, not a database table.
 - Does not adopt the manuscript's execution-hierarchy, fallback-escalation, or symbolic-load-scoring machinery — real patterns for a single-author automated prose system, not a fit for TF's current three-tier ingestion pipeline or two-action Concept Board.
 

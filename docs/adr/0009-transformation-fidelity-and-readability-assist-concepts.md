@@ -10,7 +10,12 @@
 
 **Update, post-commit:** this ADR is now committed at `docs/adr/0009-transformation-fidelity-and-readability-assist-concepts.md`. The files that briefly collided at 0010 are now uniquely numbered 0010 and 0011. The final 0007 collision was resolved by retaining `0007-reader-accessibility-and-clarity.md` and renumbering the separate scene-purpose ADR to `0012-scene-purpose-framing-from-synopsis-discipline.md`. This ADR's own number is stable.
 
-One file in the pileup, `0007-reader-accessibility-and-clarity.md`, proposes an "author-facing clarity/register pass" and a "reader accessibility/complexity register" that substantially overlap items 1 and 2 below, apparently drafted from the same or a near-identical pasted ChatGPT thread by a separate concurrent session. This ADR does not re-litigate that overlap; it flags it in "Corroborating and overlapping work" below so the project owner can merge rather than reconcile two independent proposals for the same capability.
+One file in the pileup, `0007-reader-accessibility-and-clarity.md`, proposes an
+"author-facing clarity/register pass" and a "reader accessibility/complexity
+register" that substantially overlap items 1 and 2 below. The owner
+reconciliation recorded in ADR-0007 on 2026-08-21 makes ADR-0007 authoritative
+for that shared clarity/register proposal; this ADR keeps only its distinct
+transformation-fidelity report as actionable.
 
 ## Context
 
@@ -38,6 +43,11 @@ Telling Forward already has multiple points where an agent transforms contributo
 
 ### 2. Optional contributor-facing readability and register assist
 
+**Disposition:** This overlapping proposal is retained as historical
+corroborating analysis only. The authoritative proposal and open-question
+mapping are in [ADR-0007](0007-reader-accessibility-and-clarity.md), including
+15.13. Do not create a second design or owner decision from this item.
+
 Separately from item 1, the source thread's actual use case, stripped of its book-specific tiering, is generic: a contributor wants AI help making their prose land with an intended readership without losing their voice or altering their facts and claims. Telling Forward's Mission already promises agent help with "revision" as part of reducing the mechanical burden of authorship, but no document names what revision assistance actually consists of beyond ingestion and ordering.
 
 **Proposal:** an optional, contributor-initiated pass, not a Reader App feature, not a new content type, not a platform surface, that adjusts lexical and syntactic complexity in a contributor's own draft while holding claims, named entities, and voice markers fixed. Pair it with item 1's fidelity report so the contributor sees exactly what shifted before accepting it. This stays bounded to the Author App and Concept Board side, is opt-in per use, and never touches canon status or reader-facing presentation.
@@ -46,7 +56,8 @@ Separately from item 1, the source thread's actual use case, stripped of its boo
 
 **Extension b, explicit scope fence.** Two things the source thread's own architecture does that this proposal deliberately does not adopt: it does not vary by declared content type (see "Considered and not carried forward" below, this is the same ground already covered by withdrawn open questions 15.8 and 15.9), and it does not auto-select a target complexity level for a contributor. Any complexity target stays a value the contributor sets or accepts per use, not one the platform infers or defaults from scene metadata.
 
-**Status of this item:** proposed concept; needs owner review on whether this belongs inside TF's "revision" scope at all before any design work starts.
+**Status of this item:** historical corroborating analysis; the actionable
+clarity/register proposal is owned by ADR-0007 and open question 15.13.
 
 ## Considered and not carried forward
 
@@ -59,22 +70,28 @@ A closer second pass over the source thread surfaced additional unique elements.
 
 ## Corroborating and overlapping work, not duplicated
 
-`docs/adr/0007-reader-accessibility-and-clarity.md`, drafted concurrently by a separate session from an apparently related or identical thread paste, proposes an "author-facing clarity/register pass" (its item 1) and a "reader accessibility/complexity register" open question (its item 2, logged as open question 15.13). These overlap items 1 and 2 above closely enough that they read as two independent extractions of the same underlying capability rather than two different ideas. This ADR does not restate or duplicate that file's specific field or open-question proposal. When the project owner resolves the numbering pileup noted above, these two ADRs' overlapping items are the most likely candidates for merging into one.
+`docs/adr/0007-reader-accessibility-and-clarity.md` is the current path and
+authoritative record for the overlapping clarity/register proposal. Its item 1
+and open question 15.13 supersede this ADR's item 2 as an actionable proposal.
+This ADR retains the analysis so the source thread and rationale remain
+traceable, but does not restate the field or open-question proposal.
 
 ## Non-goals of this ADR
 
 - Does not adopt the source thread's own tiering ladder (T0 through T4), "Interpretive Translation Layer," "Lexical Translation Engine," SH'ELAH validation entity, or "editorial spirit avatar" tone-selection concept. Those belong to the source property's own architecture, not Telling Forward's.
 - Does not reopen withdrawn open questions 15.8 (third platform surface) or 15.9 (in-world companion/codex content type). Item 2 above is a contributor-side editing assist, not a reader-facing surface or content type, and is a different proposal from both withdrawn items.
-- Does not authorize building anything. Both items are proposals pending owner review.
+- Does not authorize building anything. Item 1 remains a proposal pending owner
+  review; item 2 is retained only as reconciled historical analysis.
 - Does not describe, evaluate, or archive the source thread's own property (plot, characters, branding, or the companion volume's content). That material was scavenged for pattern ideas only.
-- Does not resolve the wider ADR numbering pileup beyond this ADR's own two renumberings (0007 to 0010 to 0009) and moving its own superseded 0007 draft aside. The other colliding files are unrelated sessions' work product and are left for the project owner to review, merge, and renumber.
+- The numbering history is closed; current paths are listed in the ADR index
+  and historical paths are labeled in their numbering notes.
 
 ## Recommendation
 
 | Item | Recommendation |
 |---|---|
 | 1. Transformation fidelity report | Log as proposed; low-cost output-contract change to fold in once any transformation step (ADR-0004 Tier 1/2, or Disrupt/Invert) gets designed |
-| 2. Contributor-facing readability/register assist | Log as proposed; needs an explicit owner scope decision, is this inside TF's "revision" promise, before any design work; likely candidate for merging with the overlapping proposal in `0007-reader-accessibility-and-clarity.md` |
+| 2. Contributor-facing readability/register assist | **Corroborating analysis only; authoritative proposal is ADR-0007 item 1** |
 
 ## Consequences
 

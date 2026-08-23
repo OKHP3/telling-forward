@@ -36,24 +36,39 @@ The other three questions (dramatic problem solved, reader takeaway, larger-arch
 
 **Status of this item:** proposed shape only, not drafted copy, not a schema field. If accepted, the field(s) should land in whatever table backs promoted scenes, following the same "reserve now" pattern ADR-0005 and ADR-0006 already use for their own metadata proposals.
 
-### 2. "GitHub holds / Replit executes" as a candidate third framing for ADR-0003
+### 2. "GitHub holds / Replit executes" as historical evidence for ADR-0003
 
 The Notion log records that the other property's Canon-as-Code Architecture page was updated with a named principle: **"GitHub holds / Replit executes."** GitHub is the durable source of truth (canon, history, structure); Replit is a runtime surface that acts on it but doesn't own it.
 
-This lands on an already-open question in this repository. ADR-0003 documents an unresolved tension: the original concept scoped a GitHub-native fast path (GitHub Pages, PRs and Actions as the backend), but the repository instead runs a custom Express/Postgres API on Replit, auto-pushing every commit to GitHub. As of ADR-0003's most recent update, that ADR now tracks the practical resolution path as `docs/decisions/open-questions.md` items 15.1, 15.2, and 15.6 (repo topology, contributor identity model, GitHub App vs. PAT), and offers two framings for *why* the divergence happened — (a) intentional supersession, (b) unexamined infrastructure momentum — while explicitly deferring to the project owner on which applies.
+This is evidence for a question that was open when this ADR was drafted.
+ADR-0003 now accepts the GitHub-canonical hybrid, and ADR-0013 clarifies the
+boundary: GitHub holds durable creative and editorial records while Replit
+executes the narrow product layer. The former alternatives about intentional
+supersession and infrastructure momentum are historical context, not current
+open choices. Open questions 15.1, 15.2, and 15.6 separately govern topology,
+identity, and service authentication.
 
-This item does not touch 15.1/15.2/15.6 and does not resolve ADR-0003 — those remain the concrete blockers on contributor-facing code. It answers the separate, still-open "why" question ADR-0003 asks about the architecture split itself. There is already first-party evidence pointing toward a third framing: per `telling_forward_ingestion_and_mcp.md`, every table in `lib/db/src/schema/telling-forward.ts` is commented as a derived cache over GitHub-native objects (SHA, PR number, branch ref) — consistent with Postgres being an index over GitHub, not a replacement store. The imported thread's named principle gives that existing evidence a label: **(c) GitHub holds, Replit executes** — Postgres/Express is a query and runtime layer over GitHub's canonical data, not a competing source of truth.
+This item does not touch 15.1/15.2/15.6. Those remain separate operational
+questions, not blockers to the accepted source-of-truth boundary. First-party
+schema comments and ADR-0013 provide the evidence trail for the now-accepted
+framing: **GitHub holds, Replit executes** — Postgres/Express is a query and
+runtime layer over GitHub's canonical data, not a competing source of truth.
 
-**Proposal:** add framing (c) to ADR-0003 as a third option, cross-referenced to this ADR, alongside its existing (a) and (b) — this ADR does not change ADR-0003's Status or substitute for resolving 15.1/15.2/15.6.
+**Disposition:** The framing is accepted and already recorded in ADR-0003 and
+ADR-0013. This ADR preserves the source and cross-reference as historical
+traceability; it does not create a separate architecture decision.
 
-**Status of this item:** proposed framing, evidence-only. No schema, code, or documentation change beyond the cross-reference is authorized by this ADR.
+**Status of this item:** accepted boundary reference, evidence-only. No schema
+or code change is authorized by this ADR.
 
 ## Non-goals of this ADR
 
 - Does not require the item 1 purpose note; Concept Board's "epiphany, not default detail" ethos (per `telling_forward_ui_vision.md`) argues against making it mandatory.
-- Does not resolve ADR-0003 or open-questions 15.1/15.2/15.6; item 2 adds a candidate framing for the project owner to weigh, not a decision.
+- Does not reopen ADR-0003 or open-questions 15.1/15.2/15.6; item 2 records
+  an accepted boundary already decided in ADR-0003 and clarified by ADR-0013.
 - Does not adopt the saga's own book order, naming, Notion architecture, or three-surface platform split — none of it is TF-relevant.
-- Does not touch the four-vs-six submission-state discrepancy (ADR-0004) or reopen ADR-0005/0006's open items.
+- Does not touch the historical four-state submission sketch superseded by the
+  six-state model (ADR-0004) or reopen ADR-0005/0006's open items.
 - Does not authorize building anything; Concept Board has no implementation footprint yet per `telling_forward_ui_vision.md`, so item 1 is a design note for whenever that work starts, not a standalone build task.
 
 ## Recommendation
@@ -61,14 +76,19 @@ This item does not touch 15.1/15.2/15.6 and does not resolve ADR-0003 — those 
 | Item | Recommendation |
 |---|---|
 | 1. Scene-purpose framing at Promote-to-scene | Log as proposed; low cost if adopted alongside Concept Board's first implementation, easy to skip if it doesn't earn its place |
-| 2. "GitHub holds / Replit executes" as ADR-0003 framing (c) | Accept as a documented option; forward to ADR-0003 for the project owner's actual call |
+| 2. "GitHub holds / Replit executes" | **Accepted in ADR-0003 and clarified by ADR-0013; retained here as evidence** |
 
 ## Consequences
 
 - If item 1 is accepted, the purpose-note fields should be designed into the capsule/scene data model's first version rather than retrofitted later.
-- If item 2 is accepted as part of ADR-0003, that ADR should record framing (c) alongside (a) and (b); it still would not close ADR-0003 on its own since 15.1/15.2/15.6 are the actual blockers.
+- Item 2 is already recorded by ADR-0003 and ADR-0013. The remaining
+  15.1/15.2/15.6 decisions are operational details and do not reopen the
+  source-of-truth boundary.
 - If neither is implemented, no cost — this ADR just records both ideas and their source so they aren't rediscovered from scratch.
 
 ## Next action
 
-The project owner should confirm whether item 1 is worth carrying into Concept Board's eventual implementation, and separately, review item 2 against ADR-0003 and decide whether to record framing (c) there. Update this ADR's Status once those calls are made.
+The project owner should confirm whether item 1 is worth carrying into Concept
+Board's eventual implementation. Item 2 is closed as a proposal here because
+the boundary is already recorded in ADR-0003 and ADR-0013. Update this ADR's
+Status once item 1 is decided.

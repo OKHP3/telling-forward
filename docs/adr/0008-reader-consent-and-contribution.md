@@ -95,7 +95,8 @@ The source thread makes several external factual/legal claims (a fan-fiction arc
 
 - Does not adopt the sibling property's own naming, canon-tier vocabulary, or any of its fictional entities, plot, characters, or theme content.
 - Does not archive or reproduce the source thread, including its long reconstruction of the sibling property's own purpose and themes — reviewed for TF relevance and excluded as out of scope.
-- Does not reopen ADR-0003. The four-vs-six submission-state discrepancy (15.11) is resolved: six-state model is locked (decision 2026-08-19).
+- Does not reopen ADR-0003. The historical four-state submission sketch was
+  superseded by the locked six-state model (decision 15.11, 2026-08-19).
 - Does not duplicate the existing provenance field-schema proposal; item 6 above explicitly rides on it rather than proposing a second mechanism.
 - Items 2 and 5 are now decided design requirements (15.14, 15.15, 2026-08-19). Items 1, 3, 4, 6, and 7 remain proposals pending owner review.
 

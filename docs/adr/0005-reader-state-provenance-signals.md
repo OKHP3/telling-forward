@@ -137,8 +137,8 @@ from ADR-0004 with a different prompt, not a new tier.
 
 ## Non-goals of this ADR
 
-- Does not reopen ADR-0003 (backend architecture question). The four-vs-six
-  submission-state discrepancy is resolved: six-state model is locked
+- Does not reopen ADR-0003. The historical four-state submission sketch was
+  superseded; the six-state model is locked
   (decision 15.11, 2026-08-19, Jamie Hill, PRD Build Directive v1).
 - Does not authorize building anything. Item 2 recommends reserving a
   provenance field; items 1, 3, and 5 remain proposals pending owner

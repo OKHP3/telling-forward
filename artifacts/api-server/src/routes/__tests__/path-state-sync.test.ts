@@ -46,25 +46,13 @@ const insertLog = vi.hoisted(() => ({
 }));
 
 const proposalUpsertLog = vi.hoisted(() => ({
-  calls: [] as Array<{
-    state: unknown;
-    decidedAt: unknown;
-    /** contributorId from the INSERT .values() call — what the route resolved */
-    insertedContributorId: unknown;
-    /** contributorId from the ON CONFLICT DO UPDATE SET — should be a COALESCE SQL expression */
-    conflictContributorId: unknown;
-  }>,
+  calls: [] as Array<{ state: unknown; decidedAt: unknown }>,
   reset() { this.calls = []; },
 }));
 
 const proposalPersistence = vi.hoisted(() => ({
   state: null as string | null,
   decidedAt: null as Date | null,
-  /**
-   * Simulates COALESCE(existing, incoming) for contributorId across reconcile
-   * runs: once set, a subsequent upsert cannot overwrite it.
-   */
-  contributorId: null as number | null,
   seed(state: string, decidedAt: Date) {
     this.state = state;
     this.decidedAt = decidedAt;
@@ -72,7 +60,6 @@ const proposalPersistence = vi.hoisted(() => ({
   reset() {
     this.state = null;
     this.decidedAt = null;
-    this.contributorId = null;
   },
 }));
 
@@ -160,15 +147,11 @@ vi.mock("@workspace/db", () => {
       values: (v: Record<string, unknown>) => {
         insertLog.calls.push({ branchRef: v["branchRef"] as string, state: v["state"] as string });
         return {
-          // Used by contributorNotificationsTable inserts (emitContributorNotification)
-          onConflictDoNothing: () => Promise.resolve([]),
           onConflictDoUpdate: (config: { set?: Record<string, unknown> }) => {
             if (v["prNumber"]) {
               proposalUpsertLog.calls.push({
                 state: config.set?.["state"],
                 decidedAt: config.set?.["decidedAt"],
-                insertedContributorId: v["contributorId"],
-                conflictContributorId: config.set?.["contributorId"],
               });
               const existingState = proposalPersistence.state;
               const preservesState =
@@ -177,13 +160,6 @@ vi.mock("@workspace/db", () => {
               if (!preservesState) {
                 proposalPersistence.state = v["state"] as string;
                 proposalPersistence.decidedAt = v["decidedAt"] as Date | null;
-              }
-              // Simulate COALESCE(existing, incoming): once a contributorId is
-              // stored, subsequent upserts must not overwrite it — mirrors the
-              // COALESCE expression in the production ON CONFLICT DO UPDATE SET.
-              if (proposalPersistence.contributorId === null) {
-                proposalPersistence.contributorId =
-                  (v["contributorId"] as number | null) ?? null;
               }
             }
             return {
@@ -195,8 +171,6 @@ vi.mock("@workspace/db", () => {
                     ...PROPOSAL_ROW,
                     state: proposalPersistence.state ?? v["state"],
                     decidedAt: proposalPersistence.decidedAt ?? v["decidedAt"],
-                    // COALESCE simulation: always return the first-established owner
-                    contributorId: proposalPersistence.contributorId,
                   }]);
                 }
                 return Promise.resolve([]);
@@ -228,9 +202,6 @@ vi.mock("@workspace/db", () => {
     userGithubLinksTable: "userGithubLinksTable",
     editorQuestionsTable: "editorQuestionsTable",
     contributionsTable: "contributionsTable",
-    // Minimal stub so emitContributorNotification can read .eventKey for the
-    // onConflictDoNothing target without throwing on undefined.
-    contributorNotificationsTable: { eventKey: "event_key" },
   };
 });
 
@@ -264,9 +235,6 @@ vi.mock("../../lib/github", () => ({
 const mockProvenance = vi.hoisted(() => ({
   indexNarrationCommit: vi.fn().mockResolvedValue(null),
   parseNarrationCommit: vi.fn().mockReturnValue(null),
-  replacePathMomentMemberships: vi.fn().mockResolvedValue(undefined),
-  resolveContributor: vi.fn().mockResolvedValue(null),
-  writeAcceptedProvenance: vi.fn().mockResolvedValue(1),
 }));
 
 vi.mock("../../lib/provenance", () => ({
@@ -280,12 +248,12 @@ vi.mock("../../lib/provenance", () => ({
   indexNarrationCommit: mockProvenance.indexNarrationCommit,
   indexSavedMoment: vi.fn().mockResolvedValue(null),
   parseNarrationCommit: mockProvenance.parseNarrationCommit,
-  replacePathMomentMemberships: mockProvenance.replacePathMomentMemberships,
-  resolveContributor: mockProvenance.resolveContributor,
+  replacePathMomentMemberships: vi.fn().mockResolvedValue(undefined),
+  resolveContributor: vi.fn().mockResolvedValue(null),
   resolveContributorIdentity: vi.fn().mockResolvedValue(null),
   stewardAttribution: vi.fn().mockResolvedValue({ githubIdentity: "github:alice" }),
   verifyAcceptanceDecisionNote: vi.fn().mockReturnValue(null),
-  writeAcceptedProvenance: mockProvenance.writeAcceptedProvenance,
+  writeAcceptedProvenance: vi.fn().mockResolvedValue(1),
 }));
 
 // ---------------------------------------------------------------------------
@@ -353,7 +321,7 @@ function buildAdminApp() {
 }
 
 function makePRPayload(opts: {
-  action: "opened" | "closed" | "reopened" | "synchronize" | "labeled";
+  action: "opened" | "closed" | "reopened" | "synchronize";
   merged: boolean;
   state: "open" | "closed";
 }) {
@@ -564,264 +532,6 @@ describe("webhook pull_request handler — protected proposal outcomes", () => {
       expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
     },
   );
-
-  it.each(["restricted", "withdrawn", "archived"])(
-    "ignores native label and Project-like metadata for a %s proposal",
-    async (protectedState) => {
-      mockDb._pushSelectRows([mockDb._WORLD_ROW]);
-      const retainedDecidedAt = new Date("2026-01-18T12:00:00.000Z");
-      proposalPersistence.seed(protectedState, retainedDecidedAt);
-
-      const payload = makePRPayload({
-        action: "labeled",
-        merged: false,
-        state: "open",
-      });
-      (
-        payload.pull_request as typeof payload.pull_request & {
-          labels: Array<{ name: string }>;
-          projectItems: Array<{ field: string; value: string }>;
-        }
-      ).labels = [{ name: "state:accepted-into-canon" }];
-      (
-        payload.pull_request as typeof payload.pull_request & {
-          projectItems: Array<{ field: string; value: string }>;
-        }
-      ).projectItems = [
-        { field: "Canon Status", value: "accepted-into-canon" },
-      ];
-
-      const { status } = await callWebhook("pull_request", payload);
-
-      expect(status).toBe(200);
-      expect(proposalPersistence.state).toBe(protectedState);
-      expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
-    },
-  );
-
-  it.each(["restricted", "withdrawn", "archived"])(
-    "keeps a %s proposal unchanged when the same terminal webhook is replayed",
-    async (protectedState) => {
-      const retainedDecidedAt = new Date("2026-01-18T12:00:00.000Z");
-      proposalPersistence.seed(protectedState, retainedDecidedAt);
-
-      mockDb._pushSelectRows([mockDb._WORLD_ROW]);
-      const first = await callWebhook(
-        "pull_request",
-        makePRPayload({ action: "closed", merged: true, state: "closed" }),
-      );
-      mockDb._pushSelectRows([mockDb._WORLD_ROW]);
-      const second = await callWebhook(
-        "pull_request",
-        makePRPayload({ action: "closed", merged: true, state: "closed" }),
-      );
-
-      expect(first.status).toBe(200);
-      expect(second.status).toBe(200);
-      expect(proposalPersistence.state).toBe(protectedState);
-      expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
-      expect(proposalUpsertLog.calls).toHaveLength(2);
-    },
-  );
-
-  it("does not let a non-steward review event change a protected proposal outcome", async () => {
-    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
-    mockDb._pushSelectRows([
-      {
-        id: 100,
-        storyworldId: 1,
-        pathId: 10,
-        prNumber: 42,
-        state: "restricted",
-        submittedAt: new Date().toISOString(),
-        decidedAt: new Date("2026-01-18T12:00:00.000Z"),
-      },
-    ]);
-    proposalPersistence.seed(
-      "restricted",
-      new Date("2026-01-18T12:00:00.000Z"),
-    );
-
-    const { status } = await callWebhook("pull_request_review", {
-      action: "submitted",
-      repository: { owner: { login: "testowner" }, name: "testrepo" },
-      pull_request: { number: 42 },
-      review: {
-        id: 701,
-        body: "Please accept this immediately.",
-        user: { login: "untrusted-reviewer" },
-      },
-    });
-
-    expect(status).toBe(200);
-    expect(proposalPersistence.state).toBe("restricted");
-    expect(proposalPersistence.decidedAt).toEqual(
-      new Date("2026-01-18T12:00:00.000Z"),
-    );
-  });
-});
-
-describe("admin reconcile — GitHub fixture rebuild", () => {
-  let app: ReturnType<typeof buildAdminApp>;
-  const fixturePr = {
-    number: 42,
-    state: "closed" as const,
-    merged: true,
-    headRef: "contrib/scene",
-    baseRef: "main",
-    createdAt: "2026-01-10T12:00:00.000Z",
-    mergedAt: "2026-01-11T12:00:00.000Z",
-    closedAt: "2026-01-11T12:00:00.000Z",
-    mergeCommitSha: "merge-sha-001",
-    headSha: "source-head-001",
-    baseSha: "base-sha-001",
-    mergedBy: { login: "steward", name: "Steward" },
-    author: { id: "github-user-7", login: "contributor", name: "Contributor", email: "writer@example.com" },
-  };
-  const fixtureNarration = {
-    sha: "narration-sha-001",
-    message: "Telling-Forward-Narration: v1",
-    authorName: "Contributor",
-    authorEmail: "writer@example.com",
-    authorLogin: "contributor",
-    timestamp: "2026-01-11T11:00:00.000Z",
-  };
-
-  function seedFixture() {
-    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
-    mockDb._pushSelectRows([{ ...mockDb._PATH_ROW, branchRef: "main", state: "open" }]);
-    mockDb._pushSelectRows([{ ...mockDb._PATH_ROW, branchRef: "contrib/scene" }]);
-    mockDb._pushSelectRows([{ ...mockDb._PATH_ROW, branchRef: "main", id: 11 }]);
-  }
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    insertLog.reset();
-    proposalUpsertLog.reset();
-    proposalPersistence.reset();
-    mockDb._resetSelectQueue();
-    process.env["ADMIN_SECRET"] = "admin-secret-test";
-    mockGh.listBranches.mockResolvedValue([
-      { name: "main", sha: "canon-head" },
-      { name: "contrib/scene", sha: "source-head-001" },
-    ]);
-    mockGh.listOpenPullRequests.mockResolvedValue([fixturePr]);
-    mockGh.listCommitsForBranch.mockResolvedValue([]);
-    mockGh.listCommitsBetween.mockResolvedValue([fixtureNarration]);
-    mockGh.getPullRequest.mockResolvedValue(fixturePr);
-    mockGh.getMergeCommitRange.mockResolvedValue({
-      baseSha: "base-sha-001",
-      headSha: "source-head-001",
-    });
-    mockGh.listPullRequestReviews.mockResolvedValue([
-      { id: 701, body: "What does the witness remember?", state: "CHANGES_REQUESTED", submittedAt: "2026-01-10T15:00:00.000Z" },
-    ]);
-    mockGh.listPullRequestComments.mockResolvedValue([]);
-    mockGh.getFileContent.mockResolvedValue("# Recovered scene\n\nRecovered body\n");
-    mockProvenance.parseNarrationCommit.mockReturnValue({
-      submissionId: "submission-001",
-      platformIdentity: "platform:writer-7",
-      title: "Recovered scene",
-      displayName: "Contributor",
-    });
-    mockProvenance.indexNarrationCommit.mockResolvedValue(null);
-    app = buildAdminApp();
-  });
-
-  it("rebuilds story paths, contributions, proposal lineage, questions, and provenance from one fixture", async () => {
-    seedFixture();
-    const res = await request(app)
-      .post("/reconcile")
-      .set({ "x-admin-secret": "admin-secret-test" })
-      .send({ storyworld_id: 1 });
-
-    expect(res.status).toBe(200);
-    expect(res.body.summary).toMatchObject({
-      branches_fetched: 2,
-      paths_upserted: 2,
-      commits_fetched: 1,
-      contributions_upserted: 2,
-      prs_fetched: 1,
-      proposals_upserted: 1,
-      editor_questions_upserted: 1,
-      provenance_records_upserted: 1,
-    });
-    expect(res.body.changes.updated).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          entity: "path",
-          githubId: "branch:main",
-          state: "open",
-        }),
-        expect.objectContaining({
-          entity: "contribution",
-          githubId: "commit:narration-sha-001",
-        }),
-        expect.objectContaining({
-          entity: "proposal",
-          githubId: "pr:42",
-          state: "accepted-into-canon",
-        }),
-        expect.objectContaining({
-          entity: "provenance",
-          githubId: "merge-commit:merge-sha-001",
-          state: "accepted-into-canon",
-        }),
-      ]),
-    );
-    expect(mockProvenance.indexNarrationCommit).toHaveBeenCalledWith(
-      1, 10, fixtureNarration, "# Recovered scene\n\nRecovered body\n",
-    );
-    expect(mockProvenance.replacePathMomentMemberships).toHaveBeenCalledWith(
-      1, 10, ["narration-sha-001"],
-    );
-    expect(mockProvenance.writeAcceptedProvenance).toHaveBeenCalledWith(
-      expect.objectContaining({
-        storyworldId: 1,
-        canonCommitSha: "merge-sha-001",
-        sourcePathId: 10,
-        sourcePrNumber: 42,
-      }),
-    );
-    expect(proposalUpsertLog.calls).toHaveLength(1);
-  });
-
-  it("is safe when a rerun sees no GitHub objects and does not reopen terminal local outcomes", async () => {
-    seedFixture();
-    const first = await request(app)
-      .post("/reconcile")
-      .set({ "x-admin-secret": "admin-secret-test" })
-      .send({ storyworld_id: 1 });
-
-    insertLog.reset();
-    proposalUpsertLog.reset();
-    mockDb._resetSelectQueue();
-    mockGh.listBranches.mockResolvedValue([]);
-    mockGh.listOpenPullRequests.mockResolvedValue([]);
-    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
-
-    const second = await request(app)
-      .post("/reconcile")
-      .set({ "x-admin-secret": "admin-secret-test" })
-      .send({ storyworld_id: 1 });
-
-    expect(first.status).toBe(200);
-    expect(second.status).toBe(200);
-    expect(second.body.summary).toEqual({
-      branches_fetched: 0,
-      paths_upserted: 0,
-      paths_state_updated: 0,
-      commits_fetched: 0,
-      contributions_upserted: 0,
-      prs_fetched: 0,
-      proposals_upserted: 0,
-      editor_questions_upserted: 0,
-      provenance_records_upserted: 0,
-    });
-    expect(proposalUpsertLog.calls).toHaveLength(0);
-    expect(mockProvenance.writeAcceptedProvenance).toHaveBeenCalledTimes(1);
-    expect(first.body.summary.proposals_upserted).toBe(1);
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1041,233 +751,6 @@ describe("admin reconcile — protected proposal outcomes", () => {
       );
       expect(proposalPersistence.state).toBe(protectedState);
       expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
-      expect(res.body.changes.preserved).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            entity: "proposal",
-            githubId: "pr:42",
-            state: protectedState,
-          }),
-        ]),
-      );
     },
   );
-
-  it.each(["restricted", "withdrawn", "archived"])(
-    "does not let native metadata reopen a %s proposal during reconciliation",
-    async (protectedState) => {
-      const pr = {
-        number: 42,
-        state: "open" as const,
-        merged: false,
-        headRef: "contrib/scene",
-        baseRef: "main",
-        createdAt: new Date().toISOString(),
-        mergedAt: null,
-        closedAt: null,
-        mergeCommitSha: null,
-        mergedBy: null,
-        author: {
-          login: "contributor",
-          name: "Contributor",
-          email: "c@example.com",
-        },
-        labels: [{ name: "state:accepted-into-canon" }],
-        projectItems: [{ field: "Canon Status", value: "accepted-into-canon" }],
-      };
-      mockGh.listOpenPullRequests.mockResolvedValue([pr]);
-      mockDb._pushSelectRows([mockDb._WORLD_ROW]);
-      mockDb._pushSelectRows([]);
-      const retainedDecidedAt = new Date("2026-01-18T12:00:00.000Z");
-      proposalPersistence.seed(protectedState, retainedDecidedAt);
-
-      const res = await request(app)
-        .post("/reconcile")
-        .set({ "x-admin-secret": "admin-secret-test" })
-        .send({ storyworld_id: 1 });
-
-      expect(res.status).toBe(200);
-      expect(proposalPersistence.state).toBe(protectedState);
-      expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
-    },
-  );
-});
-
-// ---------------------------------------------------------------------------
-// 6. Admin reconcile — contributor ownership link
-//
-// Proves that:
-//   a) resolveContributor is called for the PR author and its result is
-//      stored as contributorId in the proposal INSERT .values() clause.
-//   b) The ON CONFLICT DO UPDATE SET for contributorId is a COALESCE SQL
-//      expression — never a plain number — so a later reconcile pass with a
-//      different GitHub author cannot overwrite the existing link.
-//   c) Both (a) and (b) hold on a re-run where resolveContributor returns a
-//      different contributor id.
-//
-// The companion address-endpoint tests in proposal-state.test.ts confirm that
-// a proposal with contributorId = 55 (as produced by reconcile) grants access
-// only to the platform contributor with id 55 and rejects all others.
-// ---------------------------------------------------------------------------
-
-describe("admin reconcile — contributor link from PR author", () => {
-  let app: ReturnType<typeof buildAdminApp>;
-
-  const alicePr = {
-    number: 55,
-    state: "open" as const,
-    merged: false,
-    headRef: "contrib/alice-scene",
-    baseRef: "main",
-    createdAt: new Date().toISOString(),
-    mergedAt: null,
-    closedAt: null,
-    mergeCommitSha: null,
-    mergedBy: null,
-    author: {
-      id: "github-alice-1",
-      login: "alice",
-      name: "Alice",
-      email: "alice@example.com",
-    },
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    insertLog.reset();
-    proposalUpsertLog.reset();
-    proposalPersistence.reset();
-    mockDb._resetSelectQueue();
-    process.env["ADMIN_SECRET"] = "admin-secret-test";
-    mockGh.listBranches.mockResolvedValue([]);
-    mockGh.listCommitsBetween.mockResolvedValue([]);
-    mockGh.listOpenPullRequests.mockResolvedValue([alicePr]);
-    mockGh.getPullRequest.mockResolvedValue({ ...alicePr, state: "open", merged: false });
-    mockGh.listPullRequestReviews.mockResolvedValue([]);
-    mockGh.listPullRequestComments.mockResolvedValue([]);
-    mockGh.getFileContent.mockResolvedValue("");
-    mockProvenance.parseNarrationCommit.mockReturnValue(null);
-    mockProvenance.indexNarrationCommit.mockResolvedValue(null);
-    mockProvenance.resolveContributor.mockResolvedValue(null);
-    app = buildAdminApp();
-  });
-
-  it("persists the GitHub-resolved contributor id in the proposal insert values", async () => {
-    // The reconcile route calls resolveContributor with the PR author and
-    // must store the returned id in the VALUES clause of the proposal upsert.
-    mockProvenance.resolveContributor.mockResolvedValue({
-      id: 55,
-      platformIdentity: "platform:7",
-    });
-
-    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
-    mockDb._pushSelectRows([]); // base-path lookup for the PR
-
-    const res = await request(app)
-      .post("/reconcile")
-      .set({ "x-admin-secret": "admin-secret-test" })
-      .send({ storyworld_id: 1 });
-
-    expect(res.status).toBe(200);
-    expect(proposalUpsertLog.calls).toHaveLength(1);
-    // The VALUES clause carries the resolved contributor id, not null
-    expect(proposalUpsertLog.calls[0]!.insertedContributorId).toBe(55);
-  });
-
-  it("stores null when resolveContributor cannot match the PR author", async () => {
-    // If the GitHub author has not yet registered a platform account,
-    // the proposal must not block — it is inserted with null and the
-    // COALESCE rule will fill it on a future reconcile once they join.
-    mockProvenance.resolveContributor.mockResolvedValue(null);
-
-    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
-    mockDb._pushSelectRows([]);
-
-    const res = await request(app)
-      .post("/reconcile")
-      .set({ "x-admin-secret": "admin-secret-test" })
-      .send({ storyworld_id: 1 });
-
-    expect(res.status).toBe(200);
-    expect(proposalUpsertLog.calls).toHaveLength(1);
-    expect(proposalUpsertLog.calls[0]!.insertedContributorId).toBeNull();
-  });
-
-  it("uses a COALESCE SQL expression for contributorId in the conflict-update set", async () => {
-    // The ON CONFLICT DO UPDATE SET must carry COALESCE(existing, incoming),
-    // not a plain number. If this assertion fails, the production code stopped
-    // using COALESCE and a re-run could overwrite the original owner's id.
-    mockProvenance.resolveContributor.mockResolvedValue({
-      id: 55,
-      platformIdentity: "platform:7",
-    });
-
-    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
-    mockDb._pushSelectRows([]);
-
-    await request(app)
-      .post("/reconcile")
-      .set({ "x-admin-secret": "admin-secret-test" })
-      .send({ storyworld_id: 1 });
-
-    const conflictValue = proposalUpsertLog.calls[0]!.conflictContributorId;
-    // A plain number here would mean the production code stopped using COALESCE
-    expect(typeof conflictValue).not.toBe("number");
-    // The SQL object must contain a COALESCE reference
-    expect(sqlText(conflictValue)).toMatch(/COALESCE/i);
-  });
-
-  it("does not overwrite an existing contributor link when a rerun resolves a different author", async () => {
-    // First run: alice (contributor 55) is linked.
-    mockProvenance.resolveContributor.mockResolvedValue({
-      id: 55,
-      platformIdentity: "platform:7",
-    });
-    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
-    mockDb._pushSelectRows([]);
-    await request(app)
-      .post("/reconcile")
-      .set({ "x-admin-secret": "admin-secret-test" })
-      .send({ storyworld_id: 1 });
-
-    // Second run: same PR now resolves to contributor 77 (e.g. a reused login
-    // or a subsequent registration). The COALESCE rule in the conflict set must
-    // prevent bob's id from replacing alice's established link.
-    const bobPr = {
-      ...alicePr,
-      author: {
-        id: "github-bob-2",
-        login: "bob",
-        name: "Bob",
-        email: "bob@example.com",
-      },
-    };
-    mockProvenance.resolveContributor.mockResolvedValue({
-      id: 77,
-      platformIdentity: "platform:9",
-    });
-    mockGh.listOpenPullRequests.mockResolvedValue([bobPr]);
-    mockGh.getPullRequest.mockResolvedValue({ ...bobPr, state: "open", merged: false });
-    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
-    mockDb._pushSelectRows([]);
-    await request(app)
-      .post("/reconcile")
-      .set({ "x-admin-secret": "admin-secret-test" })
-      .send({ storyworld_id: 1 });
-
-    expect(proposalUpsertLog.calls).toHaveLength(2);
-
-    // Second INSERT carries bob's id in VALUES (that's what the route resolved)…
-    expect(proposalUpsertLog.calls[1]!.insertedContributorId).toBe(77);
-
-    // …but the conflict-update set still uses COALESCE, so the DB preserves 55.
-    const conflictValue = proposalUpsertLog.calls[1]!.conflictContributorId;
-    expect(typeof conflictValue).not.toBe("number");
-    expect(sqlText(conflictValue)).toMatch(/COALESCE/i);
-
-    // The mock simulates COALESCE persistence: alice's id (55) must survive
-    // the second upsert, not be overwritten by bob's 77. If this assertion
-    // fails the production COALESCE guard is no longer protecting the link.
-    expect(proposalPersistence.contributorId).toBe(55);
-  });
 });

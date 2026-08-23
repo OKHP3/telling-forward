@@ -3,10 +3,11 @@
 ## Status
 
 **Open.** The tier design below was reasoned through and partially
-prototyped (see "What's actually built" and "Verification"). It has not
-been confirmed by the project owner, and two open discrepancies with the
-existing repository need a decision before this ADR can be marked
-Accepted.
+prototyped (see "What's actually built" and "Verification"). The six-state
+model and GitHub-canonical boundary are settled elsewhere; this ADR remains
+Open because its ingestion trigger, model pin, live timing evidence, and file
+placement still need decisions or verification. It should be marked Accepted
+only after the remaining ingestion decisions and verification are complete.
 
 ## Context
 
@@ -46,12 +47,13 @@ be the first code in this repository to create a GitHub Issue at all.
 
 Any documentation still referencing four states is stale and should be updated. The capsule state model proposed in this ADR (see "Capsule state, kept separate") sits *before* the proposal state machine and is unaffected by this resolution.
 
-## Discrepancy 2: ADR-0003's open tension has evidence bearing on it
+## Historical discrepancy 2: ADR-0003's former open tension
 
-ADR-0003 asks whether the Express/Postgres/Replit backend is intentional
-supersession of the original GitHub-native fast path, or unexamined
-infrastructure momentum, and says explicitly not to resolve that without
-the project owner.
+The former version of ADR-0003 asked whether the Express/Postgres/Replit
+backend was intentional supersession of the original GitHub-native fast path,
+or unexamined infrastructure momentum. That question is historical: ADR-0003
+now accepts the GitHub-canonical hybrid, and ADR-0013 clarifies the boundary as
+“GitHub holds / Replit executes.”
 
 Evidence found while researching this ADR, offered to that decision, not
 as a resolution of it: every table comment in
@@ -64,9 +66,9 @@ comment states the general rule: "Every table that references a GitHub
 object stores the GitHub-native key... so the cache is always
 re-derivable and auditable against GitHub directly." That reads as
 consistent with framing (a) in ADR-0003, a queryable index over GitHub's
-real objects, not framing (b). It is still an inference from code
-comments, not a statement from the project owner, and ADR-0003 says
-explicitly it should stay Open until that statement exists.
+real objects, not a replacement store. ADR-0003 and ADR-0013 now provide the
+owner decision; this paragraph is retained as the evidence trail, not as an
+unresolved blocker.
 
 ## Options considered
 
@@ -188,9 +190,9 @@ This ADR should not move to Accepted until:
 
 1. ~~Submission-state model confirmed~~ — **Resolved.** Six-state model
    decided 2026-08-19 (see Discrepancy 1 above).
-2. The project owner weighs the evidence in Discrepancy 2 and either
-   updates ADR-0003's status or explicitly leaves it Open with this
-   evidence noted.
+2. ~~ADR-0003 boundary call recorded~~ — **Resolved.** ADR-0003 accepted the
+   GitHub-canonical hybrid on 2026-08-19 and ADR-0013 clarified it on
+   2026-08-20.
 3. ~~The actual upload trigger is decided~~ — **Resolved for the private
    pilot.** A steward-only Author App route commits to
    `intake/manuscripts/` and dispatches the workflow with the same branch and
