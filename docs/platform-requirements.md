@@ -6,11 +6,15 @@
 |---|---|
 | **Repository** | [OKHP3/telling-forward](https://github.com/OKHP3/telling-forward) |
 | **Suite** | OverKill Hill P³ |
-| **Status** | Capability baseline: implemented-in-checkout, provisional, deferred, and not-yet-deployed states are called out below |
-| **Date** | 2026-08-22 |
+| **Status** | Capability baseline: implemented-in-checkout, provisional, deferred, and not-yet-deployed states are called out below; the canonical Author App has a verified GitHub Pages deployment |
+| **Date** | 2026-08-24 |
 | **Related docs** | `README.md`, `docs/MISSION.md`, `CONTRIBUTING.md`, `CONTENT-LICENSE.md`, `AGENTS.md`, `replit.md` |
 
 This document is a dated capability baseline, not a blank-slate product brief. Claims use these states: **Implemented (checkout)** means the capability exists in the current source and is supported by tests or direct inspection; **Provisional** means it is usable locally but lacks participant, device, or production acceptance; **Not yet deployed** means the configured artifact has no verified published revision or route evidence; **Intentionally deferred** means the owner has explicitly kept it out of the current pilot. **Recommended** and **Open question** identify future choices rather than delivered capability.
+
+### Verified deployment boundary
+
+The canonical Author App (`artifacts/web`) is publicly deployed through GitHub Pages at https://okhp3.github.io/telling-forward/. The verified Pages build deployed revision `e4612f79754b2232cb9aee80c0166ceb70db4ea0` on 2026-08-24; the root returned HTTP 200 and its asset URLs used the `/telling-forward/` base path. This is a static client deployment only: the API server and authenticated, GitHub-backed write operations are not hosted by GitHub Pages. The Editorial Reader and companion surfaces remain not-yet-deployed unless separately evidenced.
 
 ---
 
@@ -132,10 +136,10 @@ flowchart TB
 **Layers, in plain terms:**
 
 1. **GitHub** stays the durable store. Nothing about a storyworld's history lives only in Postgres.
-2. **Sync layer** listens to GitHub webhooks (`push`, `pull_request`, `pull_request_review`, `issue_comment`) and supports reconciliation against the REST/GraphQL API, because webhooks can be missed or arrive out of order. The checkout contains this prototype layer; live GitHub repository and deployment evidence remain separate gates.
+2. **Sync layer** listens to GitHub webhooks (`push`, `pull_request`, `pull_request_review`, `issue_comment`) and supports reconciliation against the REST/GraphQL API, because webhooks can be missed or arrive out of order. The checkout contains this prototype layer; the static Pages deployment does not host the API or sync service.
 3. **Data layer** is a read-optimized cache and query index, not a second source of truth. Every row traces back to a GitHub object (commit SHA, PR number, branch ref) so the cache can be rebuilt from GitHub at any time.
 4. **Application API** is the Express 5 + OpenAPI + Orval + Zod pipeline. It serves the cached, human-shaped view to clients and proxies writes (new contribution, submit for canon, steward decision) back through Octokit so GitHub remains authoritative. Private consent and moderation records remain application-owned control-plane data when those designs are implemented.
-5. **Clients** are the React 19/Vite Author App (`artifacts/web`), the Editorial Reader (`artifacts/reader`), companion reader-oriented web surfaces, and an Expo mobile client scaffold with discovery, reading, narration, and offline-cache capability. The Author App package decision is settled; product acceptance and production deployment evidence remain open. A separate GitHub Pages discovery SPA remains optional.
+5. **Clients** are the React 19/Vite Author App (`artifacts/web`), the Editorial Reader (`artifacts/reader`), companion reader-oriented web surfaces, and an Expo mobile client scaffold with discovery, reading, narration, and offline-cache capability. The Author App has a verified static GitHub Pages deployment; product acceptance, API hosting, and service-backed production evidence remain open for the capabilities that need them.
 
 ---
 

@@ -52,7 +52,7 @@ The current product model is deliberately split between two primary apps:
 - **Author App** (`artifacts/web`) — the canonical workspace for storyworld setup, concept-board work, scene writing, proposals, and steward operations.
 - **Reader** (`artifacts/reader`) — the Editorial reading experience for discovering storyworlds, reading paths, and distinguishing canon, alternate, and draft states.
 
-Archive, Broadsheet, Signal/Noise, and Scriptorium are configured companion reader-oriented surfaces with their own visual treatments. `artifacts/mockup-sandbox` remains design-only. These are checkout and workspace capabilities; no production deployment or external route availability is claimed here.
+Archive, Broadsheet, Signal/Noise, and Scriptorium are configured companion reader-oriented surfaces with their own visual treatments. `artifacts/mockup-sandbox` remains design-only. The canonical Author App has a verified public GitHub Pages deployment; the companion surfaces and API-backed operations are not claimed as independently deployed.
 
 The approved visual system is paper-first and editorial: Paper `#F6F2EE`, Teal `#1C3A34`, Espresso `#2A2320`, Rust `#5B3A27`, Orange `#C46A2C`, and Amber `#E6A03C`, with DM Sans for working voice, JetBrains Mono for structured detail, and Alfa Slab One reserved for display moments.
 
@@ -64,6 +64,17 @@ Capability states in this README are intentionally conservative:
 - **Provisional** means local or test evidence exists, but participant, device, or production acceptance is still missing.
 - **Not yet deployed** means no published revision and route smoke evidence has been recorded.
 - **Intentionally deferred** means it is not available for the current pilot, including public contribution, untrusted uploads, rights-sensitive derivatives, monetization, and automatic canon decisions.
+
+### Verified public deployment
+
+The canonical Author App (`artifacts/web`) is published through the repository's GitHub Pages Actions workflow:
+
+- **URL:** https://okhp3.github.io/telling-forward/
+- **Deployed revision:** `e4612f79754b2232cb9aee80c0166ceb70db4ea0`
+- **Pages run:** [successful Actions run](https://github.com/OKHP3/telling-forward/actions/runs/32655379391)
+- **Verified:** 2026-08-24 — root returned HTTP 200 and the deployed HTML referenced `/telling-forward/` asset paths.
+
+This is a static client deployment. The API server, authenticated writes, GitHub-backed contribution operations, and other service-backed behavior still require a separately hosted API and are not implied by this Pages URL.
 
 ## Important content boundary
 
