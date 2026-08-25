@@ -148,6 +148,9 @@ importers:
 
   .:
     devDependencies:
+      '@babel/traverse':
+        specifier: ^7.29.0
+        version: 7.29.8
       cross-env:
         specifier: ^7.0.3
         version: 7.0.3
