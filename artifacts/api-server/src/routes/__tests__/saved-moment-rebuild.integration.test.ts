@@ -7,7 +7,10 @@ const describeWithDatabase = process.env["DATABASE_URL"] ? describe : describe.s
 vi.mock("@workspace/integrations-openai-ai-server", () => ({ openai: {} }));
 
 import { pool } from "@workspace/db";
-import { indexSavedMoment } from "../../lib/provenance";
+import {
+  indexSavedMoment,
+  replacePathMomentMemberships,
+} from "../../lib/provenance";
 import storyworldsRouter from "../storyworlds";
 
 describeWithDatabase("saved moment discovery after reconciliation", () => {
@@ -101,7 +104,33 @@ describeWithDatabase("saved moment discovery after reconciliation", () => {
     client.release();
   });
 
-  it("counts one shared saved moment while preserving both path memberships", async () => {
+  it("stops counting a saved moment after its last path membership is removed", async () => {
+    const commit = {
+      sha: `orphaned-rebuild-commit-${storyworldId}`,
+      message: "An orphaned saved moment",
+      authorName: "Rebuild Contributor",
+      authorEmail: "rebuild@example.test",
+      authorLogin: `rebuild-${storyworldId}`,
+      timestamp: "2026-08-20T12:00:00.000Z",
+    };
+
+    await indexSavedMoment(storyworldId, firstPathId, commit);
+    await replacePathMomentMemberships(storyworldId, firstPathId, []);
+
+    const discovery = await request(app).get("/");
+
+    expect(discovery.status).toBe(200);
+    expect(discovery.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: storyworldId,
+          savedMomentCount: 0,
+        }),
+      ]),
+    );
+  });
+
+  it("counts one shared saved moment after one path membership is removed", async () => {
     const commit = {
       sha: `shared-rebuild-commit-${storyworldId}`,
       message: "A shared saved moment",
@@ -113,6 +142,7 @@ describeWithDatabase("saved moment discovery after reconciliation", () => {
 
     await indexSavedMoment(storyworldId, firstPathId, commit);
     await indexSavedMoment(storyworldId, secondPathId, commit);
+    await replacePathMomentMemberships(storyworldId, firstPathId, []);
 
     const discovery = await request(app).get("/");
 
@@ -134,7 +164,7 @@ describeWithDatabase("saved moment discovery after reconciliation", () => {
        WHERE c.storyworld_id = $1`,
       [storyworldId],
     );
-    expect(Number(membershipCount.rows[0]?.["count"])).toBe(2);
+    expect(Number(membershipCount.rows[0]?.["count"])).toBe(1);
 
     const contributionCount = await client.query(
       `SELECT COUNT(*)::int AS count
@@ -142,6 +172,8 @@ describeWithDatabase("saved moment discovery after reconciliation", () => {
        WHERE storyworld_id = $1`,
       [storyworldId],
     );
-    expect(Number(contributionCount.rows[0]?.["count"])).toBe(1);
+    // Reconciliation removes the path membership, not the durable contribution
+    // record, so it remains available for a future re-index.
+    expect(Number(contributionCount.rows[0]?.["count"])).toBe(2);
   });
 });

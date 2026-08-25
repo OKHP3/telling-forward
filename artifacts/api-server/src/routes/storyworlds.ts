@@ -149,6 +149,11 @@ router.get("/", async (req, res) => {
           SELECT COUNT(DISTINCT c.id)
           FROM contributions c
           WHERE c.storyworld_id = ${storyworldsTable.id}
+            AND EXISTS (
+              SELECT 1
+              FROM contribution_path_memberships cpm
+              WHERE cpm.contribution_id = c.id
+            )
         )`.mapWith(Number),
       })
       .from(storyworldsTable)
@@ -190,6 +195,11 @@ router.get("/:id", async (req, res) => {
           SELECT COUNT(DISTINCT c.id)
           FROM contributions c
           WHERE c.storyworld_id = ${storyworldsTable.id}
+            AND EXISTS (
+              SELECT 1
+              FROM contribution_path_memberships cpm
+              WHERE cpm.contribution_id = c.id
+            )
         )`.mapWith(Number),
       })
       .from(storyworldsTable)
@@ -252,6 +262,11 @@ router.patch(
             SELECT COUNT(DISTINCT c.id)
             FROM contributions c
             WHERE c.storyworld_id = ${world.id}
+              AND EXISTS (
+                SELECT 1
+                FROM contribution_path_memberships cpm
+                WHERE cpm.contribution_id = c.id
+              )
           )`.mapWith(Number),
         })
         .from(storyPathsTable)
