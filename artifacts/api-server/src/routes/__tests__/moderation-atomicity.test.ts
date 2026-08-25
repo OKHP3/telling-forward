@@ -118,6 +118,18 @@ describe("moderation decision atomicity", () => {
     state.transaction.mockReset();
   });
 
+  it("does not expose a public report intake route during the private pilot", async () => {
+    const response = await request(buildApp())
+      .post("/storyworlds/1/moderation/report")
+      .send({
+        subjectKind: "contribution",
+        subjectReference: "public-report-attempt",
+        reasonCode: "spam",
+      });
+
+    expect(response.status).toBe(404);
+  });
+
   it("rolls back a case action when its audit event cannot be written", async () => {
     configureTransaction({ failEvent: true });
 
