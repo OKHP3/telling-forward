@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { Bell, BookOpen, Settings, LogOut } from "lucide-react";
+import { Bell, BookOpen, Settings, LogOut, PenLine, Lightbulb, GitBranch, Mic2 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import {
@@ -48,7 +48,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </span>
           </Link>
 
-          {/* Primary nav */}
+          {/* Persistent workspace navigation. World-specific tools resolve through /write. */}
           <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
             <Link
               href="/"
@@ -59,6 +59,21 @@ export function AppLayout({ children }: { children: ReactNode }) {
               data-testid="link-nav-storyworlds"
             >
               Storyworlds
+            </Link>
+            <span className="ml-2 border-l border-white/20 pl-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--tf-amber)]">
+              Workspace
+            </span>
+            <Link href="/write" className={cn("inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors", location === "/write" ? "tf-nav-active" : "opacity-75 hover:opacity-100 hover:bg-white/10")} data-testid="link-nav-write">
+              <PenLine className="h-3.5 w-3.5" /> Write
+            </Link>
+            <Link href="/write#concept-board" className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium opacity-75 hover:opacity-100 hover:bg-white/10" data-testid="link-nav-concept-board">
+              <Lightbulb className="h-3.5 w-3.5" /> Concept Board
+            </Link>
+            <Link href="/write#story-graph" className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium opacity-75 hover:opacity-100 hover:bg-white/10" data-testid="link-nav-story-graph">
+              <GitBranch className="h-3.5 w-3.5" /> Story Graph
+            </Link>
+            <Link href="/write/transcribe" className={cn("inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors", location === "/write/transcribe" ? "tf-nav-active" : "opacity-75 hover:opacity-100 hover:bg-white/10")} data-testid="link-nav-transcribe">
+              <Mic2 className="h-3.5 w-3.5" /> Transcribe
             </Link>
             <Link
               href="/submissions"
@@ -164,6 +179,22 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </header>
 
       <main className="tf-bond-divider flex-1 container mx-auto max-w-6xl border-l border-r px-4 py-8 md:py-12">
+        <nav className="mb-6 flex flex-wrap items-center gap-2 border-b border-border/50 pb-3 md:hidden" aria-label="Workspace navigation">
+          <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Workspace</span>
+          {[
+            ["/write", "Write"],
+            ["/write#concept-board", "Concept Board"],
+            ["/write#story-graph", "Story Graph"],
+            ["/write/transcribe", "Transcribe"],
+            ["/submissions", "Submissions"],
+            ["/inbox", "Inbox"],
+            ["/settings", "Settings"],
+          ].map(([href, label]) => (
+            <Link key={href} href={href} className="rounded-md border border-border/60 px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
+              {label}
+            </Link>
+          ))}
+        </nav>
         {children}
       </main>
 

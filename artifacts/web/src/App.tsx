@@ -27,6 +27,8 @@ import { ForgotPassword } from '@/pages/forgot-password';
 import { ResetPassword } from '@/pages/reset-password';
 import { StoryGraph } from '@/pages/story-graph';
 import { ContributorInbox } from '@/pages/contributor-inbox';
+import { Write } from '@/pages/write';
+import { Transcribe } from '@/pages/transcribe';
 
 const queryClient = new QueryClient();
 
@@ -47,6 +49,8 @@ function Router() {
               <Route path="/submissions" component={Submissions} />
               <Route path="/inbox" component={ContributorInbox} />
               <Route path="/settings" component={Settings} />
+              <Route path="/write" component={Write} />
+              <Route path="/write/transcribe" component={Transcribe} />
               <Route path="/worlds/:worldId/board" component={ConceptBoard} />
               <Route path="/worlds/:worldId/graph" component={StoryGraph} />
               <Route path="/worlds/:worldId/scene-writer/:capsuleId" component={SceneWriter} />
