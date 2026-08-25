@@ -412,32 +412,57 @@ router.post(
         return;
       }
 
-      if (
-        !(await hasActiveConsent(
+      let canSubmitBranch: boolean;
+      try {
+        canSubmitBranch = await hasActiveConsent(
           userId,
           consentRecordId,
           storyworldId,
           "submit-branch",
-        ))
-      ) {
+        );
+      } catch {
+        req.log.error(
+          { storyworldId, pathId, actionType: "submit-branch" },
+          "createContribution consent lookup unavailable",
+        );
+        res.status(503).json({
+          error:
+            "Consent verification is temporarily unavailable; contribution was not saved",
+        });
+        return;
+      }
+      if (!canSubmitBranch) {
         res.status(403).json({
           error: "Grant submit-branch consent for this storyworld before contributing",
         });
         return;
       }
-      if (
-        agentAssisted &&
-        !(await hasActiveConsent(
-          userId,
-          aiAssistedConsentRecordId,
-          storyworldId,
-          "ai-assisted-draft",
-        ))
-      ) {
+      if (agentAssisted) {
+        let canUseAiAssistance: boolean;
+        try {
+          canUseAiAssistance = await hasActiveConsent(
+            userId,
+            aiAssistedConsentRecordId,
+            storyworldId,
+            "ai-assisted-draft",
+          );
+        } catch {
+          req.log.error(
+            { storyworldId, pathId, actionType: "ai-assisted-draft" },
+            "createContribution consent lookup unavailable",
+          );
+          res.status(503).json({
+            error:
+              "Consent verification is temporarily unavailable; contribution was not saved",
+          });
+          return;
+        }
+        if (!canUseAiAssistance) {
         res.status(403).json({
           error: "Grant ai-assisted-draft consent before submitting AI-assisted work",
         });
         return;
+        }
       }
 
       const [user] = await db

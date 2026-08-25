@@ -20,6 +20,7 @@ const state = vi.hoisted(() => ({
   listCommitsForBranch: vi.fn(),
   getFileContent: vi.fn(),
   transaction: vi.fn(),
+  hasActiveConsent: vi.fn(),
   insertValues: [] as Array<{ table: unknown; values: unknown }>,
 }));
 
@@ -195,7 +196,7 @@ vi.mock("@workspace/api-zod", () => ({
 
 vi.mock("@workspace/integrations-openai-ai-server", () => ({ openai: {} }));
 vi.mock("../consents", () => ({
-  hasActiveConsent: vi.fn().mockResolvedValue(true),
+  hasActiveConsent: state.hasActiveConsent,
 }));
 
 import storyworldsRouter from "../storyworlds";
@@ -224,12 +225,14 @@ describe("POST /storyworlds/:id/paths/:pathId/contributions", () => {
     state.listCommitsForBranch.mockReset();
     state.getFileContent.mockReset();
     state.transaction.mockReset();
+    state.hasActiveConsent.mockReset();
     state.insertValues = [];
     state.createBranch.mockResolvedValue(undefined);
     state.createCommit.mockResolvedValue("abc123");
     state.listCommitsForBranch.mockResolvedValue([]);
     state.getFileContent.mockResolvedValue("");
     state.transaction.mockImplementation(async (callback) => callback((await import("@workspace/db")).db));
+    state.hasActiveConsent.mockResolvedValue(true);
   });
 
   function expectRejectedBeforeGitHub(response: request.Response, expectedText: string) {
@@ -423,6 +426,51 @@ describe("POST /storyworlds/:id/paths/:pathId/contributions", () => {
     });
     expect(state.createBranch).not.toHaveBeenCalled();
     expect(state.createCommit).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the consent lookup is unavailable", async () => {
+    state.hasActiveConsent.mockRejectedValueOnce(new Error("database connection lost"));
+
+    const response = await request(buildApp())
+      .post("/1/paths/7/contributions")
+      .send({
+        title: "Unavailable policy check",
+        content: "This must not reach GitHub.",
+        submissionId: "660e8400-e29b-41d4-a716-446655440015",
+      });
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      error: "Consent verification is temporarily unavailable; contribution was not saved",
+    });
+    expect(state.createBranch).not.toHaveBeenCalled();
+    expect(state.createCommit).not.toHaveBeenCalled();
+    expect(state.listCommitsForBranch).not.toHaveBeenCalled();
+    expect(state.insertValues).toHaveLength(0);
+  });
+
+  it("fails closed when the AI-assistance consent lookup is unavailable", async () => {
+    state.hasActiveConsent
+      .mockResolvedValueOnce(true)
+      .mockRejectedValueOnce(new Error("database connection lost"));
+
+    const response = await request(buildApp())
+      .post("/1/paths/7/contributions")
+      .send({
+        title: "Unavailable AI policy check",
+        content: "This must not reach GitHub.",
+        submissionId: "660e8400-e29b-41d4-a716-446655440016",
+        agentAssisted: true,
+      });
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      error: "Consent verification is temporarily unavailable; contribution was not saved",
+    });
+    expect(state.createBranch).not.toHaveBeenCalled();
+    expect(state.createCommit).not.toHaveBeenCalled();
+    expect(state.listCommitsForBranch).not.toHaveBeenCalled();
+    expect(state.insertValues).toHaveLength(0);
   });
 
   it("does not index a contribution when the GitHub commit fails", async () => {
