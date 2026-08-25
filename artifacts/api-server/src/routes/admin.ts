@@ -32,6 +32,8 @@ import {
 } from "../lib/github";
 import { logger } from "../lib/logger";
 import { proposalSyncConflictSet } from "../lib/proposal-state-sync";
+import { requireAuth } from "../middlewares/auth";
+import { requireStewardFor } from "../middlewares/steward";
 import {
   contributorAttributionsForPath,
   indexNarrationCommit,
@@ -140,8 +142,19 @@ function prToPathState(
 // POST /api/admin/reconcile
 // ---------------------------------------------------------------------------
 
-router.post("/reconcile", requireAdminSecret, async (req, res) => {
-  const { storyworld_id } = req.body as { storyworld_id?: number };
+type LedgerAction = "created" | "updated" | "preserved" | "skipped";
+type LedgerEntry = {
+  kind: "path" | "contribution" | "proposal" | "provenance";
+  identifier: string;
+  action: LedgerAction;
+  reason?: string;
+};
+
+async function reconcileHandler(req: import("express").Request, res: import("express").Response) {
+  const storyworld_id =
+    typeof req.params["id"] === "string"
+      ? Number(req.params["id"])
+      : (req.body as { storyworld_id?: number }).storyworld_id;
 
   if (!storyworld_id || typeof storyworld_id !== "number") {
     res.status(400).json({ error: "storyworld_id (number) is required" });
@@ -173,6 +186,13 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
     editor_questions_upserted: 0,
     provenance_records_upserted: 0,
   };
+  const ledger: Record<LedgerAction, LedgerEntry[]> = {
+    created: [],
+    updated: [],
+    preserved: [],
+    skipped: [],
+  };
+  const addLedger = (entry: LedgerEntry) => ledger[entry.action].push(entry);
 
   try {
     // -----------------------------------------------------------------------
@@ -205,6 +225,12 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
           // PR reconciliation below drives the state for proposed/published paths.
         });
       summary["paths_upserted"] = (summary["paths_upserted"] ?? 0) + 1;
+      addLedger({
+        kind: "path",
+        identifier: `github:branch:${owner}/${repo}#${branch.name}`,
+        action: "updated",
+        reason: "Branch inventory refreshed from GitHub.",
+      });
     }
 
     // -----------------------------------------------------------------------
@@ -242,6 +268,12 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
           await indexCommitForPath(world, path, commit, gh);
           summary["contributions_upserted"] =
             (summary["contributions_upserted"] ?? 0) + 1;
+            addLedger({
+              kind: "contribution",
+              identifier: `github:commit:${commit.sha}`,
+              action: "updated",
+              reason: "Narration commit re-indexed from the canonical branch.",
+            });
         }
         continue;
       }
@@ -257,6 +289,12 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
         await indexCommitForPath(world, path, commit, gh);
         summary["contributions_upserted"] =
           (summary["contributions_upserted"] ?? 0) + 1;
+        addLedger({
+          kind: "contribution",
+          identifier: `github:commit:${commit.sha}`,
+          action: "updated",
+          reason: "Commit re-indexed from the path's GitHub diff.",
+        });
       }
       await replacePathMomentMemberships(
         world.id,
@@ -311,6 +349,12 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
 
       if (!path) continue;
       summary["paths_state_updated"] = (summary["paths_state_updated"] ?? 0) + 1;
+      addLedger({
+        kind: "path",
+        identifier: `github:pr:${owner}/${repo}#${pr.number}/head:${pr.headRef}`,
+        action: "updated",
+        reason: `GitHub pull request outcome mapped to ${pathState}.`,
+      });
       const basePathRows = await db
         .select({ id: storyPathsTable.id })
         .from(storyPathsTable)
@@ -370,6 +414,12 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
         .returning();
 
       summary["proposals_upserted"] = (summary["proposals_upserted"] ?? 0) + 1;
+      addLedger({
+        kind: "proposal",
+        identifier: `github:pr:${owner}/${repo}#${pr.number}`,
+        action: "updated",
+        reason: `Pull request state reconciled as ${proposalState}.`,
+      });
       if (!proposal) continue;
 
       // A pull request remains queryable after its source branch is deleted, so
@@ -440,6 +490,12 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
         await indexCommitForPath(world, path, commit, gh);
         summary["contributions_upserted"] =
           (summary["contributions_upserted"] ?? 0) + 1;
+        addLedger({
+          kind: "contribution",
+          identifier: `github:commit:${commit.sha}`,
+          action: "updated",
+          reason: `Contribution recovered from pull request #${pr.number}.`,
+        });
       }
       if (acceptedRange) {
         await replacePathMomentMemberships(
@@ -448,6 +504,12 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
           commits.map((commit) => commit.sha),
         );
       } else {
+        addLedger({
+          kind: "contribution",
+          identifier: `github:pr:${owner}/${repo}#${pr.number}`,
+          action: "skipped",
+          reason: "The pull request has no verified merge range; existing path memberships were left untouched.",
+        });
         logger.warn(
           { prNumber: pr.number },
           "Skipped destructive membership reconciliation for a non-merge PR",
@@ -547,6 +609,27 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
         });
         summary["provenance_records_upserted"] =
           (summary["provenance_records_upserted"] ?? 0) + 1;
+        addLedger({
+          kind: "provenance",
+          identifier: `github:merge:${acceptedPr.mergeCommitSha}`,
+          action: "updated",
+          reason: "Accepted provenance reconstructed from the signed GitHub decision.",
+        });
+      } else if (isTerminalEvent) {
+        addLedger({
+          kind: "provenance",
+          identifier: `github:pr:${owner}/${repo}#${pr.number}`,
+          action: "preserved",
+          reason: "Terminal non-merge outcome is preserved as a published alternate; no canon provenance is created.",
+        });
+      }
+      if (!isTerminalEvent) {
+        addLedger({
+          kind: "proposal",
+          identifier: `github:pr:${owner}/${repo}#${pr.number}`,
+          action: "preserved",
+          reason: "An open GitHub pull request cannot overwrite an existing editorial decision.",
+        });
       }
     }
 
@@ -554,11 +637,29 @@ router.post("/reconcile", requireAdminSecret, async (req, res) => {
       { storyworldId: storyworld_id, owner, repo, summary },
       "Reconciliation complete",
     );
-    res.json({ ok: true, storyworld_id, owner, repo, summary });
+    res.json({ ok: true, storyworld_id, owner, repo, canonicalSource: "github", rebuildableIndex: true, summary, ledger });
   } catch (err) {
     logger.error({ err, storyworldId: storyworld_id }, "Reconciliation error");
     res.status(500).json({ error: "Reconciliation failed" });
   }
-});
+}
+
+router.post("/reconcile", requireAdminSecret, reconcileHandler);
+
+// Browser-facing rebuild entry point. It is deliberately storyworld-scoped:
+// stewards can inspect the rebuild without exposing the global admin secret.
+router.post(
+  "/reconcile-for-steward/:id",
+  requireAuth,
+  async (req, res, next) => {
+    const storyworldId = Number(req.params["id"]);
+    if (!Number.isInteger(storyworldId) || storyworldId < 1) {
+      res.status(400).json({ error: "Invalid storyworld id" });
+      return;
+    }
+    await requireStewardFor(req, res, next, storyworldId);
+  },
+  reconcileHandler,
+);
 
 export default router;

@@ -37,6 +37,8 @@ import {
   Loader2,
   Check,
   Save,
+  RefreshCw,
+  GitBranch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +63,20 @@ type ModerationCase = {
   contributorMessage: string | null;
   openedAt: string;
   events: Array<{ eventType: string; privateNote: string | null; evidenceReference: string | null; createdAt: string }>;
+};
+
+type RebuildLedgerEntry = {
+  kind: "path" | "contribution" | "proposal" | "provenance";
+  identifier: string;
+  action: "created" | "updated" | "preserved" | "skipped";
+  reason?: string;
+};
+
+type RebuildResult = {
+  canonicalSource: "github";
+  rebuildableIndex: boolean;
+  summary: Record<string, number>;
+  ledger: Record<RebuildLedgerEntry["action"], RebuildLedgerEntry[]>;
 };
 
 function getStateBadge(state: ProposalState) {
@@ -470,6 +486,9 @@ export function StewardDashboard() {
   const [moderationError, setModerationError] = useState<string | null>(null);
   const [reportForm, setReportForm] = useState({ subjectKind: "proposal", subjectReference: "", reason: "spam", note: "" });
   const [controlForm, setControlForm] = useState({ subjectUserId: "", kind: "mute", appliesTo: "submission", reason: "spam" });
+  const [rebuildResult, setRebuildResult] = useState<RebuildResult | null>(null);
+  const [rebuildError, setRebuildError] = useState<string | null>(null);
+  const [isRebuilding, setIsRebuilding] = useState(false);
 
   const { data: world, isLoading: isLoadingWorld } = useGetStoryworld(worldId, {
     query: { enabled: !!worldId, queryKey: getGetStoryworldQueryKey(worldId) },
@@ -579,6 +598,27 @@ export function StewardDashboard() {
       });
     } catch {
       setSeedError("Couldn't save the discovery invitation. Please try again.");
+    }
+  }
+
+  async function handleRebuild() {
+    if (!worldId) return;
+    setIsRebuilding(true);
+    setRebuildError(null);
+    try {
+      const response = await fetch(`/api/admin/reconcile-for-steward/${worldId}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) {
+        throw new Error("Rebuild failed");
+      }
+      setRebuildResult((await response.json()) as RebuildResult);
+    } catch {
+      setRebuildError("The rebuild could not be completed. GitHub remains unchanged; try again when the repository is reachable.");
+    } finally {
+      setIsRebuilding(false);
     }
   }
 
@@ -726,6 +766,78 @@ export function StewardDashboard() {
             </p>
           )}
         </form>
+      </section>
+
+      <section
+        className="rounded-xl border border-slate-300/80 bg-slate-50/70 p-5 sm:p-6 dark:border-slate-700 dark:bg-slate-950/30"
+        aria-labelledby="rebuild-heading"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <GitBranch className="mt-0.5 h-5 w-5 text-primary" />
+            <div>
+              <h2 id="rebuild-heading" className="font-serif text-lg font-medium">
+                Rebuild the local index
+              </h2>
+              <p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">
+                GitHub is the canonical record. Request a fresh comparison, inspect what changed,
+                and remember that this local index can always be rebuilt from the repository.
+              </p>
+            </div>
+          </div>
+          <span className="hidden shrink-0 rounded-full border border-slate-300 bg-background px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground sm:inline-flex">
+            Steward only
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => void handleRebuild()}
+          disabled={isRebuilding}
+          className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+          data-testid="button-rebuild-index"
+        >
+          <RefreshCw className={cn("h-4 w-4", isRebuilding && "animate-spin")} />
+          {isRebuilding ? "Comparing with GitHub…" : "Request rebuild"}
+        </button>
+        {rebuildError && <p className="mt-3 text-sm text-destructive" role="alert">{rebuildError}</p>}
+        {rebuildResult && (
+          <div className="mt-6 space-y-5" data-testid="rebuild-ledger">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-400">
+                Source: GitHub
+              </span>
+              <span>Completed comparison · local index remains rebuildable</span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-4">
+              {(["created", "updated", "preserved", "skipped"] as const).map((action) => (
+                <div key={action} className="rounded-lg border border-border/60 bg-background p-3">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">{action}</p>
+                  <p className="mt-1 text-2xl font-serif tabular-nums">{rebuildResult.ledger[action]?.length ?? 0}</p>
+                </div>
+              ))}
+            </div>
+            {(["created", "updated", "preserved", "skipped"] as const).map((action) => {
+              const entries = rebuildResult.ledger[action] ?? [];
+              if (!entries.length) return null;
+              return (
+                <div key={action} className="space-y-2">
+                  <h3 className="text-sm font-medium capitalize">{action} records</h3>
+                  <div className="divide-y divide-border/50 rounded-lg border border-border/60 bg-background">
+                    {entries.map((entry, index) => (
+                      <div key={`${entry.identifier}-${index}`} className="flex flex-col gap-1 p-3 text-sm sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+                        <div className="min-w-0">
+                          <p className="font-mono text-xs break-all text-foreground">{entry.identifier}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{entry.kind}</p>
+                        </div>
+                        {entry.reason && <p className="max-w-md text-xs leading-5 text-muted-foreground">{entry.reason}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section className="rounded-xl border border-red-200/70 bg-red-50/30 p-5 sm:p-6 dark:border-red-900/40 dark:bg-red-950/10" aria-labelledby="moderation-heading">
