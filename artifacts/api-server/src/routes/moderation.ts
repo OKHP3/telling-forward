@@ -104,21 +104,26 @@ router.post("/moderation/cases/:caseId/action", requireAuth, requireStewardForCa
     res.status(400).json({ error: "Invalid moderation outcome" }); return;
   }
   try {
-    const [updated] = await db.update(moderationCasesTable).set({
-      status: body.status,
-      visibilityAction: body.visibilityAction,
-      resolvedAt: ["resolved", "dismissed"].includes(body.status) ? new Date() : null,
-      contributorMessage: typeof body.contributorMessage === "string" ? body.contributorMessage.trim() || null : undefined,
-    }).where(eq(moderationCasesTable.id, routeParam(req.params.caseId))).returning();
-    if (!updated) { res.status(404).json({ error: "Moderation case not found" }); return; }
-    await db.insert(moderationEventsTable).values({
-      caseId: updated.id,
-      actorUserId: req.session.userId,
-      eventType: `case-${body.status}`,
-      reasonCode: reasons.has(body.reasonCode) ? body.reasonCode : null,
-      privateNote: typeof body.privateNote === "string" ? body.privateNote.trim() || null : null,
-      evidenceReference: typeof body.evidenceReference === "string" ? body.evidenceReference.trim() || null : null,
+    const updated = await db.transaction(async (tx) => {
+      const [caseRecord] = await tx.update(moderationCasesTable).set({
+        status: body.status,
+        visibilityAction: body.visibilityAction,
+        resolvedAt: ["resolved", "dismissed"].includes(body.status) ? new Date() : null,
+        contributorMessage: typeof body.contributorMessage === "string" ? body.contributorMessage.trim() || null : undefined,
+      }).where(eq(moderationCasesTable.id, routeParam(req.params.caseId))).returning();
+      if (!caseRecord) return null;
+
+      await tx.insert(moderationEventsTable).values({
+        caseId: caseRecord.id,
+        actorUserId: req.session.userId,
+        eventType: `case-${body.status}`,
+        reasonCode: reasons.has(body.reasonCode) ? body.reasonCode : null,
+        privateNote: typeof body.privateNote === "string" ? body.privateNote.trim() || null : null,
+        evidenceReference: typeof body.evidenceReference === "string" ? body.evidenceReference.trim() || null : null,
+      });
+      return caseRecord;
     });
+    if (!updated) { res.status(404).json({ error: "Moderation case not found" }); return; }
     res.json(updated);
   } catch (err) {
     req.log.error({ err }, "moderation action failed");
@@ -166,13 +171,27 @@ router.post("/storyworlds/:id/moderation/batch-dismiss", requireAuth, requireSte
   if (req.body?.confirm !== true) {
     res.json({ preview: true, count: cases.length, caseIds: cases.map((item) => item.id), resultingStatus: "dismissed" }); return;
   }
-  await db.update(moderationCasesTable).set({ status: "dismissed", resolvedAt: new Date(), visibilityAction: "none" })
-    .where(inArray(moderationCasesTable.id, ids));
-  await db.insert(moderationEventsTable).values(cases.map((item) => ({
-    caseId: item.id, actorUserId: req.session.userId, eventType: "batch-dismissed",
-    reasonCode: "spam" as const, privateNote: "Homogeneous low-risk spam batch review", evidenceReference: null,
-  })));
-  res.json({ preview: false, count: cases.length, caseIds: cases.map((item) => item.id), resultingStatus: "dismissed" });
+  try {
+    await db.transaction(async (tx) => {
+      await tx.update(moderationCasesTable).set({
+        status: "dismissed",
+        resolvedAt: new Date(),
+        visibilityAction: "none",
+      }).where(inArray(moderationCasesTable.id, ids));
+      await tx.insert(moderationEventsTable).values(cases.map((item) => ({
+        caseId: item.id,
+        actorUserId: req.session.userId,
+        eventType: "batch-dismissed",
+        reasonCode: "spam" as const,
+        privateNote: "Homogeneous low-risk spam batch review",
+        evidenceReference: null,
+      })));
+    });
+    res.json({ preview: false, count: cases.length, caseIds: cases.map((item) => item.id), resultingStatus: "dismissed" });
+  } catch (err) {
+    req.log.error({ err, storyworldId, caseCount: cases.length }, "moderation batch dismissal failed");
+    res.status(500).json({ error: "Failed to dismiss moderation cases" });
+  }
 });
 
 router.post("/moderation/controls/:controlId/lift", requireAuth, async (req, res, next) => {
