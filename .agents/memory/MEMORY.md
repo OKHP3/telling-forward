@@ -11,3 +11,4 @@
 - [Reader 404 recovery](reader-404-recovery.md) — route queries must stop retries for confirmed 404s so absent records never look like empty worlds.
 - [Contributor activity source](contributor-activity-source.md) — mobile activity uses durable narration records; proposal status needs an explicit contributor link before joining.
 - [Consent control plane](consent-control-plane.md) — permissions are private append-only records; revocation is prospective and never erases Git history.
+- [Browser regression runtime](browser-regression-runtime.md) — Playwright checks also require Chromium's native Nix libraries, not just the Node package.
