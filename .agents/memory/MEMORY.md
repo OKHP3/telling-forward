@@ -12,3 +12,4 @@
 - [Contributor activity source](contributor-activity-source.md) — mobile activity uses durable narration records; proposal status needs an explicit contributor link before joining.
 - [Consent control plane](consent-control-plane.md) — permissions are private append-only records; revocation is prospective and never erases Git history.
 - [Browser regression runtime](browser-regression-runtime.md) — Playwright checks also require Chromium's native Nix libraries, not just the Node package.
+- [GitHub App secret format](github-app-secret-format.md) — secure secret entry may flatten PEM keys; normalize at the application boundary without logging them.

@@ -20,6 +20,25 @@ describe("GitHub platform authentication", () => {
     });
   });
 
+  it("normalizes flattened PEM keys from secret entry forms", () => {
+    expect(
+      resolveGitHubAuth({
+        GITHUB_APP_ID: "123",
+        GITHUB_APP_INSTALLATION_ID: "456",
+        GITHUB_APP_PRIVATE_KEY:
+          "-----BEGIN PRIVATE KEY-----encoded-body-----END PRIVATE KEY-----",
+      }),
+    ).toEqual({
+      kind: "app",
+      credentials: {
+        appId: "123",
+        installationId: "456",
+        privateKey:
+          "-----BEGIN PRIVATE KEY-----\nencoded-body\n-----END PRIVATE KEY-----\n",
+      },
+    });
+  });
+
   it("rejects a partial App configuration instead of falling back to a PAT", () => {
     expect(() =>
       resolveGitHubAuth({

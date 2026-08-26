@@ -287,6 +287,14 @@ export type GitHubAuthConfig =
   | { kind: "pat"; token: string }
   | { kind: "anonymous" };
 
+function normalizeGitHubAppPrivateKey(privateKey: string): string {
+  return privateKey
+    .replace(/\\r/g, "\r")
+    .replace(/\\n/g, "\n")
+    .replace(/(-----BEGIN [^-]+-----)\s*/, "$1\n")
+    .replace(/\s*(-----END [^-]+-----)\s*$/, "\n$1\n");
+}
+
 /**
  * Resolve platform GitHub credentials without exposing secret values.
  *
@@ -315,7 +323,7 @@ export function resolveGitHubAuth(
       credentials: {
         appId,
         installationId,
-        privateKey: privateKey.replace(/\\n/g, "\n"),
+        privateKey: normalizeGitHubAppPrivateKey(privateKey),
       },
     };
   }
