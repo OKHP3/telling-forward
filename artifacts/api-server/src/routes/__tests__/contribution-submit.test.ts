@@ -22,6 +22,7 @@ const state = vi.hoisted(() => ({
   transaction: vi.fn(),
   hasActiveConsent: vi.fn(),
   insertValues: [] as Array<{ table: unknown; values: unknown }>,
+  logEvents: [] as Array<{ level: string; args: unknown[] }>,
 }));
 
 const tables = vi.hoisted(() => ({
@@ -205,7 +206,11 @@ function buildApp(): Express {
   const app = express();
   app.use(express.json());
   app.use((req: any, _res, next) => {
-    req.log = { error: vi.fn(), warn: vi.fn(), info: vi.fn() };
+    req.log = {
+      error: vi.fn((...args: unknown[]) => state.logEvents.push({ level: "error", args })),
+      warn: vi.fn((...args: unknown[]) => state.logEvents.push({ level: "warn", args })),
+      info: vi.fn((...args: unknown[]) => state.logEvents.push({ level: "info", args })),
+    };
     next();
   });
   app.use("/", storyworldsRouter);
@@ -227,6 +232,7 @@ describe("POST /storyworlds/:id/paths/:pathId/contributions", () => {
     state.transaction.mockReset();
     state.hasActiveConsent.mockReset();
     state.insertValues = [];
+    state.logEvents = [];
     state.createBranch.mockResolvedValue(undefined);
     state.createCommit.mockResolvedValue("abc123");
     state.listCommitsForBranch.mockResolvedValue([]);
@@ -428,15 +434,18 @@ describe("POST /storyworlds/:id/paths/:pathId/contributions", () => {
     expect(state.createCommit).not.toHaveBeenCalled();
   });
 
-  it("fails closed when the consent lookup is unavailable", async () => {
+  it("fails closed with a privacy-safe event when the consent lookup is unavailable", async () => {
     state.hasActiveConsent.mockRejectedValueOnce(new Error("database connection lost"));
 
     const response = await request(buildApp())
-      .post("/1/paths/7/contributions")
+      .post(
+        "/1/paths/7/contributions?consentRecordId=22222222-2222-4222-8222-222222222222&privateNote=keep-this-out",
+      )
       .send({
         title: "Unavailable policy check",
-        content: "This must not reach GitHub.",
+        content: "PRIVATE CONSENT CONTENT — this must not reach GitHub.",
         submissionId: "660e8400-e29b-41d4-a716-446655440015",
+        consentRecordId: "11111111-1111-4111-8111-111111111111",
       });
 
     expect(response.status).toBe(503);
@@ -447,6 +456,21 @@ describe("POST /storyworlds/:id/paths/:pathId/contributions", () => {
     expect(state.createCommit).not.toHaveBeenCalled();
     expect(state.listCommitsForBranch).not.toHaveBeenCalled();
     expect(state.insertValues).toHaveLength(0);
+    expect(state.logEvents).toEqual([
+      {
+        level: "error",
+        args: [
+          { storyworldId: 1, pathId: 7, actionType: "submit-branch" },
+          "createContribution consent lookup unavailable",
+        ],
+      },
+    ]);
+
+    const capturedLogEvent = JSON.stringify(state.logEvents[0]);
+    expect(capturedLogEvent).not.toContain("11111111-1111-4111-8111-111111111111");
+    expect(capturedLogEvent).not.toContain("22222222-2222-4222-8222-222222222222");
+    expect(capturedLogEvent).not.toContain("keep-this-out");
+    expect(capturedLogEvent).not.toContain("PRIVATE CONSENT CONTENT");
   });
 
   it("fails closed when the AI-assistance consent lookup is unavailable", async () => {
