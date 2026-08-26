@@ -13,6 +13,10 @@ The recovery contract is fully documented and passes its local proof. A live enc
 completed and cannot be completed from this workspace. No production credentials,
 encrypted backup destination, or isolated clean restore target are available here.
 
+The owner decisions needed to schedule the drill were recorded on 2026-08-26.
+The locally runnable synthetic backup check passes, but it is not evidence of a
+live provider upload, production restore, or recovery SLA.
+
 ---
 
 ## Evidence boundary
@@ -96,20 +100,55 @@ The API must not be opened to readers or contributors until steps 3–8 pass.
 
 ---
 
-## Open decisions that must be made before scheduling the drill
+## Decisions recorded before scheduling the drill
 
-The runbook records these as explicitly open for the private pilot:
+The runbook now records the following private-pilot choices:
 
-- Backup provider and encrypted destination (Replit Deployments automated backup,
-  `pg_dump` to object storage, or managed provider backup).
-- Encryption key custody (managed provider key, customer-managed key, or operator-held
-  passphrase).
-- Geographic redundancy and retention period.
-- Retention/deletion schedule for identity, consent, and moderation records (legal
-  basis and jurisdiction deferred).
+- Backup provider and encrypted destination: `pg_dump` to a private Replit Object
+  Storage bucket under `private-control-plane/backups/`.
+- Encryption key custody: operator-held passphrase provisioned through the
+  owner-controlled workspace secret store.
+- Geographic redundancy: none during the private pilot.
+- Backup archive retention: 35 days, with provider lifecycle deletion at expiry.
+- The generic audit evidence table is not a prerequisite for the first drill;
+  the access-controlled operations log is mandatory for drill metadata and result.
 
-None of these can be defaulted by this workspace. They require owner/operator approval
-before the drill is scheduled.
+These choices authorize scheduling but do not claim that the provider bucket,
+secret, isolated restore target, or operations-log path has been provisioned in
+this workspace.
+
+## Synthetic backup-method check — 2026-08-26
+
+Command:
+
+```
+python3 scripts/private-control-plane-backup-drill.py
+```
+
+Result:
+
+```
+synthetic private-control-plane backup drill: PASS
+archive encryption: PASS
+passphrase recovery: PASS
+checksum and byte-for-byte restore: PASS
+```
+
+The check creates an in-memory synthetic SQL dump, encrypts it with OpenSSL
+using a fresh ephemeral passphrase, decrypts it, and verifies the recovered
+bytes. It writes only temporary files and does not contact PostgreSQL,
+Replit Object Storage, or production.
+
+## First live drill schedule
+
+| Field | Scheduled value |
+|---|---|
+| Date and time | **2026-09-09 14:00 UTC** |
+| Operator | **Jamie Hill — project owner and recovery operator** |
+| Destination | Private Replit Object Storage bucket, `private-control-plane/backups/` |
+| Key custody | Operator-held passphrase from the owner-controlled workspace secret store |
+| Evidence required | Provider access log, backup manifest, retention expiry, isolated restore result, invalidated-state counts, GitHub-reference reconciliation, access-matrix result, and deletion/destruction confirmation |
+| Release gate | API remains closed to readers and contributors until runbook restore-procedure steps 3–8 pass |
 
 ---
 

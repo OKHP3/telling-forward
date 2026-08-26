@@ -2,8 +2,8 @@
 
 ## Status
 
-**Pilot control and recovery contract defined; production backup execution
-requires owner/operator approval.**
+**Pilot control and recovery contract defined; first live encrypted backup/restore
+drill scheduled for owner/operator execution.**
 
 This runbook is deliberately separate from the GitHub creative record. It
 does not authorize public moderation, public contribution, consent
@@ -51,9 +51,25 @@ For an authorized private backup, the operator must:
    integrity, table manifest, and a test restore into an isolated clean
    environment.
 
-The exact provider, schedule, encryption key custody, geographic
-redundancy, and retention duration are owner/operator decisions and remain
-explicitly open for the private pilot.
+#### Owner decisions for the private pilot — 2026-08-26
+
+The following decisions close the previously open provider, custody, and
+retention choices. They authorize scheduling the drill; they do not represent
+completion of a live backup or restore.
+
+| Decision | Approved choice | Operating constraint |
+|---|---|---|
+| Backup provider and destination | **`pg_dump` written to a private Replit Object Storage bucket**, under the `private-control-plane/backups/` prefix | The bucket is service-owned and access-controlled. Only the recovery operator and API service may access it. Do not use Replit Deployments' application backup as the control-plane archive, and never copy dumps to GitHub, an issue, a PR, an artifact, or an application upload. |
+| Encryption key custody | **Operator-held passphrase**, provisioned through the owner-controlled workspace secret store and supplied only at backup/restore time | The passphrase is not stored in the repository, dump, object metadata, or an operator log. The live drill must verify that the named operator can retrieve the secret through the approved secret-store path and decrypt the archive without exposing its value. |
+| Geographic redundancy | **No second-region replica during the private pilot** | The encrypted archive remains in the selected Replit Object Storage destination. A second-region copy requires a separate owner decision; the absence of that copy must be visible in the drill record. |
+| Backup retention and deletion | **35 days per encrypted archive**, with provider lifecycle deletion at expiry (daily lifecycle sweep, based on the archive creation timestamp) | A legal hold or active safety investigation suspends deletion and must be recorded by the owner. Expired archives are deleted; deletion evidence is retained in the access-controlled operations log without retaining dump contents. |
+| Audit evidence before the first drill | **Not required as a new database table before the first drill** | The generic append-only audit sink remains deferred. The first drill must still write its backup/restore metadata and result to the access-controlled operations log, and the existing consent, moderation, and provenance evidence must remain covered by the backup contract. |
+
+The selected method is tested locally with a synthetic dump by
+`scripts/private-control-plane-backup-drill.py`. That check exercises archive
+creation, OpenSSL encryption with a fresh test passphrase, checksum
+verification, passphrase-based decryption, and byte-for-byte recovery. It does
+not connect to PostgreSQL, Replit Object Storage, or production data.
 
 ### Export
 
@@ -127,5 +143,16 @@ GitHub/index rebuild. It asserts:
 - raw password/reset/session/token fields never enter an export.
 
 This is a contract proof, not a production backup claim. A live encrypted
-`pg_dump`/restore drill against the owner-controlled database remains
-required before public launch.
+`pg_dump`/restore drill against the owner-controlled database remains required
+before public launch. The live drill is scheduled as follows:
+
+| Field | Scheduled value |
+|---|---|
+| Drill | First live encrypted `pg_dump`/restore against the owner-controlled database |
+| Date and time | **2026-09-09 14:00 UTC** |
+| Operator | **Jamie Hill — project owner and recovery operator** |
+| Destination | Private Replit Object Storage bucket, `private-control-plane/backups/` |
+| Key custody | Operator-held passphrase from the owner-controlled workspace secret store |
+| Retention to verify | 35 days; lifecycle deletion at expiry |
+| Pre-drill gate | Confirm destination access log, secret-store retrieval, isolated clean restore target, and operations-log write path |
+| Launch gate | Do not open the API to readers or contributors until restore-procedure steps 3–8 pass |

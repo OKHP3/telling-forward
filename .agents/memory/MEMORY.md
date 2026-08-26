@@ -15,3 +15,4 @@
 - [GitHub App secret format](github-app-secret-format.md) — secure secret entry may flatten PEM keys; normalize at the application boundary without logging them.
 - [GitHub required-check context](github-required-check-context.md) — branch protection matches exact emitted check names; a successful differently named job does not satisfy the gate.
 - [Phi-4 Actions runtime](phi4-actions-runtime.md) — the pinned Phi-4 GGUF requires a current llama-cpp-python release on CPU runners; validate the loader with the exact revision.
+- [Private pilot backup policy](private-backup-policy.md) — use private Object Storage, operator-held passphrase, 35-day retention, and an operations-log record for the scheduled drill.
