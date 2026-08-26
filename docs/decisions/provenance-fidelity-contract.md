@@ -2,7 +2,9 @@
 
 ## Status
 
-**Reader visibility boundary decided for the private pilot (2026-08-21); implementation and enforcement not approved. No reader feature added.**
+**Reader visibility boundary decided for the private pilot (2026-08-21);
+contributor review boundary recorded (2026-08-26); implementation and
+enforcement not approved. No reader or contributor feature added.**
 
 This document consolidates the overlapping proposals in ADR-0005, ADR-0006,
 ADR-0007, ADR-0009, ADR-0010, and ADR-0011. It defines the records and release
@@ -78,6 +80,106 @@ agent generated the note. If the source is missing, the note says so. A
 fidelity note does not authorize use of the output, grant derivative consent,
 change canon, or transfer authorship.
 
+### Contributor fidelity note and review boundary — private pilot decision
+
+**Recorded 2026-08-26. This is a design contract only; it does not approve an
+endpoint, worker, schema, or contributor-facing UI.** A contributor may review
+only a proposed transformation of their own material. The note must be
+generated alongside the proposal, remain attached to that proposal version, and
+never silently replace the source or an earlier proposal.
+
+The contributor-facing note is a deliberately smaller, plain-language view of
+the internal fidelity note. These are the only fields it may contain:
+
+| Contributor-facing label | Internal source | Allowed presentation |
+|---|---|---|
+| **This note is for** | `source_version_ref`, `output_version_ref` | App-local names such as “Original scene” and “Proposed version.” Show enough surrounding story context for the contributor to identify the material, but never expose raw repository, branch, commit, pull-request, issue, or internal IDs. |
+| **Change type** | `transform_kind` | A maintained plain-language label such as “Clarity pass” or “Alternative structure.” Do not expose engine, pipeline, job, or provider terminology. |
+| **What changed** | `changed_material[]` | Concrete, scoped changes to claims, structure, wording, named entities, or omissions. Describe the change; do not imply that it is better or approved. |
+| **What was kept** | `preserved_intent[]` | The meaning, constraints, voice markers, plot facts, and author instructions the proposal attempted to retain. |
+| **Questions to check** | `ambiguities_flagged[]` | Unresolved choices the contributor should inspect. Only include questions relevant to the contributor’s material, with protected third-party or safety details redacted. |
+| **Meaning check** | `semantic_preservation` | One qualitative finding: “Meaning appears kept,” “Some meaning may have shifted,” or “Meaning could not be confirmed,” with a short explanation. No numeric score, confidence value, or automated pass/fail claim. |
+| **Structure and length** | `structural_simplification` | What became shorter, longer, reordered, split, combined, or otherwise structurally different. Never describe shorter as inherently better. |
+| **Intended audience** | `audience_calibration` | The requested audience or register and any observed reading consideration, if one exists. This is feedback for the contributor, not a reader-facing density band or acceptance threshold. |
+| **Review status** | `human_review_status` plus the review event | “Waiting for your review,” “You accepted this version,” “You said this needs changes,” or “You declined this version,” with the safe reason and date when available. |
+
+If a field was not checked, the note must say “Not checked” or omit it; it must
+not invent certainty. Any ambiguity that cannot be explained without exposing a
+private record is reported as a generic question or withheld from this view.
+
+#### Review actions and proposal state
+
+Contributor review is an editorial checkpoint, not a rights grant. The
+proposal state is separate from the provenance `outcome` field and from the
+consent ladder. In particular, `accepted-by-contributor` never means
+`accepted-into-canon`, and `rejected-by-contributor` never means that consent
+was revoked or that the source should be deleted.
+
+| Contributor action | Resulting proposal state | Effect |
+|---|---|---|
+| **Use this version** (accept) | `accepted-by-contributor` | Freezes the reviewed output and its note as the contributor-approved proposal version. It may proceed to a separate steward/editorial decision, but it is not canon, public, licensed for display, or approved for another transformation. |
+| **Don’t use this version** (reject) | `rejected-by-contributor` | Makes this proposed output ineligible for further editorial use. The source remains unchanged; the proposal and review event remain auditable. A later attempt requires a new proposal version and must not overwrite the rejected one. |
+| **Ask for changes** (request revision) | `changes-requested` | Returns the proposal with the contributor’s request attached. A revised output must receive a new output reference and a new fidelity note; the earlier output and note remain immutable and are not silently replaced. |
+| **Ask for another review** (appeal) | `appeal-pending` | Opens a separate review of a steward decision that rejects, restricts, or otherwise closes the proposal against the contributor’s submission. Release and further transformation are paused while pending. The appeal records the issue in contributor language and resolves to `under-review`, `changes-requested`, or the applicable terminal steward outcome; it cannot auto-publish or make the work canon. |
+
+The contributor may still withdraw an eligible proposal through the separate
+withdrawal path. A review action must not be represented as a consent grant,
+revocation, display license, canon decision, or deletion request. A steward’s
+reason may be shown only after removing identity, moderation, legal, safety,
+and other protected details that are not necessary for the contributor to
+understand what they can do next.
+
+#### Fields that must not appear in a contributor fidelity note
+
+The contributor view must exclude the following, even when the internal
+fidelity or provenance records contain them:
+
+- model name, provider identity, API version, engine name, maturity rung,
+  ingestion run, prompt, system instruction, tool trace, raw model output, or
+  generation metadata;
+- raw GitHub or repository references, including repository name/path, Issue,
+  pull request, branch, commit SHA, labels, webhook/request IDs, signatures,
+  or internal database identifiers;
+- source digests, hidden comparison material, machine-readable diffs, numeric
+  fidelity/readability scores, confidence values, classifier output, or
+  automated pass/fail decisions;
+- another contributor’s private material or identity, steward/maintainer
+  identity references, private reviewer annotations, or unrelated editorial
+  notes;
+- consent records, policy versions, license terms, revocations, attribution
+  controls, moderation cases, safety evidence, legal holds, retention or
+  deletion decisions, and private appeal evidence; and
+- any unreleased proposed output or source excerpt outside the contributor’s
+  own proposal and the minimum context needed to review it.
+
+The contributor can be told that a proposal is restricted, unavailable, or
+awaiting a protected review, but the note must not disclose the protected
+reason or record. The contributor’s own review choices and the safe outcome
+that affects their submission are visible; unrelated control-plane history is
+not.
+
+#### Plain-language wording guide
+
+The contributor UI must explain the decision in everyday writing. GitHub
+vocabulary, engine vocabulary, and internal field names must not be required
+or displayed in the default flow.
+
+| Internal concept | Use in contributor copy | Avoid |
+|---|---|---|
+| Source/output version refs | “Original scene” / “Proposed version” | “Source ref,” “output artifact,” “commit,” “branch,” or “pull request” |
+| `transform_kind` | “Change type” and a human label such as “Clarity pass” | “Engine,” “pipeline,” “job,” “run,” or provider/model names |
+| `changed_material[]` | “What changed” | “Delta,” “diff,” or “mutation” |
+| `preserved_intent[]` | “What was kept” | “Invariant,” “preservation vector,” or “semantic payload” |
+| `ambiguities_flagged[]` | “Questions to check” | “Ambiguity flags,” “unresolved tokens,” or “model uncertainty” |
+| `semantic_preservation` | “Meaning check” with the three qualitative phrases above | “Fidelity score,” “confidence,” “pass,” or “fail” |
+| `structural_simplification` | “Structure and length” | “Compression,” “optimization,” or “complexity score” |
+| `audience_calibration` | “Intended audience” and “Reading focus” | “Calibration,” “density band,” or a hidden reading grade |
+| Review actions | “Use this version,” “Don’t use this version,” “Ask for changes,” and “Ask for another review” | “Merge,” “rebase,” “close,” “deploy,” or other repository/workflow commands |
+
+Detailed technical references may be available in a separately protected
+maintainer or steward audit view, but they are never a prerequisite for the
+contributor to make a review choice.
+
 ### C. Derived ledger
 
 The term/motif ledger is a steward-facing, read-only projection derived from
@@ -144,7 +246,9 @@ Deferred or not authorized:
 - source-specific Disrupt/Invert consent policy is defined in open question
   15.10, with enforcement still unapproved;
 - public contribution or public reporting;
-- automated acceptance, moderation, rights, or publication decisions.
+- automated acceptance, moderation, rights, or publication decisions;
+- contributor-facing transform review implementation until this contract has
+  owner, legal, and privacy approval.
 
 ## Acceptance fixtures
 

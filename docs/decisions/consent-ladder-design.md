@@ -62,6 +62,14 @@ identity-linked record. If a signed-in reader turns on a feature that requires
 an affirmative reading choice or separately consented telemetry, that
 acknowledgment is recorded as `read`.
 
+Consent and contributor review are separate checkpoints. Granting a derivative
+action only permits the specifically described transformation; it does not mean
+the contributor accepts the proposed output. Conversely, a contributor choosing
+“Use this version,” “Don’t use this version,” “Ask for changes,” or “Ask for
+another review” does not grant, revoke, or change any consent record. The
+allowed fidelity fields, protected fields, and proposal-state effects are
+defined in the [contributor fidelity note and review boundary](provenance-fidelity-contract.md#contributor-fidelity-note-and-review-boundary--private-pilot-decision).
+
 ## Rationale
 
 The ladder preserves meaningful choice at the exact point a contributor takes
@@ -364,7 +372,8 @@ retention effects.
 
 - `docs/adr/0008-reader-contribution-consent-ladder-data-stream-separation-and-echo-relay-concept.md`
 - `docs/decisions/open-questions.md` (15.10, 15.14, 15.18)
-- `docs/decisions/provenance-fidelity-contract.md` (reader visibility boundary, open question 15.18)
+- `docs/decisions/provenance-fidelity-contract.md` (reader visibility boundary,
+  contributor fidelity note and review boundary, open question 15.18)
 - `docs/decisions/withdrawal-preservation-policy.md`
 - `docs/platform-requirements.md` §§6.5, 7.1–7.4
 - `CONTENT-LICENSE.md`
