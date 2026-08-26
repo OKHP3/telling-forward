@@ -2,12 +2,11 @@
 
 ## Status
 
-**Open.** The tier design below was reasoned through and partially
-prototyped (see "What's actually built" and "Verification"). The six-state
-model and GitHub-canonical boundary are settled elsewhere; this ADR remains
-Open because its ingestion trigger, model pin, live timing evidence, and file
-placement still need decisions or verification. It should be marked Accepted
-only after the remaining ingestion decisions and verification are complete.
+**Accepted (2026-08-26).** The tier design below was reasoned through,
+implemented, and verified in the owner-controlled private successor pilot
+`OKHP3/telling-forward-pilot-grove-ingestion`. The six-state model,
+GitHub-canonical boundary, ingestion trigger, pinned model revision, live
+timing evidence, and file placement are now settled.
 
 ## Context
 
@@ -127,6 +126,9 @@ contract and legacy-label handling are in
   segmentation by formatting heuristics only, no AI.
 - `.github/scripts/ingestion/extract_capsules.py` — Tier-1 capsule
   extraction via Phi-4-mini-instruct, CPU inference (llama-cpp-python).
+- `.github/scripts/ingestion/requirements.txt` pins
+  `llama-cpp-python==0.3.35`, the first version that loaded the pinned Phi-4
+  GGUF successfully on the Actions runner.
 - `.github/scripts/ingestion/file_capsules_as_issues.py` — files
   extracted capsules as draft GitHub Issues using the workflow's own
   default token.
@@ -158,14 +160,11 @@ correctly).
 `extract_capsules.py`'s JSON-extraction and capsule-validation logic was
 unit-tested against a messy simulated model response (chatty preamble
 before a JSON array), an empty-array response, non-JSON garbage, and an
-invalid capsule shape; all four cases behave as intended, and the
-garbage/invalid cases fail closed rather than silently producing
-malformed capsules. The production path now refuses the entire scene/run when
+invalid capsule shape. The production path refuses the entire scene/run when
 any model candidate is malformed, so no misleading partial batch can reach
-GitHub. The prompt template and llama-cpp-python integration have **not** been
-run against the real Phi-4-mini-instruct weights in this workspace — no
-wall-clock number exists yet for how long Tier 1 takes on real Actions
-hardware.
+GitHub. The first live run initially exposed that llama-cpp-python 0.3.5
+could not load the pinned Phi-4 GGUF; the dependency was updated to 0.3.35
+and the live run then loaded and executed the model successfully.
 
 The four owned-input fixture checks now pass locally (DOCX, EPUB, text PDF,
 and scanned/image-only PDF rejection), alongside malformed-model and draft
@@ -175,6 +174,34 @@ dispatches the pinned workflow; its response is explicitly `queued`, and
 capsules remain retrievable through the existing GitHub-backed Concept Board
 after the workflow completes. Human promotion remains the only capsule-to-
 scene path.
+
+### Live private-pilot verification - 2026-08-26
+
+Runs were dispatched by a steward against the owner-controlled private
+successor repository
+[`OKHP3/telling-forward-pilot-grove-ingestion`](https://github.com/OKHP3/telling-forward-pilot-grove-ingestion)
+using the synthetic EPUB at
+`intake/manuscripts/phi4-owned-synthetic-fixture.epub`. No real author content
+was used.
+
+- [Cold run 32925248225](https://github.com/OKHP3/telling-forward-pilot-grove-ingestion/actions/runs/32925248225)
+  completed successfully in 8m54s from workflow creation to completion
+  (8m50s job runtime). Dependency installation took 6m16s, model download
+  took 1m05s, CPU Phi-4 extraction took 46s, and Issue filing took 3s.
+  The cache miss was confirmed in the log, and the saved model cache is
+  2,457,166,782 bytes.
+- [Cache-hit run 32925827919](https://github.com/OKHP3/telling-forward-pilot-grove-ingestion/actions/runs/32925827919)
+  completed successfully in 8m42s (8m38s job runtime). The model download
+  step was skipped on the cache hit. Dependency installation took 6m50s,
+  CPU Phi-4 extraction took 49s, and Issue filing took 3s.
+- The two successful runs created four Issues total. Each Issue has exactly
+  one `capsule:planned-event` label and `state:draft`, and each body includes
+  the source excerpt plus the `Review before promoting` notice.
+- [Malformed-response run 32926407311](https://github.com/OKHP3/telling-forward-pilot-grove-ingestion/actions/runs/32926407311)
+  failed closed in the extraction step with
+  `Model response contained invalid capsule candidate(s) at index 0`.
+  Issue filing was skipped, and the repository remained at four Issues,
+  proving that no partial Issue batch reached GitHub.
 
 `artifacts/mcp-server` was smoke-tested end to end with a real MCP client
 (the SDK's own `Client` + `StdioClientTransport`, not a mock): the server
@@ -186,7 +213,7 @@ been exercised against a real GitHub repository.
 
 ## Next action
 
-This ADR should not move to Accepted until:
+The following prerequisites are resolved:
 
 1. ~~Submission-state model confirmed~~ — **Resolved.** Six-state model
    decided 2026-08-19 (see Discrepancy 1 above).
@@ -197,16 +224,14 @@ This ADR should not move to Accepted until:
    pilot.** A steward-only Author App route commits to
    `intake/manuscripts/` and dispatches the workflow with the same branch and
    upload id.
-4. `HF_MODEL_REVISION` is now a real pinned commit hash. One real Actions run
-   against an owner-controlled Storyworld Kit repository is still required to
-   produce an actual wall-clock number before that number appears in any
-   user-facing copy.
-5. File placement is confirmed: this pass put the Python ingestion
-   scripts under `.github/scripts/ingestion/` on the reasoning that
-   they're CI-only and not part of the pnpm/TypeScript workspace, and put
-   the MCP server under `artifacts/mcp-server/` to match the existing
-   "deployable/buildable packages" convention in `AGENTS.md`. Neither
-   placement is an established repository convention; confirm or move
-   before treating either as settled, and update `AGENTS.md`'s repository
-   structure section once confirmed, per that file's own maintenance
-   instruction.
+4. ~~Live model timing recorded~~ - **Resolved.** Cold and cache-hit
+   timings, including the model download step, are recorded in
+   `docs/reviews/2026-08-21-manuscript-ingestion-timing.md`.
+5. ~~File placement confirmed~~ - **Resolved.** CI-only ingestion code lives
+   under `.github/scripts/ingestion/`; the deployable MCP server lives under
+   `artifacts/mcp-server/`; and both locations are recorded in `AGENTS.md`.
+
+The live evidence does not justify a contributor-facing turnaround promise:
+the measured runs spent most of their time installing dependencies and
+loading the model, and the cache-hit path still varied with runner setup.
+Any future estimate must be based on a larger measured sample.

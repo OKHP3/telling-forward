@@ -46,6 +46,8 @@ Out of scope for the current repository:
 - `docs/adr/`: Architecture Decision Records capturing naming, contributor vocabulary, the notification model, and open architecture questions. Read before making naming, vocabulary, notification, or backend-architecture changes.
 - `lib/`: shared workspace packages — `api-client-react`, `api-spec`, `api-zod`, `db`.
 - `artifacts/`: deployable/buildable packages — `api-server`, `mockup-sandbox`.
+- `.github/scripts/ingestion/`: CI-only manuscript conversion, segmentation, Phi-4 extraction, and Issue filing scripts.
+- `artifacts/mcp-server/`: deployable Tier-2 MCP server for bring-your-own-AI capsule work.
 - `attached_assets/`: uploaded creative source material (e.g. Magnus Saga documents). Confirm the intended public/private content boundary before publication work touches this directory.
 - `scripts/`: Replit tooling — `git-askpass.sh` (GitHub auto-push auth helper), `post-merge.sh`, plus its own `package.json`/`tsconfig.json`/`src`.
 - `.agents/`: repository-local Agent Skills and prompts used to support project work.
