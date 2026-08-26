@@ -9,6 +9,7 @@
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "test:auth-session": "node scripts/auth-session-regression.mjs",
     "test:auth-session:browser": "node scripts/auth-session-browser-regression.mjs",
+    "test:unread-badge:browser": "node scripts/unread-badge-browser-regression.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
