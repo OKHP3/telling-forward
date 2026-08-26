@@ -16,6 +16,30 @@ This document is a dated capability baseline, not a blank-slate product brief. C
 
 The canonical Author App (`artifacts/web`) is publicly deployed through GitHub Pages at https://okhp3.github.io/telling-forward/. The verified Pages build deployed revision `e4612f79754b2232cb9aee80c0166ceb70db4ea0` on 2026-08-24; the root returned HTTP 200 and its asset URLs used the `/telling-forward/` base path. This is a static client deployment only: the API server and authenticated, GitHub-backed write operations are not hosted by GitHub Pages. The Editorial Reader and companion surfaces remain not-yet-deployed unless separately evidenced.
 
+#### Pages deep-link smoke test
+
+Direct browser requests were checked against the public Pages URL on
+2026-08-26. Each request returned the built SPA shell from `404.html`, with
+the `/telling-forward/assets/` paths intact, and the client rendered the
+route-specific result:
+
+| Direct URL | Browser result |
+|---|---|
+| `/sign-in` | Sign-in form rendered |
+| `/forgot-password` | Password-reset request form rendered |
+| `/submissions` | Story Submissions page rendered, including its loading state |
+| `/worlds/demo` | Storyworld route rendered its storyworld-not-found state |
+| `/worlds/demo/paths/path-1` | Story path route rendered its story-path-not-found state |
+
+GitHub Pages still reports HTTP `404` for each non-root request because the
+requested path has no physical file, even though it serves `404.html` as the
+SPA shell. This is the expected static-hosting limitation: client-side
+navigation and reloads recover cleanly, but status-sensitive consumers should
+not interpret a deep-link response as HTTP `200`. No server workaround is
+required or available within the Pages-only deployment boundary. The
+workflow's `404.html` copy step and the Vite `/telling-forward/` base path
+must remain in place.
+
 ### Separate API hosting boundary
 
 The approved production target for the service-backed Author App API is the
