@@ -14,6 +14,8 @@ import {
   getListStoryworldsQueryKey,
   useListStoryworldProposals,
   getListStoryworldProposalsQueryKey,
+  useListWebhookDeliveryEvidence,
+  getListWebhookDeliveryEvidenceQueryKey,
   useUpdateStoryworld,
   useMarkProposalUnderReview,
   useAcceptProposal,
@@ -39,6 +41,7 @@ import {
   Save,
   RefreshCw,
   GitBranch,
+  Webhook,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -77,6 +80,19 @@ type RebuildResult = {
   rebuildableIndex: boolean;
   summary: Record<string, number>;
   ledger: Record<RebuildLedgerEntry["action"], RebuildLedgerEntry[]>;
+};
+
+type WebhookDeliveryEvidence = {
+  id: number;
+  deliveryId: string;
+  eventType: string;
+  processingResult: "processed" | "ignored" | "failed";
+  replayOutcome: "new" | "duplicate";
+  proposalId: number | null;
+  editorQuestionId: number | null;
+  notificationKey: string | null;
+  provenanceRecordId: number | null;
+  receivedAt: string;
 };
 
 function getStateBadge(state: ProposalState) {
@@ -489,7 +505,6 @@ export function StewardDashboard() {
   const [rebuildResult, setRebuildResult] = useState<RebuildResult | null>(null);
   const [rebuildError, setRebuildError] = useState<string | null>(null);
   const [isRebuilding, setIsRebuilding] = useState(false);
-
   const { data: world, isLoading: isLoadingWorld } = useGetStoryworld(worldId, {
     query: { enabled: !!worldId, queryKey: getGetStoryworldQueryKey(worldId) },
   });
@@ -511,6 +526,17 @@ export function StewardDashboard() {
     query: {
       enabled: !!worldId,
       queryKey: getListStoryworldProposalsQueryKey(worldId),
+    },
+  });
+  const {
+    data: webhookEvidence = [],
+    isLoading: isLoadingWebhookEvidence,
+    isError: isWebhookEvidenceError,
+    refetch: refetchWebhookEvidence,
+  } = useListWebhookDeliveryEvidence(worldId, {
+    query: {
+      enabled: !!worldId,
+      queryKey: getListWebhookDeliveryEvidenceQueryKey(worldId),
     },
   });
 
@@ -836,6 +862,100 @@ export function StewardDashboard() {
                 </div>
               );
             })}
+          </div>
+        )}
+      </section>
+
+      <section
+        className="rounded-xl border border-slate-200 bg-slate-50/60 p-5 sm:p-6 dark:border-slate-800 dark:bg-slate-950/20"
+        aria-labelledby="webhook-evidence-heading"
+        data-testid="webhook-evidence"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <Webhook className="mt-0.5 h-5 w-5 text-slate-700 dark:text-slate-300" />
+            <div>
+              <h2 id="webhook-evidence-heading" className="font-serif text-lg font-medium">
+                Delivery evidence
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                A redacted record of signed GitHub deliveries for this storyworld. It shows what the sync processed, including safe links to affected records, never the payload or signature.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => void refetchWebhookEvidence()}
+            disabled={isLoadingWebhookEvidence}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label="Refresh delivery evidence"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", isLoadingWebhookEvidence && "animate-spin")} />
+            Refresh
+          </button>
+        </div>
+        {isWebhookEvidenceError && (
+          <p className="mt-4 text-sm text-destructive" role="alert">Delivery evidence could not be loaded.</p>
+        )}
+        {isLoadingWebhookEvidence && webhookEvidence.length === 0 && (
+          <div className="mt-5 h-20 animate-pulse rounded-lg bg-background" />
+        )}
+        {!isLoadingWebhookEvidence && !isWebhookEvidenceError && webhookEvidence.length === 0 && (
+          <p className="mt-5 rounded-lg border border-dashed border-border bg-background p-5 text-sm text-muted-foreground">
+            No signed GitHub deliveries have been recorded for this storyworld yet.
+          </p>
+        )}
+        {webhookEvidence.length > 0 && (
+          <div className="mt-5 divide-y divide-border/50 overflow-hidden rounded-lg border border-border/60 bg-background">
+            {webhookEvidence.map((item) => (
+              <article key={item.id} className="space-y-3 p-4" data-testid={`webhook-evidence-${item.id}`}>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs break-all text-foreground">{item.deliveryId}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {item.eventType} · {format(new Date(item.receivedAt), "MMM d, yyyy HH:mm")}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-[11px] font-medium uppercase tracking-[0.1em]">
+                    <span className={cn(
+                      "rounded-full border px-2 py-1",
+                      item.processingResult === "processed"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-400"
+                        : item.processingResult === "failed"
+                          ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-400"
+                          : "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300",
+                    )}>
+                      {item.processingResult}
+                    </span>
+                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-400">
+                      {item.replayOutcome === "duplicate" ? "Replay · no-op" : "First delivery"}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                  {item.proposalId !== null && (
+                    <Link className="text-primary hover:underline" href={`/worlds/${worldId}/proposals/${item.proposalId}`}>
+                      Proposal #{item.proposalId}
+                    </Link>
+                  )}
+                  {item.editorQuestionId !== null && (
+                    <span>Editor question #{item.editorQuestionId}</span>
+                  )}
+                  {item.notificationKey !== null && (
+                    <span className="font-mono break-all">Notification: {item.notificationKey}</span>
+                  )}
+                  {item.provenanceRecordId !== null && (
+                    <Link className="text-primary hover:underline" href={`/worlds/${worldId}/provenance`}>
+                      Provenance #{item.provenanceRecordId}
+                    </Link>
+                  )}
+                  {item.proposalId === null &&
+                    item.editorQuestionId === null &&
+                    item.notificationKey === null &&
+                    item.provenanceRecordId === null && <span>No related product record</span>}
+                </div>
+              </article>
+            ))}
           </div>
         )}
       </section>

@@ -250,6 +250,52 @@ export const contributorNotificationsTable = pgTable(
   ],
 );
 
+// Redacted, storyworld-scoped audit projection of an accepted GitHub webhook.
+// The raw payload, signature, secret, and contributor-private control-plane
+// data intentionally never enter this table.
+export const webhookDeliveryEvidenceTable = pgTable(
+  "webhook_delivery_evidence",
+  {
+    id: serial("id").primaryKey(),
+    storyworldId: integer("storyworld_id")
+      .notNull()
+      .references(() => storyworldsTable.id, { onDelete: "cascade" }),
+    deliveryId: text("delivery_id").notNull().unique(),
+    eventType: text("event_type").notNull(),
+    processingResult: text("processing_result").notNull(),
+    replayOutcome: text("replay_outcome").notNull(),
+    proposalId: integer("proposal_id").references(() => proposalsTable.id, {
+      onDelete: "set null",
+    }),
+    editorQuestionId: integer("editor_question_id").references(
+      () => editorQuestionsTable.id,
+      { onDelete: "set null" },
+    ),
+    notificationKey: text("notification_key"),
+    provenanceRecordId: integer("provenance_record_id").references(
+      () => provenanceRecordsTable.id,
+      { onDelete: "set null" },
+    ),
+    receivedAt: timestamp("received_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("idx_webhook_delivery_evidence_storyworld_received").on(
+      t.storyworldId,
+      t.receivedAt,
+    ),
+    check(
+      "webhook_delivery_evidence_processing_result_check",
+      sql`${t.processingResult} IN ('processed', 'ignored', 'failed')`,
+    ),
+    check(
+      "webhook_delivery_evidence_replay_outcome_check",
+      sql`${t.replayOutcome} IN ('new', 'duplicate')`,
+    ),
+  ],
+);
+
 // Application-level authority, cross-checked against GitHub branch protection
 export const stewardsTable = pgTable("stewards", {
   id: serial("id").primaryKey(),

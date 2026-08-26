@@ -176,6 +176,29 @@ export interface MyContribution {
   status: MyContributionStatus;
 }
 
+export type ContributorNotificationKind =
+  (typeof ContributorNotificationKind)[keyof typeof ContributorNotificationKind];
+
+export const ContributorNotificationKind = {
+  received: "received",
+  "being-reviewed": "being-reviewed",
+  "creative-question": "creative-question",
+  "official-story": "official-story",
+  "alternate-path": "alternate-path",
+} as const;
+
+export interface ContributorNotification {
+  id: number;
+  contributorId: number;
+  proposalId: number;
+  kind: ContributorNotificationKind;
+  title: string;
+  body: string;
+  eventKey: string;
+  readAt?: string | null;
+  createdAt: string;
+}
+
 export type ConsentRecordStatus =
   (typeof ConsentRecordStatus)[keyof typeof ConsentRecordStatus];
 
@@ -319,6 +342,38 @@ export interface CreateCapsuleBody {
 }
 
 /**
+ * Owner-controlled manuscript upload. Base64 is used because this API intentionally accepts only authenticated steward requests.
+
+ */
+export interface QueueManuscriptIngestionBody {
+  /** Original filename; must end in .docx, .epub, or .pdf. */
+  filename: string;
+  /** Base64-encoded manuscript, limited to 15 MiB decoded. */
+  contentBase64: string;
+  /**
+   * Stable client-generated id used for retry-safe intake naming.
+   * @minLength 8
+   * @maxLength 64
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$
+   */
+  uploadId: string;
+}
+
+export type QueueManuscriptIngestionResponseStatus =
+  (typeof QueueManuscriptIngestionResponseStatus)[keyof typeof QueueManuscriptIngestionResponseStatus];
+
+export const QueueManuscriptIngestionResponseStatus = {
+  queued: "queued",
+} as const;
+
+export interface QueueManuscriptIngestionResponse {
+  status: QueueManuscriptIngestionResponseStatus;
+  manuscriptPath: string;
+  commitSha: string;
+  capsules: string;
+}
+
+/**
  * Partial update — only provided fields are changed.
  */
 export interface UpdateCapsuleBody {
@@ -438,6 +493,39 @@ export type ProposalDetail = Proposal & {
   /** Editor questions returned to the contributor, ordered chronologically. */
   editorQuestions: EditorQuestion[];
 };
+
+export type WebhookDeliveryEvidenceProcessingResult =
+  (typeof WebhookDeliveryEvidenceProcessingResult)[keyof typeof WebhookDeliveryEvidenceProcessingResult];
+
+export const WebhookDeliveryEvidenceProcessingResult = {
+  processed: "processed",
+  ignored: "ignored",
+  failed: "failed",
+} as const;
+
+export type WebhookDeliveryEvidenceReplayOutcome =
+  (typeof WebhookDeliveryEvidenceReplayOutcome)[keyof typeof WebhookDeliveryEvidenceReplayOutcome];
+
+export const WebhookDeliveryEvidenceReplayOutcome = {
+  new: "new",
+  duplicate: "duplicate",
+} as const;
+
+/**
+ * Redacted, storyworld-scoped evidence for one GitHub delivery.
+ */
+export interface WebhookDeliveryEvidence {
+  id: number;
+  deliveryId: string;
+  eventType: string;
+  processingResult: WebhookDeliveryEvidenceProcessingResult;
+  replayOutcome: WebhookDeliveryEvidenceReplayOutcome;
+  proposalId?: number | null;
+  editorQuestionId?: number | null;
+  notificationKey?: string | null;
+  provenanceRecordId?: number | null;
+  receivedAt: string;
+}
 
 export interface RestrictProposalBody {
   /** @maxLength 2000 */

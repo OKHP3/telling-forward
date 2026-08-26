@@ -27,6 +27,7 @@ import type {
   ConsentRecord,
   Contribution,
   ContributionInput,
+  ContributorNotification,
   CreateCapsuleBody,
   DisruptCapsuleBody,
   EditorQuestion,
@@ -40,6 +41,8 @@ import type {
   NotFoundResponse,
   Proposal,
   ProposalDetail,
+  QueueManuscriptIngestionBody,
+  QueueManuscriptIngestionResponse,
   RegisterRequest,
   RestrictProposalBody,
   ReturnProposalBody,
@@ -52,6 +55,7 @@ import type {
   TranscribeResponse,
   UnauthorizedResponse,
   UpdateCapsuleBody,
+  WebhookDeliveryEvidence,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -533,6 +537,179 @@ export function useListMyContributions<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Returns calm plain-language updates for the authenticated contributor. Technical failures, raw GitHub events, and maintainer triage are not exposed through this inbox.
+
+ * @summary List the current contributor's notifications
+ */
+export const getListContributorNotificationsUrl = () => {
+  return `/api/me/notifications`;
+};
+
+export const listContributorNotifications = async (
+  options?: RequestInit,
+): Promise<ContributorNotification[]> => {
+  return customFetch<ContributorNotification[]>(
+    getListContributorNotificationsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListContributorNotificationsQueryKey = () => {
+  return [`/api/me/notifications`] as const;
+};
+
+export const getListContributorNotificationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listContributorNotifications>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listContributorNotifications>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListContributorNotificationsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listContributorNotifications>>
+  > = ({ signal }) =>
+    listContributorNotifications({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listContributorNotifications>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListContributorNotificationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listContributorNotifications>>
+>;
+export type ListContributorNotificationsQueryError =
+  ErrorType<UnauthorizedResponse>;
+
+/**
+ * @summary List the current contributor's notifications
+ */
+
+export function useListContributorNotifications<
+  TData = Awaited<ReturnType<typeof listContributorNotifications>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listContributorNotifications>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListContributorNotificationsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Mark one contributor notification as read
+ */
+export const getMarkContributorNotificationReadUrl = (id: number) => {
+  return `/api/me/notifications/${id}/read`;
+};
+
+export const markContributorNotificationRead = async (
+  id: number,
+  options?: RequestInit,
+): Promise<ContributorNotification> => {
+  return customFetch<ContributorNotification>(
+    getMarkContributorNotificationReadUrl(id),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getMarkContributorNotificationReadMutationOptions = <
+  TError = ErrorType<UnauthorizedResponse | void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markContributorNotificationRead>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markContributorNotificationRead>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["markContributorNotificationRead"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markContributorNotificationRead>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return markContributorNotificationRead(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkContributorNotificationReadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markContributorNotificationRead>>
+>;
+
+export type MarkContributorNotificationReadMutationError =
+  ErrorType<UnauthorizedResponse | void>;
+
+/**
+ * @summary Mark one contributor notification as read
+ */
+export const useMarkContributorNotificationRead = <
+  TError = ErrorType<UnauthorizedResponse | void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markContributorNotificationRead>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof markContributorNotificationRead>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(
+    getMarkContributorNotificationReadMutationOptions(options),
+  );
+};
 
 /**
  * @summary List the current user's active consent choices
@@ -1772,6 +1949,101 @@ export const useCreateCapsule = <
 };
 
 /**
+ * Commits an authorized steward's DOCX, EPUB, or PDF to the private intake path and dispatches the pinned repository workflow. The workflow creates only GitHub Issue capsules labeled state:draft; human promotion remains the only path from a capsule to a scene.
+
+ * @summary Queue an owned manuscript for draft capsule extraction
+ */
+export const getQueueManuscriptIngestionUrl = (id: number) => {
+  return `/api/storyworlds/${id}/manuscript-ingestion`;
+};
+
+export const queueManuscriptIngestion = async (
+  id: number,
+  queueManuscriptIngestionBody: QueueManuscriptIngestionBody,
+  options?: RequestInit,
+): Promise<QueueManuscriptIngestionResponse> => {
+  return customFetch<QueueManuscriptIngestionResponse>(
+    getQueueManuscriptIngestionUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(queueManuscriptIngestionBody),
+    },
+  );
+};
+
+export const getQueueManuscriptIngestionMutationOptions = <
+  TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof queueManuscriptIngestion>>,
+    TError,
+    { id: number; data: BodyType<QueueManuscriptIngestionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof queueManuscriptIngestion>>,
+  TError,
+  { id: number; data: BodyType<QueueManuscriptIngestionBody> },
+  TContext
+> => {
+  const mutationKey = ["queueManuscriptIngestion"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof queueManuscriptIngestion>>,
+    { id: number; data: BodyType<QueueManuscriptIngestionBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return queueManuscriptIngestion(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type QueueManuscriptIngestionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof queueManuscriptIngestion>>
+>;
+export type QueueManuscriptIngestionMutationBody =
+  BodyType<QueueManuscriptIngestionBody>;
+export type QueueManuscriptIngestionMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | ErrorResponse
+>;
+
+/**
+ * @summary Queue an owned manuscript for draft capsule extraction
+ */
+export const useQueueManuscriptIngestion = <
+  TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof queueManuscriptIngestion>>,
+    TError,
+    { id: number; data: BodyType<QueueManuscriptIngestionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof queueManuscriptIngestion>>,
+  TError,
+  { id: number; data: BodyType<QueueManuscriptIngestionBody> },
+  TContext
+> => {
+  return useMutation(getQueueManuscriptIngestionMutationOptions(options));
+};
+
+/**
  * Updates the GitHub Issue backing the capsule. Requires authentication and steward role.
 
  * @summary Update a concept capsule
@@ -2321,6 +2593,102 @@ export function useListStoryworldProposals<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getListStoryworldProposalsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns the storyworld-scoped audit projection of signed GitHub deliveries. Requires authentication and steward role. Raw payloads, signatures, webhook secrets, moderation details, and contributor-private data are never returned.
+
+ * @summary Inspect redacted GitHub delivery evidence
+ */
+export const getListWebhookDeliveryEvidenceUrl = (id: number) => {
+  return `/api/admin/webhook-deliveries/${id}`;
+};
+
+export const listWebhookDeliveryEvidence = async (
+  id: number,
+  options?: RequestInit,
+): Promise<WebhookDeliveryEvidence[]> => {
+  return customFetch<WebhookDeliveryEvidence[]>(
+    getListWebhookDeliveryEvidenceUrl(id),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListWebhookDeliveryEvidenceQueryKey = (id: number) => {
+  return [`/api/admin/webhook-deliveries/${id}`] as const;
+};
+
+export const getListWebhookDeliveryEvidenceQueryOptions = <
+  TData = Awaited<ReturnType<typeof listWebhookDeliveryEvidence>>,
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listWebhookDeliveryEvidence>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListWebhookDeliveryEvidenceQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listWebhookDeliveryEvidence>>
+  > = ({ signal }) =>
+    listWebhookDeliveryEvidence(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listWebhookDeliveryEvidence>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListWebhookDeliveryEvidenceQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listWebhookDeliveryEvidence>>
+>;
+export type ListWebhookDeliveryEvidenceQueryError = ErrorType<
+  UnauthorizedResponse | ErrorResponse
+>;
+
+/**
+ * @summary Inspect redacted GitHub delivery evidence
+ */
+
+export function useListWebhookDeliveryEvidence<
+  TData = Awaited<ReturnType<typeof listWebhookDeliveryEvidence>>,
+  TError = ErrorType<UnauthorizedResponse | ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listWebhookDeliveryEvidence>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListWebhookDeliveryEvidenceQueryOptions(id, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

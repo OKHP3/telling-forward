@@ -27,6 +27,9 @@ import {
   storyPathsTable,
   proposalsTable,
   editorQuestionsTable,
+  contributorNotificationsTable,
+  provenanceRecordsTable,
+  webhookDeliveryEvidenceTable,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { getGitHubClient } from "../lib/github";
@@ -161,6 +164,185 @@ async function findStoryworld(owner: string, repo: string) {
     )
     .limit(1);
   return rows[0] ?? null;
+}
+
+type WebhookProcessingResult = "processed" | "ignored" | "failed";
+type WebhookReplayOutcome = "new" | "duplicate";
+
+type WebhookEvidenceContext = {
+  storyworldId: number;
+  proposalId?: number;
+  editorQuestionId?: number;
+  notificationKey?: string;
+  provenanceRecordId?: number;
+};
+
+function repositoryFromPayload(payload: unknown): { owner: string; repo: string } | null {
+  if (!payload || typeof payload !== "object") return null;
+  const repository = (payload as { repository?: unknown }).repository;
+  if (!repository || typeof repository !== "object") return null;
+  const owner = (repository as { owner?: { login?: unknown } }).owner?.login;
+  const repo = (repository as { name?: unknown }).name;
+  return typeof owner === "string" && typeof repo === "string"
+    ? { owner, repo }
+    : null;
+}
+
+async function evidenceContextFor(
+  eventType: string,
+  payload: unknown,
+  world: { id: number },
+): Promise<WebhookEvidenceContext> {
+  const context: WebhookEvidenceContext = { storyworldId: world.id };
+  let prNumber: number | null = null;
+  let objectId: number | null = null;
+  let provenanceCommitSha: string | null = null;
+
+  if (eventType === "pull_request") {
+    const pr = (payload as PullRequestPayload).pull_request;
+    prNumber = typeof pr?.number === "number" ? pr.number : null;
+    if (pr?.merged && pr.merge_commit_sha) {
+      provenanceCommitSha = pr.merge_commit_sha;
+    }
+  } else if (eventType === "pull_request_review") {
+    const reviewPayload = payload as PullRequestReviewPayload;
+    prNumber = typeof reviewPayload.pull_request?.number === "number"
+      ? reviewPayload.pull_request.number
+      : null;
+    objectId = typeof reviewPayload.review?.id === "number"
+      ? reviewPayload.review.id
+      : null;
+    const decision = reviewPayload.review?.body
+      ? verifyAcceptanceDecisionNote(
+          reviewPayload.review.body,
+          process.env["GITHUB_WEBHOOK_SECRET"],
+        )
+      : null;
+    if (decision) provenanceCommitSha = decision.canonCommitSha;
+  } else if (eventType === "issue_comment") {
+    const commentPayload = payload as IssueCommentPayload;
+    prNumber = typeof commentPayload.issue?.number === "number"
+      ? commentPayload.issue.number
+      : null;
+    objectId = typeof commentPayload.comment?.id === "number"
+      ? commentPayload.comment.id
+      : null;
+    const decision = commentPayload.comment?.body
+      ? verifyAcceptanceDecisionNote(
+          commentPayload.comment.body,
+          process.env["GITHUB_WEBHOOK_SECRET"],
+        )
+      : null;
+    if (decision) provenanceCommitSha = decision.canonCommitSha;
+  }
+
+  if (prNumber !== null) {
+    const [proposal] = await db
+      .select({ id: proposalsTable.id })
+      .from(proposalsTable)
+      .where(
+        and(
+          eq(proposalsTable.storyworldId, world.id),
+          eq(proposalsTable.prNumber, prNumber),
+        ),
+      )
+      .limit(1);
+    if (proposal) {
+      context.proposalId = proposal.id;
+      if (eventType === "pull_request" && (payload as PullRequestPayload).action === "opened") {
+        context.notificationKey = `proposal:${proposal.id}:received`;
+      } else if (eventType === "pull_request") {
+        const pr = (payload as PullRequestPayload).pull_request;
+        if (pr.merged && pr.merge_commit_sha) {
+          context.notificationKey = `proposal:${proposal.id}:official-story:${pr.merge_commit_sha}`;
+        } else if (
+          (payload as PullRequestPayload).action === "closed" &&
+          pr.state === "closed"
+        ) {
+          context.notificationKey = `proposal:${proposal.id}:alternate-path:${pr.number}`;
+        }
+      } else if (
+        eventType === "pull_request_review" &&
+        (payload as PullRequestReviewPayload).action === "submitted" &&
+        Boolean((payload as PullRequestReviewPayload).review.body?.trim()) &&
+        !parseAcceptanceDecisionNote(
+          (payload as PullRequestReviewPayload).review.body ?? "",
+        )
+      ) {
+        context.notificationKey = `editor-question:${objectId}`;
+      }
+    }
+  }
+
+  // Only retain a notification link when the idempotent notification row
+  // actually exists. This prevents an evidence row from implying that a
+  // contributor was notified when the proposal had no linked contributor.
+  if (context.notificationKey) {
+    const [notification] = await db
+      .select({ eventKey: contributorNotificationsTable.eventKey })
+      .from(contributorNotificationsTable)
+      .where(eq(contributorNotificationsTable.eventKey, context.notificationKey))
+      .limit(1);
+    if (!notification) context.notificationKey = undefined;
+  }
+
+  if (objectId !== null && (eventType === "pull_request_review" || eventType === "issue_comment")) {
+    const [question] = await db
+      .select({ id: editorQuestionsTable.id })
+      .from(editorQuestionsTable)
+      .where(eq(editorQuestionsTable.reviewCommentId, objectId))
+      .limit(1);
+    if (question) context.editorQuestionId = question.id;
+  }
+
+  if (provenanceCommitSha) {
+    const [provenance] = await db
+      .select({ id: provenanceRecordsTable.id })
+      .from(provenanceRecordsTable)
+      .where(
+        and(
+          eq(provenanceRecordsTable.storyworldId, world.id),
+          eq(provenanceRecordsTable.canonCommitSha, provenanceCommitSha),
+        ),
+      )
+      .limit(1);
+    if (provenance) context.provenanceRecordId = provenance.id;
+  }
+
+  return context;
+}
+
+async function recordWebhookEvidence(input: {
+  deliveryId: string;
+  eventType: string;
+  processingResult: WebhookProcessingResult;
+  replayOutcome: WebhookReplayOutcome;
+  context: WebhookEvidenceContext;
+}): Promise<void> {
+  await db
+    .insert(webhookDeliveryEvidenceTable)
+    .values({
+      deliveryId: input.deliveryId,
+      eventType: input.eventType,
+      processingResult: input.processingResult,
+      replayOutcome: input.replayOutcome,
+      storyworldId: input.context.storyworldId,
+      proposalId: input.context.proposalId ?? null,
+      editorQuestionId: input.context.editorQuestionId ?? null,
+      notificationKey: input.context.notificationKey ?? null,
+      provenanceRecordId: input.context.provenanceRecordId ?? null,
+    })
+    .onConflictDoUpdate({
+      target: webhookDeliveryEvidenceTable.deliveryId,
+      set: {
+        processingResult: input.processingResult,
+        replayOutcome: input.replayOutcome,
+        proposalId: input.context.proposalId ?? null,
+        editorQuestionId: input.context.editorQuestionId ?? null,
+        notificationKey: input.context.notificationKey ?? null,
+        provenanceRecordId: input.context.provenanceRecordId ?? null,
+      },
+    });
 }
 
 async function rebuildAcceptedDecision(input: {
@@ -778,6 +960,25 @@ export async function githubWebhookHandler(
     return;
   }
 
+  // GitHub supplies this identifier for every delivery. Keep the existing
+  // compatibility behavior for local callers that omit it, but only create
+  // audit evidence when the identifier is present.
+  const deliveryId = req.headers["x-github-delivery"] as string | undefined;
+  const repository = repositoryFromPayload(payload);
+  const world = deliveryId && repository
+    ? await findStoryworld(repository.owner, repository.repo)
+    : null;
+  const previousEvidence = deliveryId
+    ? await db
+        .select({ id: webhookDeliveryEvidenceTable.id })
+        .from(webhookDeliveryEvidenceTable)
+        .where(eq(webhookDeliveryEvidenceTable.deliveryId, deliveryId))
+        .limit(1)
+    : [];
+  const replayOutcome: WebhookReplayOutcome =
+    previousEvidence.length > 0 ? "duplicate" : "new";
+  let processingResult: WebhookProcessingResult = "processed";
+
   try {
     switch (eventType) {
       case "push":
@@ -796,10 +997,44 @@ export async function githubWebhookHandler(
         logger.info("GitHub webhook ping received");
         break;
       default:
+        processingResult = "ignored";
         logger.debug({ eventType }, "Unhandled webhook event type — ignoring");
     }
-    res.status(200).json({ ok: true, event: eventType });
+    if (!world && deliveryId) processingResult = "ignored";
+    if (deliveryId && world) {
+      const context = await evidenceContextFor(eventType, payload, world);
+      await recordWebhookEvidence({
+        deliveryId,
+        eventType,
+        processingResult,
+        replayOutcome,
+        context,
+      });
+    }
+    res.status(200).json({
+      ok: true,
+      event: eventType,
+      ...(deliveryId ? { delivery: deliveryId } : {}),
+      replay: replayOutcome,
+    });
   } catch (err) {
+    processingResult = "failed";
+    if (deliveryId && world) {
+      try {
+        await recordWebhookEvidence({
+          deliveryId,
+          eventType,
+          processingResult,
+          replayOutcome,
+          context: await evidenceContextFor(eventType, payload, world),
+        });
+      } catch (evidenceError) {
+        logger.error(
+          { err: evidenceError, deliveryId },
+          "Failed to record webhook evidence",
+        );
+      }
+    }
     logger.error({ err, eventType }, "Webhook handler error");
     res.status(500).json({ error: "Internal handler error" });
   }

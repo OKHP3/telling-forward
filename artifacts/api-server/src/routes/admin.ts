@@ -17,13 +17,14 @@
  */
 
 import { Router, type IRouter } from "express";
-import { eq, and, sql as drizzleSql } from "drizzle-orm";
+import { eq, and, desc, sql as drizzleSql } from "drizzle-orm";
 import {
   db,
   storyworldsTable,
   storyPathsTable,
   proposalsTable,
   editorQuestionsTable,
+  webhookDeliveryEvidenceTable,
 } from "@workspace/db";
 import {
   getGitHubClient,
@@ -645,6 +646,46 @@ async function reconcileHandler(req: import("express").Request, res: import("exp
 }
 
 router.post("/reconcile", requireAdminSecret, reconcileHandler);
+
+// Redacted webhook audit projection. This is separate from the global admin
+// secret so a steward can inspect only their own storyworld's deliveries.
+router.get(
+  "/webhook-deliveries/:id",
+  requireAuth,
+  async (req, res, next) => {
+    const storyworldId = Number(req.params["id"]);
+    if (!Number.isInteger(storyworldId) || storyworldId < 1) {
+      res.status(400).json({ error: "Invalid storyworld id" });
+      return;
+    }
+    await requireStewardFor(req, res, next, storyworldId);
+  },
+  async (req, res) => {
+    const storyworldId = Number(req.params["id"]);
+    try {
+      const evidence = await db
+        .select({
+          id: webhookDeliveryEvidenceTable.id,
+          deliveryId: webhookDeliveryEvidenceTable.deliveryId,
+          eventType: webhookDeliveryEvidenceTable.eventType,
+          processingResult: webhookDeliveryEvidenceTable.processingResult,
+          replayOutcome: webhookDeliveryEvidenceTable.replayOutcome,
+          proposalId: webhookDeliveryEvidenceTable.proposalId,
+          editorQuestionId: webhookDeliveryEvidenceTable.editorQuestionId,
+          notificationKey: webhookDeliveryEvidenceTable.notificationKey,
+          provenanceRecordId: webhookDeliveryEvidenceTable.provenanceRecordId,
+          receivedAt: webhookDeliveryEvidenceTable.receivedAt,
+        })
+        .from(webhookDeliveryEvidenceTable)
+        .where(eq(webhookDeliveryEvidenceTable.storyworldId, storyworldId))
+        .orderBy(desc(webhookDeliveryEvidenceTable.receivedAt));
+      res.json(evidence);
+    } catch (err) {
+      req.log.error({ err, storyworldId }, "webhook delivery evidence load failed");
+      res.status(500).json({ error: "Failed to load webhook delivery evidence" });
+    }
+  },
+);
 
 // Browser-facing rebuild entry point. It is deliberately storyworld-scoped:
 // stewards can inspect the rebuild without exposing the global admin secret.

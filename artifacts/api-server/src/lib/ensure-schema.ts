@@ -246,6 +246,22 @@ export async function ensureSchema(): Promise<void> {
       CONSTRAINT provenance_canon_commit_unique UNIQUE (storyworld_id, canon_commit_sha)
     );
 
+    CREATE TABLE IF NOT EXISTS webhook_delivery_evidence (
+      id                   SERIAL      PRIMARY KEY,
+      storyworld_id        INTEGER     NOT NULL REFERENCES storyworlds(id) ON DELETE CASCADE,
+      delivery_id          TEXT        NOT NULL UNIQUE,
+      event_type           TEXT        NOT NULL,
+      processing_result    TEXT        NOT NULL CHECK (processing_result IN ('processed', 'ignored', 'failed')),
+      replay_outcome       TEXT        NOT NULL CHECK (replay_outcome IN ('new', 'duplicate')),
+      proposal_id          INTEGER REFERENCES proposals(id) ON DELETE SET NULL,
+      editor_question_id   INTEGER REFERENCES editor_questions(id) ON DELETE SET NULL,
+      notification_key     TEXT,
+      provenance_record_id INTEGER REFERENCES provenance_records(id) ON DELETE SET NULL,
+      received_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_webhook_delivery_evidence_storyworld_received
+      ON webhook_delivery_evidence (storyworld_id, received_at);
+
     -- Migration: upgrade review_comment_id from INTEGER to BIGINT if needed.
     -- GitHub review IDs are 64-bit; INTEGER silently truncates large values.
     -- CREATE TABLE IF NOT EXISTS won't alter existing columns, so we apply this

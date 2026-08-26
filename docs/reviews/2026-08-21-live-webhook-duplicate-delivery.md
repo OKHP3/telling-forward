@@ -35,6 +35,14 @@ idempotency, and provenance rebuild safeguards. This is implementation
 evidence only; it is not a substitute for a live GitHub delivery and deployed
 database test.
 
+The steward-facing audit projection now records the GitHub delivery ID, event
+type, processing result, replay outcome, and safe references to existing
+proposal, editor-question, notification, and provenance records. The protected
+steward dashboard shows this projection without returning raw payloads,
+signatures, secrets, or private control-plane fields. This improves local and
+post-deployment inspection, but does not change GitHub's canonical delivery
+history or remove the need for the live replay below.
+
 ## Required next evidence
 
 After the API is published and a webhook secret is configured on both GitHub

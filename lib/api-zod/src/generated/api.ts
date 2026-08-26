@@ -101,8 +101,9 @@ export const ListMyContributionsResponse = zod.array(
 );
 
 /**
- * Plain-language contributor updates. Technical failures and maintainer triage
- * are intentionally not represented here.
+ * Returns calm plain-language updates for the authenticated contributor. Technical failures, raw GitHub events, and maintainer triage are not exposed through this inbox.
+
+ * @summary List the current contributor's notifications
  */
 export const ListContributorNotificationsResponseItem = zod.object({
   id: zod.number(),
@@ -124,6 +125,31 @@ export const ListContributorNotificationsResponseItem = zod.object({
 export const ListContributorNotificationsResponse = zod.array(
   ListContributorNotificationsResponseItem,
 );
+
+/**
+ * @summary Mark one contributor notification as read
+ */
+export const MarkContributorNotificationReadParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const MarkContributorNotificationReadResponse = zod.object({
+  id: zod.number(),
+  contributorId: zod.number(),
+  proposalId: zod.number(),
+  kind: zod.enum([
+    "received",
+    "being-reviewed",
+    "creative-question",
+    "official-story",
+    "alternate-path",
+  ]),
+  title: zod.string(),
+  body: zod.string(),
+  eventKey: zod.string(),
+  readAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+});
 
 /**
  * @summary List the current user's active consent choices
@@ -540,6 +566,43 @@ export const CreateCapsuleBody = zod.object({
 });
 
 /**
+ * Commits an authorized steward's DOCX, EPUB, or PDF to the private intake path and dispatches the pinned repository workflow. The workflow creates only GitHub Issue capsules labeled state:draft; human promotion remains the only path from a capsule to a scene.
+
+ * @summary Queue an owned manuscript for draft capsule extraction
+ */
+export const QueueManuscriptIngestionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const queueManuscriptIngestionBodyUploadIdMin = 8;
+export const queueManuscriptIngestionBodyUploadIdMax = 64;
+
+export const queueManuscriptIngestionBodyUploadIdRegExp = new RegExp(
+  "^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$",
+);
+
+export const QueueManuscriptIngestionBody = zod
+  .object({
+    filename: zod
+      .string()
+      .describe("Original filename; must end in .docx, .epub, or .pdf."),
+    contentBase64: zod
+      .string()
+      .describe("Base64-encoded manuscript, limited to 15 MiB decoded."),
+    uploadId: zod
+      .string()
+      .min(queueManuscriptIngestionBodyUploadIdMin)
+      .max(queueManuscriptIngestionBodyUploadIdMax)
+      .regex(queueManuscriptIngestionBodyUploadIdRegExp)
+      .describe(
+        "Stable client-generated id used for retry-safe intake naming.",
+      ),
+  })
+  .describe(
+    "Owner-controlled manuscript upload. Base64 is used because this API intentionally accepts only authenticated steward requests.\n",
+  );
+
+/**
  * Updates the GitHub Issue backing the capsule. Requires authentication and steward role.
 
  * @summary Update a concept capsule
@@ -747,6 +810,33 @@ export const ListStoryworldProposalsResponseItem = zod
   );
 export const ListStoryworldProposalsResponse = zod.array(
   ListStoryworldProposalsResponseItem,
+);
+
+/**
+ * Returns the storyworld-scoped audit projection of signed GitHub deliveries. Requires authentication and steward role. Raw payloads, signatures, webhook secrets, moderation details, and contributor-private data are never returned.
+
+ * @summary Inspect redacted GitHub delivery evidence
+ */
+export const ListWebhookDeliveryEvidenceParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListWebhookDeliveryEvidenceResponseItem = zod
+  .object({
+    id: zod.number(),
+    deliveryId: zod.string(),
+    eventType: zod.string(),
+    processingResult: zod.enum(["processed", "ignored", "failed"]),
+    replayOutcome: zod.enum(["new", "duplicate"]),
+    proposalId: zod.number().nullish(),
+    editorQuestionId: zod.number().nullish(),
+    notificationKey: zod.string().nullish(),
+    provenanceRecordId: zod.number().nullish(),
+    receivedAt: zod.coerce.date(),
+  })
+  .describe("Redacted, storyworld-scoped evidence for one GitHub delivery.");
+export const ListWebhookDeliveryEvidenceResponse = zod.array(
+  ListWebhookDeliveryEvidenceResponseItem,
 );
 
 /**

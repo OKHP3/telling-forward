@@ -850,6 +850,40 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /admin/webhook-deliveries/{id}:
+    get:
+      operationId: listWebhookDeliveryEvidence
+      tags: [storyworlds]
+      summary: Inspect redacted GitHub delivery evidence
+      description: >
+        Returns the storyworld-scoped audit projection of signed GitHub
+        deliveries. Requires authentication and steward role. Raw payloads,
+        signatures, webhook secrets, moderation details, and contributor-private
+        data are never returned.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Redacted delivery evidence
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WebhookDeliveryEvidence"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not a steward for this storyworld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /proposals:
     get:
       operationId: listProposals
@@ -2003,6 +2037,45 @@ components:
         - body
         - resolved
         - createdAt
+
+    WebhookDeliveryEvidence:
+      type: object
+      description: Redacted, storyworld-scoped evidence for one GitHub delivery.
+      properties:
+        id:
+          type: integer
+        deliveryId:
+          type: string
+        eventType:
+          type: string
+        processingResult:
+          type: string
+          enum: [processed, ignored, failed]
+        replayOutcome:
+          type: string
+          enum: [new, duplicate]
+        proposalId:
+          type: integer
+          nullable: true
+        editorQuestionId:
+          type: integer
+          nullable: true
+        notificationKey:
+          type: string
+          nullable: true
+        provenanceRecordId:
+          type: integer
+          nullable: true
+        receivedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - deliveryId
+        - eventType
+        - processingResult
+        - replayOutcome
+        - receivedAt
 
     RestrictProposalBody:
       type: object
