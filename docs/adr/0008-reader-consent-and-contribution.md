@@ -30,9 +30,11 @@ TF's Mission already implies this distinction without naming it: principle #4 ("
 
 Each distinct level of reader participation (read only, react, submit a theory, write a branch, license a branch for platform display, submit a branch for canon review) should carry its own explicit consent step, rather than one Terms-of-Service checkbox covering everything a reader might ever do.
 
-This directly extends open question 15.10 (consent boundary for Disrupt/Invert derivatives), which already asks whether an original contributor gets a say when their accepted material is used to generate derivative output. The ladder pattern generalizes 15.10 from "one mechanic's consent gap" to "does TF need a general per-action consent model."
+This directly extends open question 15.10 (consent boundary for Disrupt/Invert derivatives), which asked whether an original contributor gets a say when their accepted material is used to generate derivative output. The ladder pattern generalizes the source-specific decision in 15.10 to "does TF need a general per-action consent model."
 
 **Decided (2026-08-19, Jamie Hill, PRD Build Directive v1, decision 15.14):** Design the per-action consent ladder in Stage 0–1. No enforcement is required in this phase — the output is a design document and draft schema, not a live enforcement mechanism. Design must exist before any Stage 2/3 public-contribution or enforcement work proceeds. See `docs/decisions/open-questions.md` 15.14.
+
+**Decided for private-pilot policy (2026-08-26, Jamie Hill, decision 15.10):** Disrupt and Invert require separate, affirmative, source-specific consent for one accepted scene or capsule and one private transformation run. The consent records the purpose, audience, duration, attribution treatment, and revocation effect. Enforcement remains blocked until the gate in `docs/decisions/consent-ladder-design.md` is approved and evidenced. See `docs/decisions/open-questions.md` 15.10.
 
 ### 3. Constrained-choice contribution mode
 
@@ -98,14 +100,14 @@ The source thread makes several external factual/legal claims (a fan-fiction arc
 - Does not reopen ADR-0003. The historical four-state submission sketch was
   superseded by the locked six-state model (decision 15.11, 2026-08-19).
 - Does not duplicate the existing provenance field-schema proposal; item 6 above explicitly rides on it rather than proposing a second mechanism.
-- Items 2 and 5 are now decided design requirements (15.14, 15.15, 2026-08-19). Items 1, 3, 4, 6, and 7 remain proposals pending owner review.
+- Items 2 and 5 are now decided design requirements (15.14, 15.15, 2026-08-19). The source-specific Disrupt/Invert policy is decided for the private pilot under 15.10 (2026-08-26), with enforcement still unapproved. Items 1, 3, 4, 6, and 7 remain proposals pending owner review.
 
 ## Recommendation
 
 | Item | Recommendation |
 |---|---|
 | 1. Three-stream data separation | Log as a design principle for the first reader-analytics/feedback surface, with concrete mechanisms; no immediate action |
-| 2. Per-action consent ladder | **Decided 2026-08-19 (15.14):** design in Stage 0–1; no enforcement required yet; design must precede Stage 2/3 public-contribution work |
+| 2. Per-action consent ladder | **Decided 2026-08-19 (15.14), with 15.10 resolved for policy on 2026-08-26:** design in Stage 0–1; Disrupt and Invert require separate source-specific consent; enforcement remains blocked by the consent-ladder gate |
 | 3. Constrained-choice contribution mode | Log as a candidate feature; needs its own scoping if pursued |
 | 4. Sequential contributor relay | Log as a candidate Reader App feature; flag as high complexity, needs its own future ADR; blocked on item 5 |
 | 5. Baseline moderation tooling | **Decided 2026-08-19 (15.15):** design in Stage 0–1; no enforcement required yet; design must precede items 3 and 4 reaching implementation |
@@ -115,7 +117,7 @@ The source thread makes several external factual/legal claims (a fan-fiction arc
 ## Consequences
 
 - If item 1 is accepted, any future reader-analytics or feedback-capture design should partition data classes and retention/visibility rules from the outset rather than retrofitting them later.
-- If item 2 is accepted, 15.10's eventual resolution should consider whether it answers the general case (a consent ladder) or only the Disrupt/Invert-specific case.
+- Item 2 now has both a general ladder and a source-specific Disrupt/Invert policy. The policy does not authorize enforcement, and its preservation behavior follows `withdrawal-preservation-policy.md`.
 - If item 3 is pursued, it gives Concept Board its first reader-facing (not just author-facing) capsule-creation path, feeding the existing CME pipeline.
 - If item 4 is pursued, it would be TF's first genuinely multi-contributor, sequenced Reader App mechanic and likely needs its own requirements pass before any design work — it does not fit inside the existing Concept Board/Scene Writer scope. It should not launch before item 5 exists.
 - If item 5 is accepted, whatever moderation primitives are chosen should be scoped before items 3 or 4 reach implementation, not after.
@@ -124,7 +126,7 @@ The source thread makes several external factual/legal claims (a fan-fiction arc
 
 ## Next action
 
-Items 2 (15.14) and 5 (15.15) are decided as design requirements for Stage 0–1 (2026-08-19, Jamie Hill, PRD Build Directive v1). Task #73 covers the design work for both. The project owner should give a per-item call — accept, reject, or defer — for items 1, 3, 4, 6, and 7. Update this ADR's Status once that call is made.
+Items 2 (15.14) and 5 (15.15) are decided as design requirements for Stage 0–1 (2026-08-19, Jamie Hill, PRD Build Directive v1). The source-specific Disrupt/Invert policy under 15.10 is decided for the private pilot (2026-08-26, Jamie Hill), but its enforcement gate remains unapproved. The project owner should give a per-item call — accept, reject, or defer — for items 1, 3, 4, 6, and 7. Update this ADR's Status once that call is made.
 
 ## Housekeeping note (unrelated to this thread's content)
 

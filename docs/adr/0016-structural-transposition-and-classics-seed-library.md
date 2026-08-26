@@ -21,10 +21,11 @@ technique.
 
 The open problem with applying it inside Telling Forward (TF) is consent and
 rights. A structural transform pointed at a living author's active
-storyworld raises the same question open question 15.10 already logs for
-Disrupt and Invert derivatives, at much higher stakes: a Disrupt or Invert
-derivative stays inside one storyworld, a structural transposition spins up
-an entire second sellable product off someone else's structural work.
+storyworld is related to the source-specific policy recorded in open question
+15.10 for Disrupt and Invert derivatives, but at much higher stakes: a Disrupt
+or Invert derivative stays inside one storyworld, while a structural
+transposition spins up an entire second sellable product off someone else's
+structural work.
 
 The project owner's follow-up resolved that risk for a first implementation:
 seed the platform with public-domain classics, work with no living
@@ -135,10 +136,10 @@ that carries no rights risk at all.
   explicitly deferred under Mission principle #10 until real traction
   exists. A classics-sourced Transpose pilot is a lower-risk future on-ramp
   to that idea, not a reason to design it now.
-- Does not resolve open question 15.10 (Disrupt/Invert consent). The new
-  open question below is related but distinct, and categorically higher
-  stakes, and should not be assumed answered by whatever 15.10 eventually
-  decides.
+- Does not resolve open question 15.20 (cross-storyworld structural reuse
+  consent). The Disrupt/Invert policy in 15.10 is related but distinct, and
+  categorically lower stakes. It must not be treated as an answer for
+  Transpose.
 - Is not a legal opinion. The copyright framework above is stated for
   planning purposes; counsel review is required before this ships as a
   product feature, not before design conversation continues.
@@ -148,10 +149,10 @@ that carries no rights risk at all.
 **Cross-storyworld structural reuse consent, for a living author's
 storyworld.** If Transpose is ever pointed at an actively-authored
 storyworld rather than a public-domain one, what consent, attribution, or
-license model governs it? This is 15.10's question at a different scale, an
+license model governs it? This is related to 15.10 at a different scale, an
 entire second sellable product instead of one derivative capsule, and
-deserves its own decision rather than inheriting 15.10's eventual answer by
-default. See `docs/decisions/open-questions.md` 15.20.
+deserves its own decision rather than inheriting the 15.10 policy by default.
+See `docs/decisions/open-questions.md` 15.20.
 
 **Public-domain sourcing verification process.** Before any classics
 storyworld is registered, what concrete verification step confirms a given

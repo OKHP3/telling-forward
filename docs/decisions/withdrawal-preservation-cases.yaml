@@ -76,6 +76,7 @@ cases:
     situation: An accepted scene has already been used in a future derivative or transformed work.
     current_proposal_state: accepted-into-canon
     requested_outcome: deletion-or-preservation-disposition-review
+    derivative_action: disrupt-or-invert
     requester: contributor-or-affected-rightsholder
     approval: owner-legal-rights-and-affected-steward-review-required
     reader_visibility: hold-or-remove-only-after-approved-scope-and-window
@@ -96,3 +97,68 @@ cases:
       - remove-or-correct-source-dependent-material-only-after-approved-disposition
       - do-not-promise-control-over-independent-copies
       - do-not-rewrite-github-history-as-an-automatic-remedy
+
+  - id: disrupt-revoked-after-private-creation
+    situation: A contributor approved one private Disrupt run for an accepted scene, then revoked consent after the derivative was created but before release.
+    current_proposal_state: accepted-into-canon
+    derivative_action: disrupt
+    requested_outcome: hold-unreleased-derivative-for-disposition-review
+    requester: verified-source-contributor
+    approval: owner-legal-privacy-and-affected-steward-review-required
+    reader_visibility: not-released-pending-disposition
+    can_reenter_same_proposal: false
+    recoverable:
+      - original-scene-provenance
+      - disrupt-derivative-lineage
+      - source-contributor-attribution
+      - derivative-consent-version-and-revocation-time
+      - operator-purpose-audience-and-release-state
+      - decision-and-appeal-audit
+    independent_copies:
+      service_control: managed-unreleased-copy-only
+      not_promised: third-party-copies-and-exports
+    backups:
+      disposition: retain-only-under-approved-recovery-retention-or-legal-hold
+      reader_restore_blocked: true
+    legal_hold:
+      preserve_affected_records: true
+      overrides_ordinary_removal: true
+    correction:
+      route: owner-approved-reader-attribution-or-content-correction
+      rewrite_github_history_automatically: false
+    unresolved:
+      - jurisdiction-specific-disposition
+      - approved-operational-window
+
+  - id: invert-revoked-after-release
+    situation: A contributor approved one private Invert run for an accepted capsule, and the derivative was later released with separate display approval before the contributor revoked Invert consent.
+    current_proposal_state: accepted-into-canon
+    derivative_action: invert
+    requested_outcome: released-derivative-preservation-review
+    requester: verified-source-contributor-or-affected-rightsholder
+    approval: owner-legal-rights-privacy-and-affected-steward-review-required
+    reader_visibility: preserve-by-default-only-if-separable-and-independently-authorized
+    can_reenter_same_proposal: false
+    recoverable:
+      - original-capsule-provenance
+      - invert-derivative-lineage
+      - source-contributor-attribution
+      - derivative-consent-version-and-revocation-time
+      - display-consent-and-release-time
+      - known-copy-backup-legal-hold-and-appeal-records
+    independent_copies:
+      service_control: managed-reader-surface-and-known-managed-derivative
+      not_promised: third-party-copies-and-exports
+    backups:
+      disposition: retain-under-approved-recovery-retention-or-legal-hold
+      reader_restore_blocked: true
+    legal_hold:
+      preserve_affected_records: true
+      overrides_ordinary_removal: true
+    correction:
+      route: appeal-or-owner-approved-attribution-or-content-correction
+      rewrite_github_history_automatically: false
+    unresolved:
+      - whether-the-released-derivative-is-sufficiently-separable
+      - jurisdiction-specific-disposition
+      - appeal-outcome

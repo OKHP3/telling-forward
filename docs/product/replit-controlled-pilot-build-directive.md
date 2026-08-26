@@ -48,7 +48,7 @@ The following are hard constraints, not suggestions:
 - Do not use a generic "AI processing allowed" switch as consent for Disrupt, Invert, translation, training, display, canon review, or commercial evaluation.
 - Do not accept real untrusted uploads or represent an upload pipeline as safe. Manual typed capture and synthetic or demonstrably owned test fixtures are the only permitted ingestion inputs for this work.
 - Do not add public contribution, open registration for an unmoderated community, payments, virtual credits, royalties, adaptation rights, or mobile scope.
-- Do not resolve open owner decisions in code. In particular, open questions 15.1, 15.2, 15.3, 15.6, 15.10, 15.14, and 15.15 remain open.
+- Do not resolve open owner decisions in code. In particular, open questions 15.1, 15.2, 15.3, 15.6, 15.14, and 15.15 remain open. The 15.10 Disrupt/Invert policy is decided for the private pilot, but its enforcement gate remains unapproved.
 
 If an existing surface conflicts with a constraint, keep it available only to the project owner as clearly labeled synthetic/demo behavior or safely remove it from ordinary contributor flows. Do not quietly leave a rights-sensitive action looking production-ready.
 

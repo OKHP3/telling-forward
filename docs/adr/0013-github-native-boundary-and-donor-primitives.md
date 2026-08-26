@@ -210,8 +210,9 @@ The source-backed evidence note is
 The decision is supported for the current architecture boundary. The following
 remain provisional or deferred: actual GitHub App deployment, organization
 settings and plan-dependent features, live GitHub rebuild behavior, the
-source-specific CIE/PIE consent decision in open question 15.10, mobile scope
-15.7, and reader accessibility metadata 15.13.
+  source-specific Disrupt/Invert consent policy in open question 15.10, whose
+  enforcement remains unapproved, mobile scope 15.7, and reader accessibility
+  metadata 15.13.
 
 ## Related decisions
 

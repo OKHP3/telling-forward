@@ -141,7 +141,8 @@ Deferred or not authorized:
 - Disrupt, Invert, translation, training, monetization, or derivatives;
 - reader-facing process narrative, compendium, or side-car UI;
 - reader accessibility/density metadata, open question 15.13;
-- source-specific CIE/PIE consent, open question 15.10;
+- source-specific Disrupt/Invert consent policy is defined in open question
+  15.10, with enforcement still unapproved;
 - public contribution or public reporting;
 - automated acceptance, moderation, rights, or publication decisions.
 

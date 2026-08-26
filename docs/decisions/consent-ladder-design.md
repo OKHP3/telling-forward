@@ -2,9 +2,10 @@
 
 ## Status
 
-**Design complete; enforcement not approved.** This records the Stage 0–1 design
-required by open question 15.14. It does not authorize a consent screen, API
-gate, database migration, or public-contribution feature.
+**Private-pilot policy approved; enforcement not approved.** This records the
+Stage 0–1 design required by open questions 15.10 and 15.14. It defines the
+source-specific Disrupt and Invert decision, but does not authorize a consent
+screen, API gate, database migration, or public-contribution feature.
 
 ## Context
 
@@ -52,7 +53,8 @@ derivative transformation.
 | `license-for-display` | A clearly stated, non-exclusive permission to host and display the identified contribution in the named storyworld and surface | Canon acceptance, commercial use, sublicensing beyond the declared operator, or derivative transformation |
 | `submit-for-canon-review` | Asking the steward to review the identified branch or scene for canon consideration | A promise of acceptance, ownership transfer, display beyond its agreed scope, or permission for later transformations |
 | `ai-assisted-draft` | The contributor's use of the disclosed drafting assistance for the contributor's own input, plus the required disclosure of that use | Consent to train an AI on the contribution, reuse another contributor's work, CIE/PIE operations, or any derivative transformation |
-| `cie-pie-derivative` | **Not available under this design.** Reserved for a future, source-specific derivative consent design | Generic AI assistance, display licensing, canon-review submission, or any prior contribution consent |
+| `disrupt-derivative` | The source-specific permission defined in "Disrupt and Invert derivative decision" below, for one accepted scene and one private transformation run | Invert, display licensing, canon acceptance, public release, commercial adaptation, model training, or any other source/resource |
+| `invert-derivative` | The source-specific permission defined in "Disrupt and Invert derivative decision" below, for one accepted capsule and one private transformation run | Disrupt, display licensing, canon acceptance, public release, commercial adaptation, model training, or any other source/resource |
 
 `read` must not become a disguised creative-rights waiver. For anonymous public
 reading, the product may present a notice without creating a persistent
@@ -83,10 +85,70 @@ submitting under the action's own terms. It does **not** authorize:
 - a steward, another contributor, or an agent to invoke a tool on the
   contributor's material merely because the contributor used AI themselves.
 
-Open question 15.10 remains the authority for whether and how a source
-contributor may authorize CIE/PIE work. A future 15.10 decision must define a
-source-specific consent, attribution, scope, and withdrawal rule before the
-reserved `cie-pie-derivative` action can be enabled.
+Open question 15.10 is resolved for the private-pilot policy by the
+source-specific decision below. A future implementation must use distinct
+Disrupt and Invert records or an equivalently explicit action discriminator. A
+generic `cie-pie-derivative` grant is not a substitute and remains unavailable.
+
+### Disrupt and Invert derivative decision
+
+The private-pilot policy is **approved in principle, with enforcement not
+approved**. A contributor may approve a Disrupt or Invert derivative only when
+all of the following are true:
+
+- the contributor is verified and is the recorded source contributor for the
+  identified accepted resource;
+- the request names exactly one accepted source resource and exactly one
+  action;
+- the contributor gives a separate affirmative choice for Disrupt or Invert,
+  in plain language, immediately before that action is requested; and
+- the request is limited to the audience, purpose, and duration shown in that
+  choice.
+
+Consent to submit, display, send for canon review, use drafting assistance, or
+perform the other derivative action never satisfies this gate.
+
+| Field | Disrupt | Invert |
+|---|---|---|
+| Contributor choice | “Allow Disrupt to make one private prose exploration from this accepted scene.” Declining leaves the scene unchanged and does not affect contribution, display, or canon-review rights. | “Allow Invert to make one private concept exploration from this accepted capsule.” Declining leaves the capsule unchanged and does not affect contribution, display, or canon-review rights. |
+| Storyworld and resource scope | Within the named storyworld, one named accepted scene identified by its durable provenance record. A world-wide grant, a branch-wide grant, and a grant for unspecified scenes are invalid. | Within the named storyworld, one named accepted capsule identified by its durable provenance record. A world-wide grant, a branch-wide grant, and a grant for unspecified capsules are invalid. |
+| Purpose | Private creative exploration of a scene into a proposed prose derivative. The output is not canon, an alternate publication, a submission by the source contributor, or training data. | Private creative exploration of a capsule into a proposed inverted concept. The output is not canon, an alternate publication, a submission by the source contributor, or training data. |
+| Audience | The source contributor and authorized stewards in the private pilot only. No reader-facing display, external export, or third-party sharing is included. | The source contributor and authorized stewards in the private pilot only. No reader-facing display, external export, or third-party sharing is included. |
+| Attribution | Preserve the source contributor as the source contributor and identify the Disrupt operation, source record, consent version, and derivative creator or operator. Do not label the derivative as solely authored by the source contributor. | Preserve the source contributor as the source contributor and identify the Invert operation, source record, consent version, and derivative creator or operator. Do not label the derivative as solely authored by the source contributor. |
+| Duration | One requested transformation run. A grant expires unused 30 calendar days after it is recorded, or sooner if revoked or superseded. It grants no continuing reuse right after the run. | One requested transformation run. A grant expires unused 30 calendar days after it is recorded, or sooner if revoked or superseded. It grants no continuing reuse right after the run. |
+| Further use | Any new transformation, publication, reader display, canon consideration, alternate-path release, commercial use, or reuse in another storyworld needs its own approved action and consent. | Any new transformation, publication, reader display, canon consideration, alternate-path release, commercial use, or reuse in another storyworld needs its own approved action and consent. |
+| Revocation before execution | Deny the request. A request already queued but not started must be cancelled or held. | Deny the request. A request already queued but not started must be cancelled or held. |
+| Revocation after creation | Stop new source-dependent use and hold an unreleased derivative. A released derivative follows the accepted-derivative preservation policy below. | Stop new source-dependent use and hold an unreleased derivative. A released derivative follows the accepted-derivative preservation policy below. |
+
+This decision grants a narrow permission to make a private derivative. It does
+not transfer copyright, grant an adaptation license, waive attribution, permit
+model training, or allow the steward or an agent to infer consent from a prior
+action.
+
+### Enforcement gate
+
+No Disrupt or Invert endpoint, consent toggle, background job, export, or
+reader-facing surface may be enabled against real contributor material until
+the following gate is approved and evidenced:
+
+1. the policy and contributor-facing copy have completed owner, legal, and
+   privacy review;
+2. the server derives the action from the endpoint and verifies the
+   contributor, accepted source resource, action, policy version, audience,
+   purpose, and unexpired consent record;
+3. revocation, expiry, supersession, restriction, and source-status changes
+   fail closed, including queued and in-flight work;
+4. every generated derivative stores source lineage, consent version,
+   transformation action, purpose, audience, attribution, operator, and
+   release time;
+5. generated output is private and unreleased by default, with separate
+   review and display permission; and
+6. the preservation, independent-copy, backup, legal-hold, appeal, and
+   correction paths in `withdrawal-preservation-policy.md` are operationally
+   owned and tested.
+
+Until this gate is approved, existing prototype affordances must not be
+treated as permission to transform real contributor material.
 
 ## Capture and scope model
 
@@ -145,7 +207,9 @@ CREATE TABLE consent_records (
     'license-for-display',
     'submit-for-canon-review',
     'ai-assisted-draft',
-    'cie-pie-derivative'
+    'cie-pie-derivative',
+    'disrupt-derivative',
+    'invert-derivative'
   )),
   scope_kind TEXT NOT NULL CHECK (scope_kind IN (
     'storyworld',
@@ -160,9 +224,13 @@ CREATE TABLE consent_records (
   policy_document_ref TEXT NOT NULL,
   policy_version TEXT NOT NULL,
   policy_hash TEXT NOT NULL,
+  purpose TEXT NOT NULL,
+  audience TEXT NOT NULL,
+  attribution_treatment TEXT NOT NULL,
 
   recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   effective_at TIMESTAMPTZ NOT NULL,
+  expires_at TIMESTAMPTZ,
   revoked_at TIMESTAMPTZ,
   supersedes_consent_id UUID REFERENCES consent_records(id),
   recorded_via TEXT NOT NULL,
@@ -179,8 +247,10 @@ The ledger is append-only: revocation and supersession create a new record
 linked to the prior grant rather than mutating consent history. The effective
 consent is the most recent applicable record for the scope and action. A future
 implementation must validate that `scope_reference` is present for every
-resource-specific action and must not allow `cie-pie-derivative` to be granted
-until 15.10 is resolved.
+resource-specific action and must not allow any derivative action to be granted
+until the enforcement gate above is approved. The legacy
+`cie-pie-derivative` umbrella value must not be used for a Disrupt or Invert
+grant.
 
 Consent records are intentionally a **private PostgreSQL control-plane
 exception** to the general GitHub-rebuildable-content rule. Putting identity,
@@ -210,9 +280,9 @@ through the relevant submission flow. Revocation applies prospectively:
 
 ### Accepted derivative boundary
 
-The reserved `cie-pie-derivative` action is not enabled by this design. If a
-future, source-specific derivative permission is approved, its revocation
-still cannot recall a derivative that was already created. The future
+The `disrupt-derivative` and `invert-derivative` permissions defined above are
+approved as a private-pilot policy, but are not enabled for enforcement. Their
+revocation still cannot recall a derivative that was already created. The future
 implementation must:
 
 - stop new source-dependent transformations and new publication after the
@@ -231,8 +301,7 @@ implementation must:
 
 This boundary is a product policy decision for the private pilot, not a legal
 determination. No consent toggle, derivative endpoint, or public derivative
-feature may be implemented until source-specific terms and enforcement are
-approved.
+feature may be enabled until the enforcement gate above is approved.
 
 The proposal lifecycle is the operational companion to consent:
 
@@ -282,7 +351,8 @@ retention effects.
   and age/guardian rules.
 - The exact deletion/export process and the operational window for taking
   licensed displays down.
-- The source-specific CIE/PIE derivative consent model (open question 15.10).
+- The legal/privacy review and operational enforcement of the source-specific
+  Disrupt/Invert derivative consent model.
 - The legal/privacy review, jurisdictional terms, and operational enforcement
   for the accepted-derivative disposition policy.
 - Whether anonymous readers may use any optional reaction or telemetry features.

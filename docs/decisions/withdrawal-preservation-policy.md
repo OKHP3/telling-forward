@@ -2,12 +2,15 @@
 
 ## Status
 
-**Design complete; enforcement not approved.**
+**Private-pilot policy approved; enforcement not approved.**
 
 This policy defines the preservation choices that must not be collapsed into the
 single `withdrawn` proposal state. It does not add a database table, change the
 proposal state machine, authorize public contribution, or approve deletion,
-orphaning, consent, moderation, or derivative enforcement.
+orphaning, moderation, or derivative enforcement. The source-specific consent
+decision for Disrupt and Invert is recorded in
+`consent-ladder-design.md`; this document defines what happens after a permitted
+derivative exists or a request is withdrawn or revoked.
 
 ## Decision
 
@@ -96,6 +99,27 @@ This is a private-pilot product boundary, not a legal conclusion. Legal and
 privacy review is required before enforcement, public derivative features, or
 jurisdiction-specific removal promises.
 
+### Disrupt and Invert disposition rule
+
+The approved Disrupt and Invert consent is narrow and source-specific. It does
+not change the preservation result merely because the derivative was generated
+by a product action rather than written directly by a contributor.
+
+| Point in the derivative lifecycle | Required result after withdrawal or revocation |
+|---|---|
+| Consent granted, transformation not started | Fail closed. Do not start the action. An unused grant expires after its stated window and is never a standing reuse license. |
+| Request queued or transformation in flight | Stop or hold the work where technically possible. Do not publish it. Record the interruption and review any partial output under the same source lineage. |
+| Derivative created but not released | Hold it from readers and external export pending owner-approved disposition. Preserve the source, derivative, consent version, attribution, and decision audit. |
+| Derivative released on a managed reader surface | Preserve by default only when it is separable, its independent permission remains valid, and no safety, privacy, rights, or legal-hold decision requires removal. Remove, redact, or correct only through the approved disposition path. |
+| Independent copy, third-party publication, or export | Do not promise service control. Record the known copy and any requested notice or correction, but treat its disposition as a separate decision. |
+| Recovery or retention-bound backup | Keep it when required by the approved recovery, retention, or legal-hold policy. Do not restore it to a reader surface or new derivative job under revoked consent. |
+| Appeal or correction request | Keep the current reader-facing result safe while the appeal is reviewed. Preserve the challenged source and derivative lineage, record the decision-maker and effective window, and apply an approved attribution or content correction without silently rewriting Git history. |
+
+Disrupt and Invert must never be treated as a single reusable permission. A
+revocation of one action does not revoke the other, but it does stop that
+action's future source-dependent use. A later request for either action requires
+a new, matching consent record.
+
 ## Durable and private records
 
 ### GitHub-recoverable creative record
@@ -176,11 +200,13 @@ derivative permission from `withdrawn`.
 
 - The nine-value proposal enum remains unchanged; this policy does not add
   states for attribution or deletion.
-- The consent ladder remains per-action, revocable, and design-only. Withdrawal
-  stops future eligible use subject to preservation limits; it does not erase
-  historical records automatically.
-- The `cie-pie-derivative` action remains unavailable. This policy does not
-  create derivative consent or authorize Concept Board Disrupt/Invert.
+- The consent ladder remains per-action, revocable, and enforcement-gated.
+  Disrupt and Invert are approved as narrow private-pilot policy actions, not as
+  enabled endpoints or toggles. Withdrawal stops future eligible use subject to
+  preservation limits; it does not erase historical records automatically.
+- The legacy `cie-pie-derivative` umbrella action remains unavailable. This
+  policy does not authorize implementation until the enforcement gate in
+  `consent-ladder-design.md` is approved.
 - Moderation remains private and case-based. A withdrawal does not resolve a
   moderation case, and a restriction does not publish its private reason.
 - ADR-0013 remains authoritative: GitHub is canonical for recoverable creative
