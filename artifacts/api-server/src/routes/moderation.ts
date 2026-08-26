@@ -52,23 +52,28 @@ router.post("/storyworlds/:id/moderation/cases", requireAuth, requireStewardForS
     res.status(400).json({ error: "A subject, reference, and valid reason are required" }); return;
   }
   try {
-    const [created] = await db.insert(moderationCasesTable).values({
-      storyworldId,
-      subjectKind: body.subjectKind,
-      subjectReference: body.subjectReference.trim(),
-      openedByUserId: req.session.userId,
-      assignedStewardId: null,
-      primaryReasonCode: body.primaryReasonCode,
-      contributorMessage: typeof body.contributorMessage === "string" ? body.contributorMessage.trim() || null : null,
-      visibilityAction: visibility.has(body.visibilityAction) ? body.visibilityAction : "none",
-    }).returning();
-    await db.insert(moderationEventsTable).values({
-      caseId: created!.id,
-      actorUserId: req.session.userId,
-      eventType: "case-opened",
-      reasonCode: body.primaryReasonCode,
-      privateNote: typeof body.privateNote === "string" ? body.privateNote.trim() || null : null,
-      evidenceReference: typeof body.evidenceReference === "string" ? body.evidenceReference.trim() || null : null,
+    const created = await db.transaction(async (tx) => {
+      const [createdCase] = await tx.insert(moderationCasesTable).values({
+        storyworldId,
+        subjectKind: body.subjectKind,
+        subjectReference: body.subjectReference.trim(),
+        openedByUserId: req.session.userId,
+        assignedStewardId: null,
+        primaryReasonCode: body.primaryReasonCode,
+        contributorMessage: typeof body.contributorMessage === "string" ? body.contributorMessage.trim() || null : null,
+        visibilityAction: visibility.has(body.visibilityAction) ? body.visibilityAction : "none",
+      }).returning();
+      if (!createdCase) throw new Error("Moderation case was not created");
+
+      await tx.insert(moderationEventsTable).values({
+        caseId: createdCase.id,
+        actorUserId: req.session.userId,
+        eventType: "case-opened",
+        reasonCode: body.primaryReasonCode,
+        privateNote: typeof body.privateNote === "string" ? body.privateNote.trim() || null : null,
+        evidenceReference: typeof body.evidenceReference === "string" ? body.evidenceReference.trim() || null : null,
+      });
+      return createdCase;
     });
     res.status(201).json(created);
   } catch (err) {

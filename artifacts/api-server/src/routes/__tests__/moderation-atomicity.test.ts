@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
     primaryReasonCode: "spam",
     visibilityAction: "none",
   },
+  caseInsert: vi.fn(),
   eventInsert: vi.fn(),
   transaction: vi.fn(),
 }));
@@ -76,6 +77,7 @@ function buildApp() {
 function configureTransaction({ failEvent }: { failEvent: boolean }) {
   state.transaction.mockImplementation(async (callback) => {
     const workingCase = { ...state.caseRecord };
+    state.caseInsert.mockImplementation(async () => [workingCase]);
     const tx = {
       update: vi.fn(() => ({
         set: vi.fn((changes) => ({
@@ -87,9 +89,9 @@ function configureTransaction({ failEvent }: { failEvent: boolean }) {
           })),
         })),
       })),
-      insert: vi.fn(() => ({
-        values: state.eventInsert,
-      })),
+      insert: vi.fn((table) => table === tables.moderationCasesTable
+        ? { values: vi.fn(() => ({ returning: state.caseInsert })) }
+        : { values: state.eventInsert }),
     };
     state.eventInsert.mockImplementation(async () => {
       if (failEvent) throw new Error("moderation event store unavailable");
@@ -115,6 +117,7 @@ describe("moderation decision atomicity", () => {
       visibilityAction: "none",
     };
     state.eventInsert.mockReset();
+    state.caseInsert.mockReset();
     state.transaction.mockReset();
   });
 
@@ -143,6 +146,29 @@ describe("moderation decision atomicity", () => {
       status: "open",
       visibilityAction: "none",
     });
+    expect(state.transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not leave a case behind when its opening audit event cannot be written", async () => {
+    configureTransaction({ failEvent: true });
+
+    const response = await request(buildApp())
+      .post("/storyworlds/1/moderation/cases")
+      .send({
+        subjectKind: "contribution",
+        subjectReference: "contribution-1",
+        primaryReasonCode: "spam",
+      });
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ error: "Failed to create moderation case" });
+    expect(state.caseRecord).toMatchObject({
+      id: "case-1",
+      status: "open",
+      visibilityAction: "none",
+    });
+    expect(state.caseInsert).toHaveBeenCalledTimes(1);
+    expect(state.eventInsert).toHaveBeenCalledTimes(1);
     expect(state.transaction).toHaveBeenCalledTimes(1);
   });
 
