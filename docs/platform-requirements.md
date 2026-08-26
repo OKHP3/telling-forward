@@ -16,6 +16,46 @@ This document is a dated capability baseline, not a blank-slate product brief. C
 
 The canonical Author App (`artifacts/web`) is publicly deployed through GitHub Pages at https://okhp3.github.io/telling-forward/. The verified Pages build deployed revision `e4612f79754b2232cb9aee80c0166ceb70db4ea0` on 2026-08-24; the root returned HTTP 200 and its asset URLs used the `/telling-forward/` base path. This is a static client deployment only: the API server and authenticated, GitHub-backed write operations are not hosted by GitHub Pages. The Editorial Reader and companion surfaces remain not-yet-deployed unless separately evidenced.
 
+### Separate API hosting boundary
+
+The approved production target for the service-backed Author App API is the
+Replit **Autoscale** deployment of the registered `artifacts/api-server`
+artifact. Replit provides the API's stable HTTPS `*.replit.app` URL when the
+owner publishes that artifact. The URL must be recorded as the API base only
+after `getDeploymentInfo()` reports an active deployment with a successful
+build; a workspace `.replit.dev` URL is never a production base.
+
+The Pages workflow consumes that published origin through the non-secret
+repository variable `TELLING_FORWARD_API_BASE_URL`. It is injected only as
+`VITE_API_BASE_URL` during the Vite build, and the workflow rejects missing,
+non-HTTPS, or path-qualified values. The frontend never receives API
+credentials. The API's production environment must set:
+
+- `FRONTEND_URL=https://okhp3.github.io/telling-forward/` for OAuth and email
+  redirects.
+- `FRONTEND_ORIGIN=https://okhp3.github.io` for the credentialed CORS
+  allowlist. This must be an origin without the Pages path.
+- `GITHUB_OAUTH_CALLBACK_URL=<API base>/api/auth/github/callback`.
+- `DATABASE_URL`, `REDIS_URL`, `SESSION_SECRET`, `CLERK_PUBLISHABLE_KEY`, and
+  `CLERK_SECRET_KEY` through the deployment's secret/environment settings.
+
+Production sessions use Secure, HttpOnly, SameSite=None cookies because the
+static Pages origin and API origin are cross-site. The API's Clerk proxy
+derives its public callback host from the HTTPS request host; the Clerk/Auth
+configuration must therefore be completed against the published API origin,
+not a development URL.
+
+### Availability record
+
+| Surface | Hosting target | URL/revision evidence | Availability claim |
+|---|---|---|---|
+| Author App static shell | GitHub Pages | Verified URL and Pages revision above | Static Pages availability is verified |
+| Author App API | Replit Autoscale, `artifacts/api-server` | Must be filled from a successful production deployment lookup | Service-backed availability is not claimed until `/api/healthz`, CORS, Clerk callbacks, and database connectivity are externally smoke-tested |
+
+The live API publication and its external smoke test are intentionally
+separate evidence from the already verified static Pages deployment. See
+`docs/reviews/2026-08-26-api-deployment-record.md` for the current record.
+
 ---
 
 ## 1. Purpose
@@ -366,7 +406,7 @@ Directly answering the "Vite, Tailwind, TypeScript, Playwright" question: here's
 
 - **Confirmed:** Replit autoscale deployment (`.replit`), Node 24, `pnpm store prune` as a post-build step, ports 8080 (app) and 8081→80 (external).
 - **Confirmed:** GitHub sync is currently one-directional (workspace → GitHub via post-commit hook). The read/write GitHub integration in Section 6 is new infrastructure, not an extension of that hook.
-- **Confirmed:** `.github/workflows/deploy-pages.yml` builds and publishes `artifacts/web` to `https://okhp3.github.io/telling-forward/` with a Vite subpath base and SPA fallback. GitHub Pages hosts the client artifact only; API-backed behavior remains dependent on the optional `TELLING_FORWARD_API_BASE_URL` repository variable.
+- **Confirmed:** `.github/workflows/deploy-pages.yml` builds and publishes `artifacts/web` to `https://okhp3.github.io/telling-forward/` with a Vite subpath base and SPA fallback. GitHub Pages hosts the client artifact only; API-backed behavior requires the `TELLING_FORWARD_API_BASE_URL` repository variable.
 - **Recommended, optional:** if the public discovery SPA (Section 5, 9) gets built, deploy it independently via GitHub Actions to GitHub Pages, following `okhp3-vite-github-pages` exactly — client-only, no secrets in the build, base-path and router basename handled per that skill's contract. Keep it decoupled from the Replit-hosted API/DB deployment; it should degrade to "browse cached public data" if the main platform is down.
 
 ---

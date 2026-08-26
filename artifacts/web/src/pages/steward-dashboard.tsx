@@ -44,6 +44,7 @@ import {
   Webhook,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiUrl } from "@/lib/api-url";
 
 type ProposalState =
   | "draft"
@@ -549,7 +550,7 @@ export function StewardDashboard() {
 
   async function loadModerationCases() {
     if (!worldId) return;
-    const response = await fetch(`/api/storyworlds/${worldId}/moderation/cases`, { credentials: "include" });
+    const response = await fetch(apiUrl(`/api/storyworlds/${worldId}/moderation/cases`), { credentials: "include" });
     if (!response.ok) throw new Error("Could not load moderation cases");
     setModerationCases(await response.json());
   }
@@ -561,7 +562,7 @@ export function StewardDashboard() {
   async function openModerationCase(event: React.FormEvent) {
     event.preventDefault();
     setModerationError(null);
-    const response = await fetch(`/api/storyworlds/${worldId}/moderation/cases`, {
+    const response = await fetch(apiUrl(`/api/storyworlds/${worldId}/moderation/cases`), {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         subjectKind: reportForm.subjectKind,
@@ -577,7 +578,7 @@ export function StewardDashboard() {
   }
 
   async function applyCaseAction(item: ModerationCase, status: string, visibilityAction: string) {
-    const response = await fetch(`/api/moderation/cases/${item.id}/action`, {
+    const response = await fetch(apiUrl(`/api/moderation/cases/${item.id}/action`), {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status, visibilityAction, reasonCode: item.primaryReasonCode }),
     });
@@ -587,7 +588,7 @@ export function StewardDashboard() {
 
   async function applyControl(event: React.FormEvent) {
     event.preventDefault();
-    const response = await fetch(`/api/storyworlds/${worldId}/moderation/controls`, {
+    const response = await fetch(apiUrl(`/api/storyworlds/${worldId}/moderation/controls`), {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         subjectUserId: Number(controlForm.subjectUserId),
@@ -632,7 +633,7 @@ export function StewardDashboard() {
     setIsRebuilding(true);
     setRebuildError(null);
     try {
-      const response = await fetch(`/api/admin/reconcile-for-steward/${worldId}`, {
+      const response = await fetch(apiUrl(`/api/admin/reconcile-for-steward/${worldId}`), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

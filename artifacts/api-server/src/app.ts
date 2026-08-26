@@ -14,6 +14,7 @@ import {
   clerkProxyMiddleware,
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
+import { getFrontendCorsOrigin } from "./lib/runtime-config";
 
 // Session store backed by PostgreSQL — survives server restarts
 const PgStore = connectPgSimple(session);
@@ -51,13 +52,9 @@ app.use(
 );
 
 // CORS: credentials require an explicit origin allowlist — never reflect all
-// origins (origin: true) with credentials: true.
-// - If FRONTEND_URL is set, allow only that origin (works in all environments).
-// - Otherwise in development, allow all origins for convenience (no prod risk).
-// - Otherwise in production, disable cross-origin requests entirely (same-origin only).
-const corsOrigin: cors.CorsOptions["origin"] =
-  process.env.FRONTEND_URL ??
-  (process.env.NODE_ENV !== "production" ? true : false);
+// origins in production. FRONTEND_URL may contain the Pages subpath used by
+// OAuth redirects, so runtime-config normalizes it to the browser origin.
+const corsOrigin: cors.CorsOptions["origin"] = getFrontendCorsOrigin();
 
 app.use(cors({ origin: corsOrigin, credentials: true }));
 
@@ -119,10 +116,10 @@ app.use(
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      // "lax" is required for the GitHub OAuth redirect flow:
-      // GitHub redirects back via top-level navigation which "strict" blocks.
-      // The oauthState session value provides CSRF protection instead.
-      sameSite: "lax",
+      // The Pages app and API are different sites, so production fetches need
+      // SameSite=None. The cookie remains Secure and HttpOnly. Lax is retained
+      // locally, and the OAuth state value protects the GitHub redirect flow.
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     },
   }),

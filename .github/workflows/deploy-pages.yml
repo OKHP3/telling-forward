@@ -36,6 +36,31 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
+      - name: Require the separately hosted production API
+        env:
+          API_BASE_URL: ${{ vars.TELLING_FORWARD_API_BASE_URL }}
+        run: |
+          node <<'NODE'
+          const raw = (process.env.API_BASE_URL || '').trim();
+          if (!raw) {
+            console.error('TELLING_FORWARD_API_BASE_URL is not configured.');
+            console.error('Set it to the published Replit API URL before deploying Pages.');
+            process.exit(1);
+          }
+
+          let parsed;
+          try {
+            parsed = new URL(raw);
+          } catch {
+            console.error('TELLING_FORWARD_API_BASE_URL must be an absolute HTTPS URL.');
+            process.exit(1);
+          }
+
+          if (parsed.protocol !== 'https:' || parsed.search || parsed.hash || parsed.pathname !== '/') {
+            console.error('TELLING_FORWARD_API_BASE_URL must be an HTTPS origin with no path, query, or fragment.');
+            process.exit(1);
+          }
+          NODE
       - name: Build the canonical web app
         env:
           BASE_PATH: /telling-forward/
