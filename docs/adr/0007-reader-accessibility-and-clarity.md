@@ -2,7 +2,7 @@
 
 ## Status
 
-**Open.** This ADR proposes five independent, separately-decidable items, not one accept/reject decision. See "Recommendation" for the per-item call and "Next action" for what closes it.
+**Open.** This ADR proposes five independent, separately-decidable items, not one accept/reject decision. Item 2 has an explicit owner decision to defer; items 1 and 3–5 remain proposals. See "Recommendation" for the per-item calls and "Next action" for what remains open.
 
 ## Context
 
@@ -38,7 +38,17 @@ The thread's separate "Lexical Ladder" idea (declaring a section's allowed vocab
 
 **Proposal:** log a new open question — should capsules/scenes carry an optional, author-set "reader accessibility" or "density" tag, and if so, is it steward-visible only or reader-facing? — without prejudging the answer or importing BAC's specific band count or labels.
 
-**Status of this item:** proposed open question only, added to `docs/decisions/open-questions.md` as 15.13.
+**Status of this item:** explicitly deferred by the owner on 2026-08-26;
+recorded in `docs/decisions/open-questions.md` as 15.13.
+
+**Owner decision (2026-08-26): Defer.** The current private pilot and the next
+implementation stage do not have enough demonstrated reader need to justify a
+new accessibility or density signal. Do not add an author-set field, band,
+label, default, steward-only view, or reader-facing signal to capsules or
+scenes. Revisit only if reader research or an explicit accessibility
+requirement establishes a concrete need; that future review must define the
+audience, vocabulary, and placement without importing labels from the source
+thread.
 
 ### 3. Canon-lock enforcement for agent-assisted transforms
 
@@ -78,14 +88,14 @@ Separately, the thread's own tool-selection pattern for its author ("primary dra
 - Does not import the MPS manuscript's own readability scores or any BAC/MPS lore, terminology, or branding.
 - Does not treat the author's personal GPT-5.2 Pro tier experience as evidence for or against any TF ingestion-tier design; ADR-0004's tier structure already doesn't depend on any single vendor's consumer tier.
 - Does not reopen ADR-0003, ADR-0004's four-vs-six discrepancy, or ADR-0005's or ADR-0006's existing items.
-- Does not authorize building anything. All five items are proposals pending owner review.
+- Does not authorize building anything. Items 1 and 3–5 remain proposals pending owner review; item 2 is explicitly deferred.
 
 ## Recommendation
 
 | Item | Recommendation |
 |---|---|
 | 1. Author-facing clarity/register pass | Log as proposed; candidate Tier 2 / local-LLM capability, needs owner review before any design work |
-| 2. Reader accessibility/density metadata | Log as open question (15.13); no default answer proposed, Lexical Ladder noted as one candidate mechanism |
+| 2. Reader accessibility/density metadata | Defer (owner decision, 2026-08-26); no capsule/scene field, band, label, default, steward-only view, or reader-facing signal is approved |
 | 3. Canon-lock enforcement for agent transforms | Log as proposed; complementary to ADR-0006 item 2; `capsules`-table dependency resolved (decision 15.12, 2026-08-19) — implementation via Issue labels/body |
 | 4. Staged-pass / named-drift design rule | Log as proposed process convention; low cost, no schema impact |
 | 5. Progressive disclosure for onboarding copy | Log as proposed writing convention; low cost, no schema impact |
@@ -93,13 +103,16 @@ Separately, the thread's own tool-selection pattern for its author ("primary dra
 ## Consequences
 
 - If item 1 is accepted, it adds a new transform type to the Concept Board / Author App vocabulary alongside Disrupt and Invert, distinct from both, and would need its own UI and prompt-template design.
-- If item 2 is accepted, it adds a metadata field to the scene schema. Note: there is no `capsules` database table (decision 15.12, 2026-08-19); metadata lives in capsule Issue labels and body or on the scene record itself.
+- Item 2 is deferred: no accessibility/density metadata field or signal is authorized for capsules or scenes. If the question is reopened, its placement must be decided explicitly; there is no `capsules` database table (decision 15.12, 2026-08-19).
 - If item 3 is accepted, the locked-terms mechanism must be expressed in capsule Issue conventions, not a database table column (decision 15.12, 2026-08-19).
 - Items 4 and 5 are process/documentation conventions and can be adopted independently of everything else in this ADR, at any time, with no schema dependency.
 
 ## Next action
 
-The project owner should give a per-item call — accept, reject, or defer — for items 1 through 5. Update this ADR's Status once that call is made.
+The project owner should give a per-item call — accept, reject, or defer — for
+items 1 and 3 through 5. Item 2 was deferred on 2026-08-26 and is closed as an
+open question unless a later evidence-backed review reopens it. Update this
+ADR's Status once the remaining calls are made.
 
 The consolidated fidelity, progressive-disclosure, outside-reader, and
 accessibility deferral boundaries are in

@@ -139,7 +139,7 @@ A root `LICENSE` file exists as a proprietary/all-rights-reserved placeholder (d
 - **15.10 — Disrupt/Invert derivative consent:** Decided for private-pilot policy on 2026-08-26. Each action requires separate, affirmative, source-specific consent for one accepted scene or capsule and one private run. Enforcement remains unapproved; do not enable an endpoint, toggle, job, export, or reader surface for real contributor material until the gate in `docs/decisions/consent-ladder-design.md` is approved and evidenced.
 - **15.14 / 15.15 — Consent ladder and moderation tooling:** Design only in Stage 0–1. Written design documents must exist before any Stage 2/3 public-contribution or moderation work proceeds.
 - **15.7 — Mobile scope and timing:** Open.
-- **15.13 — Reader accessibility/density metadata:** Open.
+- **15.13 — Reader accessibility/density metadata:** Decided — deferred on 2026-08-26. No field, label, or reader-facing or steward-only signal is approved; revisit only with evidence of a concrete need.
 - The product model, contribution rules, agent skills, and content governance described in `README.md` and `CONTRIBUTING.md` are explicitly still evolving, not finalized features.
 - `attached_assets/` contains working documents whose relationship to the platform's public/private content boundary is governed separately. `content/pilot-storyworld/` is the single authorized location for real creative source material in Stage 0–1.
 
