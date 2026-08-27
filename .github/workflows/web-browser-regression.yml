@@ -1,0 +1,61 @@
+name: Web browser regression
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'artifacts/web/**'
+      - 'lib/api-client-react/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/web-browser-regression.yml'
+  pull_request:
+    paths:
+      - 'artifacts/web/**'
+      - 'lib/api-client-react/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/web-browser-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium and native dependencies
+        run: pnpm --filter @workspace/web exec playwright install --with-deps chromium
+      - name: Start the canonical web app
+        run: |
+          pnpm --filter @workspace/web exec vite --config vite.config.ts --host 0.0.0.0 --port 22333 > "$RUNNER_TEMP/telling-forward-web.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/telling-forward-web.pid"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:22333/sign-in > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/telling-forward-web.log"
+          exit 1
+      - name: Run the contributor cache isolation regression
+        run: pnpm run test:auth-session:browser
+      - name: Stop the canonical web app
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/telling-forward-web.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/telling-forward-web.pid")" || true
+          fi

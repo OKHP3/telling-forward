@@ -83,6 +83,7 @@ The repository documents this stack (see `replit.md`):
 
 - `pnpm run typecheck` — full typecheck across all packages.
 - `pnpm run build` — typecheck + build all packages.
+- `pnpm run test:auth-session:browser` — browser-level contributor account-switch and cache-isolation regression. Run `pnpm --filter @workspace/web exec playwright install chromium` once when the local Playwright browser is missing.
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec.
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only).
 - `pnpm --filter @workspace/api-server run dev` — run the API server locally.

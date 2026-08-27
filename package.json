@@ -6,7 +6,8 @@
     "preinstall": "node scripts/preinstall.mjs",
     "build": "pnpm run typecheck && cross-env PORT=3000 BASE_PATH=/ EXPO_PUBLIC_DOMAIN=build.invalid EXPO_BUILD_METRO_PORT=8082 pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+    "test:auth-session:browser": "pnpm --filter @workspace/web run test:auth-session:browser"
   },
   "private": true,
   "devDependencies": {
