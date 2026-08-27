@@ -506,4 +506,3 @@ The implementation team must keep these visible rather than resolving them by as
 - whether any later stage will introduce monetization or adaptation programs.
 
 Until the owner closes a decision in the repository, affected work remains provisional or deferred.
-

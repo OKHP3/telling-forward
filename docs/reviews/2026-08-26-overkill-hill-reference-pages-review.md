@@ -99,4 +99,3 @@ The companion section should describe the Magnus Saga as a speculative fiction s
 ## Next action
 
 Update the OverKill Hill source-generated Telling Forward page and its catalogue/navigation links using the corrections above, regenerate the site, run the site's validation suite, and verify the deployed URLs after GitHub Pages completes.
-
