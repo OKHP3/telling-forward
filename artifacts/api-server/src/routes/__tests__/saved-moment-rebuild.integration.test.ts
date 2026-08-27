@@ -25,6 +25,7 @@ describeWithDatabase("saved moment discovery after reconciliation", () => {
   let firstPathId: number;
   let secondPathId: number;
   let contributorId: number;
+  let stewardUserId: number;
   let app: express.Express;
 
   beforeAll(async () => {
@@ -39,6 +40,20 @@ describeWithDatabase("saved moment discovery after reconciliation", () => {
       [suffix, `${suffix}-repo`, "Saved Moment Rebuild"],
     );
     storyworldId = Number(world.rows[0]?.["id"]);
+
+    const user = await client.query(
+      `INSERT INTO users (email, password_hash, display_name)
+       VALUES ($1, $2, $3)
+       RETURNING id`,
+      [`${suffix}-steward@example.test`, "test-only-password-hash", "Rebuild Steward"],
+    );
+    stewardUserId = Number(user.rows[0]?.["id"]);
+
+    await client.query(
+      `INSERT INTO stewards (storyworld_id, user_id, role)
+       VALUES ($1, $2, 'steward')`,
+      [storyworldId, stewardUserId],
+    );
 
     const paths = await client.query(
       `INSERT INTO story_paths
@@ -74,6 +89,11 @@ describeWithDatabase("saved moment discovery after reconciliation", () => {
     contributorId = Number(contributor.rows[0]?.["id"]);
 
     app = express();
+    app.use(express.json());
+    app.use((req: any, _res, next) => {
+      req.session = { userId: stewardUserId };
+      next();
+    });
     app.use("/", storyworldsRouter);
   });
 
@@ -94,8 +114,16 @@ describeWithDatabase("saved moment discovery after reconciliation", () => {
       [storyworldId],
     );
     await client.query(
+      `DELETE FROM stewards WHERE storyworld_id = $1`,
+      [storyworldId],
+    );
+    await client.query(
       `DELETE FROM storyworlds WHERE id = $1`,
       [storyworldId],
+    );
+    await client.query(
+      `DELETE FROM users WHERE id = $1`,
+      [stewardUserId],
     );
     await client.query(
       `DELETE FROM contributors WHERE id = $1`,
@@ -118,6 +146,10 @@ describeWithDatabase("saved moment discovery after reconciliation", () => {
     await replacePathMomentMemberships(storyworldId, firstPathId, []);
 
     const discovery = await request(app).get("/");
+    const detail = await request(app).get(`/${storyworldId}`);
+    const update = await request(app)
+      .patch(`/${storyworldId}`)
+      .send({ seed: "The last path has gone quiet." });
 
     expect(discovery.status).toBe(200);
     expect(discovery.body).toEqual(
@@ -128,6 +160,16 @@ describeWithDatabase("saved moment discovery after reconciliation", () => {
         }),
       ]),
     );
+    expect(detail.status).toBe(200);
+    expect(detail.body).toMatchObject({
+      id: storyworldId,
+      savedMomentCount: 0,
+    });
+    expect(update.status).toBe(200);
+    expect(update.body).toMatchObject({
+      id: storyworldId,
+      savedMomentCount: 0,
+    });
   });
 
   it("counts one shared saved moment after one path membership is removed", async () => {
@@ -145,6 +187,10 @@ describeWithDatabase("saved moment discovery after reconciliation", () => {
     await replacePathMomentMemberships(storyworldId, firstPathId, []);
 
     const discovery = await request(app).get("/");
+    const detail = await request(app).get(`/${storyworldId}`);
+    const update = await request(app)
+      .patch(`/${storyworldId}`)
+      .send({ seed: "One path still carries the moment." });
 
     expect(discovery.status).toBe(200);
     expect(discovery.body).toEqual(
@@ -156,6 +202,16 @@ describeWithDatabase("saved moment discovery after reconciliation", () => {
         }),
       ]),
     );
+    expect(detail.status).toBe(200);
+    expect(detail.body).toMatchObject({
+      id: storyworldId,
+      savedMomentCount: 1,
+    });
+    expect(update.status).toBe(200);
+    expect(update.body).toMatchObject({
+      id: storyworldId,
+      savedMomentCount: 1,
+    });
 
     const membershipCount = await client.query(
       `SELECT COUNT(*)::int AS count
