@@ -5,6 +5,21 @@ the **Rerun record template** for every production rerun; do not overwrite an
 earlier run. A route being reachable locally is control evidence, not
 production acceptance evidence.
 
+## Validation gate
+
+Run `pnpm run check:journey-acceptance` before treating a run as accepted. The
+check reports incomplete fields on blocked, partial, and failed records so the
+next rerun can fill them in. It exits unsuccessfully when an `accepted` run has
+missing or placeholder publication, fixture, participant, route, permission,
+vocabulary, attribution, provenance, or timestamp evidence; when its evidence
+status is not `observed production`; or when a failure boundary has no concrete
+next prerequisite.
+
+The check also requires the route and permission tables to contain `Observed`
+evidence and the local checks to remain under their separate control-evidence
+heading. Local control rows can support a debugging conclusion, but they never
+upgrade a missing production observation.
+
 ## Evidence rules
 
 - `Observed` means a participant action or externally reachable production
@@ -116,11 +131,11 @@ term communicated the intended action without requiring GitHub terminology.
 List local checks here only. These do not upgrade an unobserved production
 route to `Pass`.
 
-| Check                                | Result     | Timestamp (UTC) | Limit                      |
-| ------------------------------------ | ---------- | --------------- | -------------------------- |
-| `<API health or route check>`        | `<result>` | `...`           | `<what it does not prove>` |
-| `<web/reader/mobile workflow check>` | `<result>` | `...`           | `<what it does not prove>` |
-| `<test/build/check>`                 | `<result>` | `...`           | `<what it does not prove>` |
+| Check                                | Result     | Evidence tier  | Timestamp (UTC) | Limit                      |
+| ------------------------------------ | ---------- | --------------- | ---------------- | -------------------------- |
+| `<API health or route check>`        | `<result>` | `Local control` | `...`            | `<what it does not prove>` |
+| `<web/reader/mobile workflow check>` | `<result>` | `Local control` | `...`            | `<what it does not prove>` |
+| `<test/build/check>`                 | `<result>` | `Local control` | `...`            | `<what it does not prove>` |
 
 ## Run: 2026-08-20 external participant acceptance
 
