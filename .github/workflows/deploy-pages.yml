@@ -36,6 +36,38 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
+      - name: Install Chromium for browser regression
+        run: pnpm --filter @workspace/web exec playwright install --with-deps chromium
+      - name: Start web app for browser regression
+        env:
+          BASE_PATH: /
+          PORT: 22333
+        run: |
+          pnpm --filter @workspace/web run dev > "$RUNNER_TEMP/web-browser-regression.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/web-browser-regression.pid"
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:22333/sign-in > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/web-browser-regression.log"
+          exit 1
+      - name: Run contributor account-switch browser regression
+        env:
+          AUTH_BROWSER_REGRESSION_BASE_URL: http://127.0.0.1:22333
+        run: |
+          mkdir -p artifacts/web/test-results
+          pnpm --filter @workspace/web run test:auth-session:browser
+      - name: Upload browser regression diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-session-browser-regression-results
+          if-no-files-found: warn
+          path: |
+            artifacts/web/test-results/
+            ${{ runner.temp }}/web-browser-regression.log
       - name: Require the separately hosted production API
         env:
           API_BASE_URL: ${{ vars.TELLING_FORWARD_API_BASE_URL }}
