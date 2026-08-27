@@ -63,6 +63,11 @@ const proposalPersistence = vi.hoisted(() => ({
   },
 }));
 
+const authorizationState = vi.hoisted(() => ({
+  authenticated: false,
+  steward: false,
+}));
+
 // ---------------------------------------------------------------------------
 // DB mock
 // ---------------------------------------------------------------------------
@@ -226,6 +231,27 @@ const mockGh = vi.hoisted(() => ({
 
 vi.mock("../../lib/github", () => ({
   getGitHubClient: () => mockGh,
+}));
+
+vi.mock("../../middlewares/auth", () => ({
+  requireAuth: (req: any, res: any, next: any) => {
+    if (!authorizationState.authenticated) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+    req.session = { userId: 42 };
+    next();
+  },
+}));
+
+vi.mock("../../middlewares/steward", () => ({
+  requireStewardFor: (_req: any, res: any, next: any) => {
+    if (!authorizationState.steward) {
+      res.status(403).json({ error: "Not a steward for this storyworld" });
+      return;
+    }
+    next();
+  },
 }));
 
 // ---------------------------------------------------------------------------
@@ -753,4 +779,166 @@ describe("admin reconcile — protected proposal outcomes", () => {
       expect(proposalPersistence.decidedAt).toEqual(retainedDecidedAt);
     },
   );
+});
+
+describe("steward reconcile — authorization and grouped ledger", () => {
+  let app: ReturnType<typeof buildAdminApp>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    insertLog.reset();
+    proposalUpsertLog.reset();
+    proposalPersistence.reset();
+    mockDb._resetSelectQueue();
+    authorizationState.authenticated = false;
+    authorizationState.steward = false;
+    mockGh.listBranches.mockResolvedValue([]);
+    mockGh.listOpenPullRequests.mockResolvedValue([]);
+    mockGh.listCommitsForBranch.mockResolvedValue([]);
+    mockGh.listCommitsBetween.mockResolvedValue([]);
+    mockGh.listPullRequestReviews.mockResolvedValue([]);
+    mockGh.listPullRequestComments.mockResolvedValue([]);
+    mockGh.getPullRequest.mockResolvedValue(null);
+    mockGh.getMergeCommitRange.mockResolvedValue(null);
+    mockGh.getFileContent.mockResolvedValue("");
+    mockProvenance.parseNarrationCommit.mockReturnValue(null);
+    mockProvenance.indexNarrationCommit.mockResolvedValue(null);
+    app = buildAdminApp();
+  });
+
+  it("rejects an unauthenticated rebuild before querying GitHub", async () => {
+    const res = await request(app)
+      .post("/reconcile-for-steward/1")
+      .send({ storyworld_id: 1 });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ error: "Authentication required" });
+    expect(mockGh.listBranches).not.toHaveBeenCalled();
+    expect(mockGh.listOpenPullRequests).not.toHaveBeenCalled();
+  });
+
+  it("rejects an authenticated non-steward before querying GitHub", async () => {
+    authorizationState.authenticated = true;
+
+    const res = await request(app)
+      .post("/reconcile-for-steward/1")
+      .send({ storyworld_id: 1 });
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({ error: "Not a steward for this storyworld" });
+    expect(mockGh.listBranches).not.toHaveBeenCalled();
+    expect(mockGh.listOpenPullRequests).not.toHaveBeenCalled();
+  });
+
+  it("returns a grouped ledger with stable GitHub identifiers and reasons", async () => {
+    authorizationState.authenticated = true;
+    authorizationState.steward = true;
+
+    const pullRequests = [
+      {
+        number: 42,
+        state: "open" as const,
+        merged: false,
+        headRef: "contrib/open",
+        baseRef: "main",
+        baseSha: "base-open",
+        headSha: "head-open",
+        createdAt: new Date("2026-08-20T12:00:00.000Z").toISOString(),
+        mergedAt: null,
+        closedAt: null,
+        mergeCommitSha: null,
+        mergedBy: null,
+        author: { id: "1001", login: "contributor", name: "Contributor", email: "c@example.com" },
+      },
+      {
+        number: 43,
+        state: "closed" as const,
+        merged: false,
+        headRef: "contrib/rejected",
+        baseRef: "main",
+        baseSha: "base-rejected",
+        headSha: "head-rejected",
+        createdAt: new Date("2026-08-21T12:00:00.000Z").toISOString(),
+        mergedAt: null,
+        closedAt: new Date("2026-08-22T12:00:00.000Z").toISOString(),
+        mergeCommitSha: null,
+        mergedBy: null,
+        author: { id: "1002", login: "contributor-two", name: "Contributor Two", email: "c2@example.com" },
+      },
+      {
+        number: 44,
+        state: "closed" as const,
+        merged: true,
+        headRef: "contrib/merged",
+        baseRef: "main",
+        baseSha: "base-merged",
+        headSha: "head-merged",
+        createdAt: new Date("2026-08-23T12:00:00.000Z").toISOString(),
+        mergedAt: new Date("2026-08-24T12:00:00.000Z").toISOString(),
+        closedAt: new Date("2026-08-24T12:00:00.000Z").toISOString(),
+        mergeCommitSha: "merge-sha-44",
+        mergedBy: { id: "2001", login: "steward-alice", displayName: "Steward Alice" },
+        author: { id: "1003", login: "contributor-three", name: "Contributor Three", email: "c3@example.com" },
+      },
+    ];
+    mockGh.listOpenPullRequests.mockResolvedValue(pullRequests);
+    mockDb._pushSelectRows([mockDb._WORLD_ROW]);
+
+    const res = await request(app).post("/reconcile-for-steward/1");
+
+    expect(res.status).toBe(200);
+    expect(res.body.canonicalSource).toBe("github");
+    expect(res.body.rebuildableIndex).toBe(true);
+    expect(Object.keys(res.body.ledger)).toEqual([
+      "created",
+      "updated",
+      "preserved",
+      "skipped",
+    ]);
+
+    expect(res.body.ledger.updated).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          identifier: "github:pr:testowner/testrepo#42/head:contrib/open",
+          reason: "GitHub pull request outcome mapped to proposed.",
+        }),
+        expect.objectContaining({
+          identifier: "github:pr:testowner/testrepo#44/head:contrib/merged",
+          reason: "GitHub pull request outcome mapped to published-canon.",
+        }),
+        expect.objectContaining({
+          identifier: "github:merge:merge-sha-44",
+          reason: "Accepted provenance reconstructed from the signed GitHub decision.",
+        }),
+      ]),
+    );
+    expect(res.body.ledger.preserved).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          identifier: "github:pr:testowner/testrepo#42",
+          reason: "An open GitHub pull request cannot overwrite an existing editorial decision.",
+        }),
+        expect.objectContaining({
+          identifier: "github:pr:testowner/testrepo#43",
+          reason: "Terminal non-merge outcome is preserved as a published alternate; no canon provenance is created.",
+        }),
+      ]),
+    );
+    expect(res.body.ledger.skipped).toEqual([
+      {
+        kind: "contribution",
+        identifier: "github:pr:testowner/testrepo#44",
+        action: "skipped",
+        reason: "The pull request has no verified merge range; existing path memberships were left untouched.",
+      },
+    ]);
+
+    for (const entries of Object.values(res.body.ledger) as Array<Array<Record<string, unknown>>>) {
+      for (const entry of entries) {
+        expect(entry.identifier).toMatch(/^github:/);
+        expect(entry.reason).toEqual(expect.any(String));
+        expect((entry.reason as string).length).toBeGreaterThan(0);
+      }
+    }
+  });
 });
