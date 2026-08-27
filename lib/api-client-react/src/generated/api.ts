@@ -50,6 +50,7 @@ import type {
   StoryPath,
   StoryProvenance,
   Storyworld,
+  StoryworldRegistration,
   StoryworldUpdate,
   TranscribeRequest,
   TranscribeResponse,
@@ -1213,6 +1214,96 @@ export function useListStoryworlds<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Requires authentication and an explicit rights confirmation. The repository must already exist on GitHub; this operation never creates or changes repository content. The server reads storyworld.json and the complete Storyworld Kit contract before indexing the repository.
+
+ * @summary Register an existing GitHub Storyworld Kit repository
+ */
+export const getRegisterStoryworldUrl = () => {
+  return `/api/storyworlds`;
+};
+
+export const registerStoryworld = async (
+  storyworldRegistration: StoryworldRegistration,
+  options?: RequestInit,
+): Promise<Storyworld> => {
+  return customFetch<Storyworld>(getRegisterStoryworldUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(storyworldRegistration),
+  });
+};
+
+export const getRegisterStoryworldMutationOptions = <
+  TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerStoryworld>>,
+    TError,
+    { data: BodyType<StoryworldRegistration> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof registerStoryworld>>,
+  TError,
+  { data: BodyType<StoryworldRegistration> },
+  TContext
+> => {
+  const mutationKey = ["registerStoryworld"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof registerStoryworld>>,
+    { data: BodyType<StoryworldRegistration> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return registerStoryworld(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegisterStoryworldMutationResult = NonNullable<
+  Awaited<ReturnType<typeof registerStoryworld>>
+>;
+export type RegisterStoryworldMutationBody = BodyType<StoryworldRegistration>;
+export type RegisterStoryworldMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | ErrorResponse
+>;
+
+/**
+ * @summary Register an existing GitHub Storyworld Kit repository
+ */
+export const useRegisterStoryworld = <
+  TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerStoryworld>>,
+    TError,
+    { data: BodyType<StoryworldRegistration> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof registerStoryworld>>,
+  TError,
+  { data: BodyType<StoryworldRegistration> },
+  TContext
+> => {
+  return useMutation(getRegisterStoryworldMutationOptions(options));
+};
 
 /**
  * @summary Get a storyworld by id

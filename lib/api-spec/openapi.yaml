@@ -313,6 +313,50 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Storyworld"
+    post:
+      operationId: registerStoryworld
+      tags: [storyworlds]
+      summary: Register an existing GitHub Storyworld Kit repository
+      description: >
+        Requires authentication and an explicit rights confirmation. The
+        repository must already exist on GitHub; this operation never creates
+        or changes repository content. The server reads storyworld.json and
+        the complete Storyworld Kit contract before indexing the repository.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoryworldRegistration"
+      responses:
+        "201":
+          description: Storyworld registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Storyworld"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Registration requires steward authority
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Repository is already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Repository does not satisfy the Storyworld Kit contract
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /storyworlds/{id}:
     get:
@@ -1412,6 +1456,22 @@ components:
         - readerTheme
         - createdAt
         - updatedAt
+
+    StoryworldRegistration:
+      type: object
+      required:
+        - repository
+        - rightsConfirmed
+      properties:
+        repository:
+          type: string
+          minLength: 1
+          description: GitHub repository URL or owner/name reference.
+        rightsConfirmed:
+          type: boolean
+          description: >
+            Confirms that the registering steward has checked the repository's
+            contents and has authority to register them for this storyworld.
 
     StoryworldUpdate:
       type: object

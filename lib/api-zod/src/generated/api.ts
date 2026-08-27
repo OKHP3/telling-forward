@@ -257,6 +257,24 @@ export const ListStoryworldsResponseItem = zod.object({
 export const ListStoryworldsResponse = zod.array(ListStoryworldsResponseItem);
 
 /**
+ * Requires authentication and an explicit rights confirmation. The repository must already exist on GitHub; this operation never creates or changes repository content. The server reads storyworld.json and the complete Storyworld Kit contract before indexing the repository.
+
+ * @summary Register an existing GitHub Storyworld Kit repository
+ */
+
+export const RegisterStoryworldBody = zod.object({
+  repository: zod
+    .string()
+    .min(1)
+    .describe("GitHub repository URL or owner\/name reference."),
+  rightsConfirmed: zod
+    .boolean()
+    .describe(
+      "Confirms that the registering steward has checked the repository's contents and has authority to register them for this storyworld.\n",
+    ),
+});
+
+/**
  * @summary Get a storyworld by id
  */
 export const GetStoryworldParams = zod.object({

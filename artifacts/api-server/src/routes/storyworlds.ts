@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type NextFunction, type Request, type Response } from "express";
 import { eq, and, asc, count, desc, inArray, or, sql } from "drizzle-orm";
 import {
   db,
@@ -19,6 +19,7 @@ import {
   ListStoryworldProposalsParams,
   CreateContributionBody,
   CreateContributionParams,
+  RegisterStoryworldBody,
   UpdateStoryworldBody,
   UpdateStoryworldParams,
   UpdateStoryworldResponse,
@@ -127,6 +128,302 @@ function parseCapsuleId(raw: string | string[] | undefined): number | null {
   return isNaN(n) ? null : n;
 }
 
+const SUPPORTED_STORYWORLD_KIT = "telling-forward-storyworld";
+const SUPPORTED_KIT_VERSION = 1;
+const REQUIRED_KIT_FILES = [
+  "CONTRIBUTING.md",
+  "CANON-POLICY.md",
+  "PROVENANCE.md",
+  ".github/labels.json",
+  ".github/CODEOWNERS.example",
+  ".github/branch-protection.md",
+  ".github/ISSUE_TEMPLATE/capsule.yml",
+  ".github/ISSUE_TEMPLATE/story-submission.yml",
+  ".github/workflows/validate-storyworld.yml",
+  "scripts/validate-storyworld-kit.mjs",
+] as const;
+const REQUIRED_KIT_LABELS = [
+  "capsule:character",
+  "capsule:arc",
+  "capsule:event",
+  "capsule:arc-beat",
+  "capsule:planned-event",
+  "capsule:motif",
+  "state:draft",
+  "state:submitted",
+  "state:under-review",
+  "state:returned-with-notes",
+  "state:accepted-into-canon",
+  "state:published-alternate",
+] as const;
+
+type StoryworldManifest = {
+  kit?: unknown;
+  kitVersion?: unknown;
+  storyworldId?: unknown;
+  title?: unknown;
+  name?: unknown;
+  canonBranch?: unknown;
+  contentRoot?: unknown;
+  provenanceContract?: unknown;
+  governance?: {
+    inviteOnly?: unknown;
+    publicContribution?: unknown;
+    automaticCanon?: unknown;
+    automaticRightsDecision?: unknown;
+  };
+};
+
+type RegistrationFailure = {
+  message: string;
+  details?: string[];
+};
+
+function parseGitHubRepositoryReference(reference: string): {
+  owner: string;
+  repo: string;
+} | null {
+  const value = reference.trim().replace(/\/+$/, "").replace(/\.git$/, "");
+  const urlMatch = value.match(/^https?:\/\/github\.com\/([^/]+)\/([^/?#]+)$/i);
+  const shortMatch = value.match(/^([^/\s]+)\/([^/\s]+)$/);
+  const owner = (urlMatch?.[1] ?? shortMatch?.[1])?.trim();
+  const repo = (urlMatch?.[2] ?? shortMatch?.[2])?.trim();
+
+  if (!owner || !repo || !/^[A-Za-z0-9_.-]+$/.test(owner) || !/^[A-Za-z0-9_.-]+$/.test(repo)) {
+    return null;
+  }
+
+  // GitHub repository identity is case-insensitive. Canonicalizing the
+  // database key prevents the unique constraint from being bypassed with a
+  // differently-cased URL.
+  return { owner: owner.toLowerCase(), repo: repo.toLowerCase() };
+}
+
+function asManifest(value: unknown): StoryworldManifest | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as StoryworldManifest)
+    : null;
+}
+
+function titleFromManifest(manifest: StoryworldManifest, repo: string): string | null {
+  const explicitTitle = typeof manifest.title === "string"
+    ? manifest.title.trim()
+    : typeof manifest.name === "string"
+      ? manifest.name.trim()
+      : "";
+  if (explicitTitle) return explicitTitle;
+
+  if (typeof manifest.storyworldId !== "string") return null;
+  const slug = manifest.storyworldId.trim();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug === "replace-with-storyworld-slug") {
+    return null;
+  }
+  return slug
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ") || repo;
+}
+
+function registrationFailure(message: string, details?: string[]): RegistrationFailure {
+  return { message, ...(details?.length ? { details } : {}) };
+}
+
+async function validateStoryworldRepository(
+  owner: string,
+  repo: string,
+): Promise<{
+  canonBranch: string;
+  title: string;
+} | RegistrationFailure> {
+  const gh = getGitHubClient();
+  let branches;
+  try {
+    branches = await gh.listBranches(owner, repo);
+  } catch {
+    return registrationFailure(
+      "GitHub could not read that repository. Check that it exists and that the Storyworld Kit is accessible.",
+    );
+  }
+
+  if (!branches.length) {
+    return registrationFailure("The repository has no branches to register.");
+  }
+
+  const branchNames = new Set(branches.map((branch) => branch.name.replace(/^refs\/heads\//, "")));
+  const probeBranch = branchNames.has("main")
+    ? "main"
+    : branches[0]!.name.replace(/^refs\/heads\//, "");
+
+  let manifest: StoryworldManifest | null;
+  try {
+    manifest = asManifest(JSON.parse(await gh.getFileContent(owner, repo, "storyworld.json", probeBranch)));
+  } catch {
+    return registrationFailure(
+      "The repository is missing a readable storyworld.json file.",
+    );
+  }
+
+  const errors: string[] = [];
+  if (!manifest) errors.push("storyworld.json must contain a JSON object");
+  if (manifest?.kit !== SUPPORTED_STORYWORLD_KIT) {
+    errors.push(`storyworld.json must declare kit=${SUPPORTED_STORYWORLD_KIT}`);
+  }
+  if (manifest?.kitVersion !== SUPPORTED_KIT_VERSION) {
+    errors.push(`storyworld.json must declare kitVersion=${SUPPORTED_KIT_VERSION}`);
+  }
+  if (typeof manifest?.storyworldId !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(manifest.storyworldId) ||
+      manifest.storyworldId === "replace-with-storyworld-slug") {
+    errors.push("storyworld.json must declare a real lowercase storyworldId slug");
+  }
+  if (typeof manifest?.canonBranch !== "string" || !manifest.canonBranch.trim()) {
+    errors.push("storyworld.json must declare canonBranch");
+  }
+  if (manifest?.contentRoot !== undefined &&
+      (typeof manifest.contentRoot !== "string" || !manifest.contentRoot.trim())) {
+    errors.push("storyworld.json contentRoot must be a non-empty path");
+  }
+  if (manifest?.provenanceContract !== "telling-forward:accepted-contribution:v1") {
+    errors.push("storyworld.json must declare the v1 provenance contract");
+  }
+  if (manifest?.governance?.inviteOnly !== true) {
+    errors.push("the Kit must remain invite-only");
+  }
+  if (manifest?.governance?.publicContribution !== false) {
+    errors.push("public contribution must remain disabled");
+  }
+  if (manifest?.governance?.automaticCanon !== false) {
+    errors.push("automatic canon must remain disabled");
+  }
+  if (manifest?.governance?.automaticRightsDecision !== false) {
+    errors.push("automatic rights decisions must remain disabled");
+  }
+
+  const canonBranch = typeof manifest?.canonBranch === "string"
+    ? manifest.canonBranch.trim().replace(/^refs\/heads\//, "")
+    : "";
+  if (canonBranch && !branchNames.has(canonBranch)) {
+    errors.push(`the declared canon branch "${canonBranch}" does not exist`);
+  }
+  if (errors.length) return registrationFailure("The repository failed Storyworld Kit validation.", errors);
+
+  const contractErrors: string[] = [];
+  for (const path of REQUIRED_KIT_FILES) {
+    try {
+      const content = await gh.getFileContent(owner, repo, path, canonBranch);
+      if (!content.trim()) contractErrors.push(`${path} is empty`);
+
+      if (path === ".github/labels.json") {
+        let labels: unknown;
+        try {
+          labels = JSON.parse(content);
+        } catch {
+          contractErrors.push(".github/labels.json is not valid JSON");
+          continue;
+        }
+        if (!Array.isArray(labels)) {
+          contractErrors.push(".github/labels.json must contain an array");
+        } else {
+          const labelNames = new Set(
+            labels
+              .filter((label): label is { name?: unknown } => Boolean(label && typeof label === "object"))
+              .map((label) => label.name),
+          );
+          for (const requiredLabel of REQUIRED_KIT_LABELS) {
+            if (!labelNames.has(requiredLabel)) {
+              contractErrors.push(`missing canonical label: ${requiredLabel}`);
+            }
+          }
+          if (labels.some((label) =>
+            !label || typeof label !== "object" ||
+            typeof (label as { name?: unknown }).name !== "string" ||
+            !/^[0-9a-f]{6}$/i.test(String((label as { color?: unknown }).color ?? "")),
+          )) {
+            contractErrors.push("every Kit label needs a name and six-digit hex color");
+          }
+        }
+      }
+
+      if (path === "PROVENANCE.md") {
+        for (const phrase of [
+          "telling-forward:accepted-contribution:v1",
+          "Submission-Id",
+          "Platform-Attribution",
+          "canon commit SHA",
+        ]) {
+          if (!content.includes(phrase)) {
+            contractErrors.push(`PROVENANCE.md is missing required convention: ${phrase}`);
+          }
+        }
+      }
+
+      if (path === ".github/workflows/validate-storyworld.yml") {
+        if (!content.includes("contents: read")) {
+          contractErrors.push("Kit validation workflow must use read-only contents permission");
+        }
+        if (/merge|publish|accept|rights decision/i.test(content)) {
+          contractErrors.push("Kit validation workflow must not contain editorial or rights actions");
+        }
+      }
+    } catch {
+      contractErrors.push(`missing required Kit file: ${path}`);
+    }
+  }
+
+  if (contractErrors.length) {
+    return registrationFailure("The repository failed the Storyworld Kit contract.", contractErrors);
+  }
+
+  const title = titleFromManifest(manifest!, repo);
+  if (!title) return registrationFailure("storyworld.json must provide a valid storyworld identity.");
+  return { canonBranch, title };
+}
+
+/**
+ * Registration has no storyworld ID to use with requireStewardForStoryworld.
+ * Existing stewards may register another world; on an empty installation the
+ * first authenticated rights-confirming user bootstraps the initial steward
+ * record for the first world.
+ */
+async function requireRegistrationSteward(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const userId = req.session.userId;
+  if (!userId) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+
+  try {
+    const membership = await db
+      .select({ id: stewardsTable.id })
+      .from(stewardsTable)
+      .where(eq(stewardsTable.userId, userId))
+      .limit(1);
+    if (membership.length) {
+      next();
+      return;
+    }
+
+    // A fresh installation has no existing steward membership to check. The
+    // first registration creates that membership inside the same transaction.
+    const worlds = await db
+      .select({ id: storyworldsTable.id })
+      .from(storyworldsTable)
+      .limit(1);
+    if (!worlds.length) {
+      next();
+      return;
+    }
+
+    res.status(403).json({ error: "Only a storyworld steward can register a repository." });
+  } catch (err) {
+    req.log.error({ err }, "registration steward check failed");
+    res.status(500).json({ error: "Could not verify steward authority." });
+  }
+}
+
 const router: IRouter = Router();
 
 // GET /api/storyworlds
@@ -169,6 +466,105 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: "Failed to load storyworlds" });
   }
 });
+
+// POST /api/storyworlds
+// Repository creation remains a GitHub-side action (ADR-0014). This endpoint
+// only lets an authenticated steward index an already-existing, validated Kit.
+router.post(
+  "/",
+  requireAuth,
+  requireRegistrationSteward,
+  async (req, res): Promise<void> => {
+    const body = RegisterStoryworldBody.safeParse(req.body);
+    if (!body.success) {
+      res.status(400).json({ error: "Provide a GitHub repository and confirm its rights are cleared." });
+      return;
+    }
+    if (!body.data.rightsConfirmed) {
+      res.status(403).json({
+        error: "A steward must confirm that the repository contents are rights-cleared before registration.",
+      });
+      return;
+    }
+
+    const repository = parseGitHubRepositoryReference(body.data.repository);
+    if (!repository) {
+      res.status(400).json({ error: "Use a GitHub repository URL or owner/name reference." });
+      return;
+    }
+
+    try {
+      const existing = await db
+        .select({ id: storyworldsTable.id })
+        .from(storyworldsTable)
+        .where(and(
+          eq(storyworldsTable.repoOwner, repository.owner),
+          eq(storyworldsTable.repoName, repository.repo),
+        ))
+        .limit(1);
+      if (existing.length) {
+        res.status(409).json({ error: "That GitHub repository is already registered as a storyworld." });
+        return;
+      }
+
+      const validated = await validateStoryworldRepository(repository.owner, repository.repo);
+      if ("message" in validated) {
+        res.status(422).json({
+          error: validated.message,
+          ...(validated.details ? { details: validated.details } : {}),
+        });
+        return;
+      }
+
+      const userId = req.session.userId;
+      if (!userId) {
+        res.status(401).json({ error: "Authentication required" });
+        return;
+      }
+      const created = await db.transaction(async (tx) => {
+        const [world] = await tx
+          .insert(storyworldsTable)
+          .values({
+            repoOwner: repository.owner,
+            repoName: repository.repo,
+            title: validated.title,
+            stewardId: userId,
+            canonBranchRef: validated.canonBranch,
+          })
+          .returning();
+        if (!world) throw new Error("Storyworld insert returned no row");
+
+        await tx.insert(stewardsTable).values({
+          storyworldId: world.id,
+          userId,
+          role: "owner",
+        });
+        await tx.insert(storyPathsTable).values({
+          storyworldId: world.id,
+          branchRef: validated.canonBranch,
+          title: "Canon Path",
+          state: "open",
+        });
+        return world;
+      });
+
+      res.status(201).json({
+        ...created,
+        pathCount: 1,
+        savedMomentCount: 0,
+      });
+    } catch (err) {
+      const code = (err as { code?: unknown }).code;
+      const constraint = (err as { constraint?: unknown }).constraint;
+      if (code === "23505" || constraint === "storyworlds_repo_unique") {
+        res.status(409).json({ error: "That GitHub repository is already registered as a storyworld." });
+        return;
+      }
+      req.log.error({ err }, "registerStoryworld failed");
+      res.status(500).json({ error: "Storyworld registration failed before the index could be created." });
+    }
+  },
+);
 
 // GET /api/storyworlds/:id
 router.get("/:id", async (req, res) => {

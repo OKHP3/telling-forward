@@ -87,6 +87,17 @@ export interface Storyworld {
   updatedAt: string;
 }
 
+export interface StoryworldRegistration {
+  /**
+   * GitHub repository URL or owner/name reference.
+   * @minLength 1
+   */
+  repository: string;
+  /** Confirms that the registering steward has checked the repository's contents and has authority to register them for this storyworld.
+   */
+  rightsConfirmed: boolean;
+}
+
 export interface StoryworldUpdate {
   /**
    * One short, single-line invitation for the Reader discovery page. Send null to clear the current seed sentence.

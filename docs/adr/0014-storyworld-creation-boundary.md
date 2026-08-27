@@ -94,10 +94,12 @@ Reasoning:
   proven, without requiring a new ADR (it does not change the creation
   boundary, only the trigger for registration).
 
-Regardless of this decision, one gap is real and unaffected by which framing
-was chosen: there is currently no `createStoryworld` **or**
-`registerStoryworld` endpoint of any kind. That is the concrete next build
-item this ADR authorizes scoping work for.
+The registration gap identified by this ADR is now closed: the Author App
+exposes a steward-guarded `registerStoryworld` mutation. It accepts only an
+existing GitHub repository, requires an explicit rights confirmation, validates
+`storyworld.json` and the complete Kit contract against the supported version,
+and creates the rebuildable application index atomically. Repository creation
+and Kit application remain outside the app.
 
 ## Guardrails
 
