@@ -52,3 +52,53 @@ reachable shared Redis service:
 No connection string, credential, participant identity, or production URL was
 recorded because none was available and secrets must not be included in
 evidence.
+
+## Follow-up controlled run — 2026-08-27
+
+This run reached the shared-service phase using two production-like API
+processes and one ephemeral local Redis service. The Redis endpoint is
+intentionally omitted.
+
+- **Run ID:** `2026-08-27-auth-rate-limit-two-instance`
+- **Run time (UTC):** `2026-08-27T13:39:42Z`
+- **Run type:** `controlled production-like verification`
+- **Decision:** `local shared-service controls passed; publication evidence blocked`
+- **Workspace revision under test:** `b081215492850c8d5d5d9389b2acc26ddbbf7cce`
+- **Published revision:** `TBD — deployment metadata reports no active deployment`
+- **Published URL:** `TBD — deployment metadata reports no active deployment`
+
+### Prerequisite and readiness evidence
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Shared Redis service | Pass | One ephemeral Redis service was used by both API processes; the endpoint was not recorded |
+| API instance 1 readiness | Pass | Log emitted `Rate-limit Redis connection ready` before listening |
+| API instance 2 readiness | Pass | Log emitted `Rate-limit Redis connection ready` before listening |
+| Published deployment | Blocked | Deployment lookup succeeded but reported `isDeployed=false` and no production URL or revision |
+
+### Shared quota evidence
+
+Requests used the same resolved client IP and alternated between the two API
+processes. The login limiter allowed ten invalid-credential requests across
+both processes and rejected the eleventh:
+
+| Alternating request range | Result |
+| --- | --- |
+| Requests 1, 3, 5, 7, 9 | `401` on instance 1 |
+| Requests 2, 4, 6, 8, 10 | `401` on instance 2 |
+| Request 11 | `429` on instance 1 with `Retry-After` |
+
+This proves the ten-request IP quota was consumed once by the shared Redis
+store rather than independently by each process.
+
+### Redis removal / failure evidence
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Production startup without `REDIS_URL` | Pass | Process exited with status 1 before listening and reported `REDIS_URL must be configured in production...` |
+| First request after runtime Redis shutdown | Not used as acceptance evidence | The initial probe raced the client's disconnect detection and returned `401`; no fail-closed claim is made from it |
+
+The required removal path is therefore satisfied by the production startup
+guard. A public deployment smoke test remains outstanding and must use the
+published revision plus a reachable managed Redis service; this local run does
+not establish production availability.
