@@ -42,16 +42,13 @@ jobs:
           if git diff --quiet -- artifacts/web/package.json pnpm-lock.yaml; then
             exit 0
           fi
-          branch="automation/refresh-mermaid"
+          branch="automation/refresh-mermaid-${GITHUB_RUN_ID}"
           git config user.name "telling-forward-dependency-bot"
           git config user.email "telling-forward-dependency-bot@users.noreply.github.com"
-          if git ls-remote --exit-code origin "refs/heads/$branch" >/dev/null 2>&1; then
-            git fetch origin "$branch"
-          fi
-          git switch --create "$branch" || git switch "$branch"
+          git switch --create "$branch"
           git add artifacts/web/package.json pnpm-lock.yaml
           git commit -m "chore(web): refresh Mermaid"
-          git push --force-with-lease origin "$branch"
+          git push --set-upstream origin "$branch"
           pr_url="$(gh pr list --head "$branch" --base main --state open --json url --jq '.[0].url')"
           if [ -z "$pr_url" ]; then
             pr_url="$(gh pr create --base main --head "$branch" --title "chore(web): refresh Mermaid" --body "Automated daily Mermaid refresh. The workflow ran the Author App typecheck and production build before opening this pull request.")"
