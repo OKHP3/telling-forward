@@ -23,7 +23,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The Pages client can be published only after the separately hosted API
+  # origin exists. Keep this workflow quiet during the documented pre-API
+  # phase instead of creating a failing notification on every web change.
   build:
+    if: ${{ vars.TELLING_FORWARD_API_BASE_URL != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
