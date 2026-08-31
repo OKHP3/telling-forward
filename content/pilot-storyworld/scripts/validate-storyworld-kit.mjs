@@ -93,8 +93,20 @@ const workflow = await text(".github/workflows/validate-storyworld.yml");
 if (!workflow.includes("contents: read")) {
   errors.push("validation workflow must use read-only contents permission");
 }
+if (!/^\s+name:\s+validate-storyworld\s*$/m.test(workflow)) {
+  errors.push(
+    "validation workflow must emit the required check context validate-storyworld",
+  );
+}
 if (/merge|publish|accept|rights decision/i.test(workflow)) {
   errors.push("validation workflow must not contain editorial or rights actions");
+}
+
+const branchProtection = await text(".github/branch-protection.md");
+if (!branchProtection.includes("exact check context `validate-storyworld`")) {
+  errors.push(
+    "branch protection must require the exact validate-storyworld check context",
+  );
 }
 
 if (errors.length) {

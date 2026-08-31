@@ -89,12 +89,38 @@ canon branch.
 ## Configuration discrepancy discovered
 
 The live branch-protection rule requires the status context
-`validate-storyworld`, while the workflow currently emits the check name
+`validate-storyworld`, while the workflow at the time emitted the check name
 `Validate structural contract`. The structural job succeeded, but GitHub still
 reported the PR as blocked after steward approval because the exact required
 context was still expected.
 
 This evidence therefore proves the review gate and the successful structural
 job, but it does **not** claim that the live required-check configuration is
-merge-ready. Aligning the protected context with the emitted check name is a
-separate follow-up and is intentionally not changed by this exercise.
+merge-ready for that historical run.
+
+## Post-fix acceptance check
+
+**Date:** 2026-08-31
+**Type:** Owner-approved synthetic configuration check
+**Disposition:** Passed; no synthetic change merged
+
+The Storyworld Kit now keeps the protected requirement and emitted check
+context identical:
+
+- Required branch-protection context: `validate-storyworld`
+- Workflow job/check emitted: `validate-storyworld`
+- Required steward review: one approving review from the designated code owner
+
+The synthetic acceptance matrix is conjunctive:
+
+| Structural check | Steward approval | Expected pull-request state |
+| --- | --- | --- |
+| success | present | merge-ready |
+| success | absent | blocked |
+| missing or unsuccessful | present | blocked |
+
+The matrix confirms that a pull request is merge-ready only after the named
+structural check succeeds **and** the designated steward approval is present.
+This is a gate-readiness assertion, not a decision about canon, rights,
+moderation, or publication; the structural workflow retains read-only contents
+permission and has no merge authority.

@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   structural-contract:
-    name: Validate structural contract
+    name: validate-storyworld
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
