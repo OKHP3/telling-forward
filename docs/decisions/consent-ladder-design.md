@@ -153,7 +153,8 @@ the following gate is approved and evidenced:
    review and display permission; and
 6. the preservation, independent-copy, backup, legal-hold, appeal, and
    correction paths in `withdrawal-preservation-policy.md` are operationally
-   owned and tested.
+   owned and tested. The private-pilot operating rules are approved there;
+   enforcement is not.
 
 Until this gate is approved, existing prototype affordances must not be
 treated as permission to transform real contributor material.
@@ -359,10 +360,13 @@ retention effects.
   and age/guardian rules.
 - The exact deletion/export process and the operational window for taking
   licensed displays down.
-- The legal/privacy review and operational enforcement of the source-specific
-  Disrupt/Invert derivative consent model.
-- The legal/privacy review, jurisdictional terms, and operational enforcement
-  for the accepted-derivative disposition policy.
+- The operational enforcement of the source-specific Disrupt/Invert derivative
+  consent model.
+- Jurisdiction-specific terms and operational enforcement for the
+  accepted-derivative disposition policy. The private-pilot retention, removal,
+  legal-hold, appeal, and correction rules are approved in
+  `withdrawal-preservation-policy.md`, but are not legal advice or an
+  authorization to enforce the feature.
 - Whether anonymous readers may use any optional reaction or telemetry features.
 - Whether a future storyworld may offer a broader, independently negotiated
   contribution agreement; it must remain an explicit alternative, not a hidden

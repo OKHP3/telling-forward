@@ -3,6 +3,24 @@ status: policy-fixtures-only
 enforcement_approved: false
 proposal_state_model_unchanged: true
 public_contribution_launched: false
+operational_rules:
+  effective_date: 2026-08-31
+  approval_status: private-pilot-operational-rules-approved-enforcement-not-approved
+  approvals:
+    owner: approved
+    legal_reviewer: approved-with-stricter-jurisdictional-rules-prevailing
+    privacy_reviewer: approved-with-stricter-privacy-rules-prevailing
+  managed_surface_window:
+    standard: 7-calendar-days-after-approved-disposition
+    urgent_safety_privacy_or_legal_hold: immediate-temporary-hold-and-final-review-within-24-hours-where-practicable
+  private_disposition_record_retention: 24-months-after-final-disposition
+  encrypted_backup_retention: 35-days-per-archive
+  legal_hold: suspends-scoped-deletion-and-backup-expiry-until-owner-and-legal-privacy-release
+  appeal_window: 30-calendar-days-after-decision-notice
+  appeal_decision_target: 14-calendar-days-after-complete-request
+  appeal_authority: owner-plus-independent-legal-or-privacy-reviewer; original-steward-advisory-only
+  correction: managed-surfaces-within-7-calendar-days; append-audit-event; no-automatic-github-history-rewrite
+  independent_copies: outside-service-control-and-not-promised
 cases:
   - id: draft-contributor-withdraws
     situation: A contributor withdraws a draft before editorial review begins.
@@ -87,9 +105,7 @@ cases:
       - consent-policy-version-and-revocation-time
       - legal-hold-and-decision-audit
     unresolved:
-      - jurisdiction-specific-legal-or-privacy-disposition
-      - owner-approved-operational-window
-      - appeal-or-correction-outcome
+      - jurisdiction-specific-legal-or-privacy-disposition-may-require-stricter-result
     policy_default:
       - stop-new-source-dependent-use-after-revocation
       - hold-unreleased-use-pending-review
@@ -127,8 +143,7 @@ cases:
       route: owner-approved-reader-attribution-or-content-correction
       rewrite_github_history_automatically: false
     unresolved:
-      - jurisdiction-specific-disposition
-      - approved-operational-window
+      - jurisdiction-specific-disposition-may-require-stricter-result
 
   - id: invert-revoked-after-release
     situation: A contributor approved one private Invert run for an accepted capsule, and the derivative was later released with separate display approval before the contributor revoked Invert consent.
@@ -160,5 +175,4 @@ cases:
       rewrite_github_history_automatically: false
     unresolved:
       - whether-the-released-derivative-is-sufficiently-separable
-      - jurisdiction-specific-disposition
-      - appeal-outcome
+      - jurisdiction-specific-disposition-may-require-stricter-result

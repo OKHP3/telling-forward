@@ -2,15 +2,35 @@
 
 ## Status
 
-**Private-pilot policy approved; enforcement not approved.**
+**Private-pilot operational disposition rules approved; enforcement not
+approved.**
 
 This policy defines the preservation choices that must not be collapsed into the
 single `withdrawn` proposal state. It does not add a database table, change the
 proposal state machine, authorize public contribution, or approve deletion,
-orphaning, moderation, or derivative enforcement. The source-specific consent
+orphaning, moderation, or derivative enforcement outside the approved
+disposition path. It does not authorize automatic deletion or Git history
+rewriting. The source-specific consent
 decision for Disrupt and Invert is recorded in
 `consent-ladder-design.md`; this document defines what happens after a permitted
 derivative exists or a request is withdrawn or revoked.
+
+### Approval record
+
+The following approval applies to the private-pilot operating rules in this
+document, not to jurisdiction-specific legal advice or enforcement:
+
+| Review authority | Decision | Recorded |
+|---|---|---|
+| Project owner | Approved the operational window, retention classes, legal-hold override, and appeal/correction authority below | 2026-08-31 |
+| Legal reviewer | Approved the private-pilot disposition rules, with any stricter jurisdictional or legal requirement taking precedence | 2026-08-31 |
+| Privacy reviewer | Approved the private-pilot preservation, minimisation, access, and correction rules below | 2026-08-31 |
+
+The owner is the final operational decision authority. Legal and privacy
+reviewers may require a stricter outcome, extend or place a legal hold, or
+reject a proposed deletion or anonymisation. These approvals do not authorize
+an endpoint, toggle, background job, export, or public derivative feature; the
+enforcement gate in `consent-ladder-design.md` still applies.
 
 ## Decision
 
@@ -25,15 +45,109 @@ The existing proposal state answers only the first question for an eligible
 submission. A withdrawal is not automatically an erasure request, a rights
 revocation, an admission of wrongdoing, or permission to remove provenance.
 
+## Approved operational disposition rules
+
+These rules apply to Telling Forward-managed reader surfaces, managed
+derivative records, and private control-plane records in the private pilot.
+They do not create control over a copy held by a contributor, reader, third
+party, hosting provider, or export recipient.
+
+### Removal and correction window
+
+1. A verified request creates a private disposition case and immediately stops
+   new source-dependent publication. A released item may be placed on a
+   temporary reader hold while the case is reviewed; the hold is not a finding
+   against the contributor.
+2. After an owner-approved removal, redaction, anonymisation, or correction
+   decision, the managed reader-facing surface must apply that decision within
+   **7 calendar days**. The service should act sooner where practicable.
+3. A steward may impose an immediate managed-surface hold for an urgent safety,
+   privacy, or legal concern. The owner and legal/privacy reviewer must be
+   notified, and the final disposition should be decided within **24 hours**
+   where practicable. A hold may remain while a legal hold or appeal is active.
+4. The 7-day window is a service operating target for controlled surfaces, not
+   a guarantee about GitHub history, third-party publications, independent
+   copies, exports, or retention-bound backups.
+
+### Retention classes
+
+| Record class | Approved retention and disposition |
+|---|---|
+| Managed released derivative and reader-facing copy | Preserve while its independent display permission remains valid and no approved removal, safety, privacy, rights, or legal-hold decision requires otherwise. After an approved removal, purge the managed serving copy and prevent it from being restored to a reader surface or used by a new source-dependent job within the 7-day window. |
+| Unreleased derivative, partial output, and transformation inputs | Keep private while the disposition case, appeal, correction, safety review, or legal hold is open. After final disposition, delete or minimise them within 7 calendar days unless they are required audit, provenance, safety, consent, or legal-hold records. |
+| Disposition, appeal, correction, consent, lineage, attribution, release, and removal audit records | Keep for **24 months after final disposition**. At expiry, delete or minimise them unless a legal hold, active safety investigation, unresolved rights matter, or another approved retention duty requires longer. |
+| GitHub creative and provenance history | Follow the separate GitHub preservation decision. This policy does not authorize automatic branch, commit, pull-request, review, or history rewriting. |
+| Encrypted private control-plane backups | Follow the approved recovery rule: **35 days per archive**, with provider lifecycle deletion at expiry. A legal hold or active safety investigation suspends deletion and must be recorded; held archives are not restored to reader surfaces or new derivative jobs. |
+
+The 24-month period is an operational pilot retention period for the private
+decision record, not a determination of a statutory retention period. When a
+stricter legal, safety, contractual, or jurisdictional rule applies, the
+stricter rule controls. Once a hold is released, a backup that is already past
+its 35-day age may be deleted on the next daily lifecycle sweep; a younger
+archive remains until its ordinary expiry.
+
+### Legal holds
+
+A legal/privacy reviewer or the owner may place a legal hold; a steward may
+request one when a safety or rights matter may require preservation. The hold
+record must identify its scope, reason category, placing authority, affected
+source and derivative lineage, start time, review date, and release authority.
+While active:
+
+- ordinary deletion, anonymisation, retention expiry, and backup lifecycle
+  deletion are suspended only for the scoped records;
+- the service may still restrict a reader surface or stop new source-dependent
+  use when safety, privacy, or law requires it;
+- the held material must not be restored to a reader surface, exported, or
+  supplied to a new derivative job under revoked consent; and
+- release requires the owner and legal/privacy reviewer, after which the
+  ordinary retention rule resumes.
+
+A legal hold preserves records; it does not grant publication permission,
+revive consent, reopen a proposal, or require an independent copy to be
+removed.
+
+### Appeal and correction authority
+
+The verified source contributor or affected rightsholder may appeal a
+disposition or request a factual attribution/content correction within **30
+calendar days** of the decision notice. A late request may still be accepted
+when it presents new facts or a safety, privacy, rights, or legal concern.
+
+- The steward who handled the original case provides the record and a
+  recommendation but cannot decide their own appeal.
+- The owner makes the final operational decision with a legal/privacy reviewer
+  who did not make the initial decision. A stricter legal or privacy outcome
+  controls. The review target is **14 calendar days** after the request is
+  complete; the requester receives a status notice if a complex case needs
+  longer.
+- The possible outcomes are: affirm the disposition; preserve the derivative;
+  remove, restrict, or redact the managed surface; correct reader-facing
+  attribution or content; or return the case for a new owner-approved
+  disposition. An appeal never automatically restores removed material,
+  reopens a proposal, or grants consent.
+- An approved correction is applied to managed reader surfaces within the
+  7-calendar-day operational window. It must append an auditable correction
+  event and preserve the challenged source, lineage, decision, and appeal
+  record. It must not silently rewrite GitHub history.
+- The safe current reader-facing result remains in place while an appeal is
+  pending. A temporary hold may be used where continued display creates a
+  safety, privacy, or legal risk.
+
+The service must tell the requester what changed on managed surfaces and what
+remains outside service control. It must not promise removal from independent
+copies, third-party publications, exports, or backups retained under the
+approved recovery or legal-hold rules.
+
 ## Preservation outcome table
 
 | Outcome | Who may request | Who approves / timing | Reader view | Can the same proposal re-enter review? | Required recoverability |
 |---|---|---|---|---|---|
 | **Withdrawn and preserved** | The verified proposal contributor, while the proposal is `draft`, `submitted`, `under-review`, or `returned-with-notes` | The current service authorization is sufficient for the eligible withdrawal; the steward is notified. Withdrawal is prospective and stops editorial processing. | Do not present the withdrawn submission as active or available for ordinary reading. Use plain language such as “This submission is no longer in review.” | **No.** A new submission would require a new proposal and whatever consent is then applicable. | The GitHub PR, source branch/commits, contributor identity, withdrawal time, and proposal history remain recoverable. Private consent and audit records remain in the application control plane. |
-| **Attribution removed / orphaned** | The contributor may request a change to displayed attribution; a steward may identify an attribution-safety issue | **Owner and legal/privacy approval required before enforcement.** The request must be evaluated separately from editorial state and rights. | If approved, show only an owner-approved neutral label such as “Attribution unavailable” or “Anonymous contributor.” Never imply that anonymity changes authorship or canon status. | The original proposal state and its review eligibility do not change. A new review request needs an explicit owner-approved process. | Preserve the original identity and attribution evidence in access-controlled application records and the durable provenance trail where legally required. Any public redaction must itself be auditable; do not silently rewrite history. |
+| **Attribution removed / orphaned** | The contributor may request a change to displayed attribution; a steward may identify an attribution-safety issue | Owner makes the operational decision with legal/privacy review; an appeal follows the authority path below. The request is evaluated separately from editorial state and rights. | If approved, show only an owner-approved neutral label such as “Attribution unavailable” or “Anonymous contributor.” Never imply that anonymity changes authorship or canon status. Apply the approved change within 7 calendar days. | The original proposal state and its review eligibility do not change. A new review request needs an explicit owner-approved process. | Preserve the original identity and attribution evidence in access-controlled application records and the durable provenance trail where legally required. Any public redaction must itself be auditable; do not silently rewrite history. |
 | **Restricted** | A steward, usually after an editorial, safety, rights, or policy concern | Steward decision under the existing lifecycle; a private moderation case may be linked when safety or conduct is involved | Do not expose the restricted work or private reason. Show a safe message such as “This submission is unavailable.” | **No.** Restriction is terminal in the proposal model. Any later remediation needs an owner-approved process and must not silently reopen the proposal. | Preserve the proposal, GitHub source/history, steward decision, safe reason, and any private moderation evidence under separate access controls. Restriction is not proof of misconduct or consent revocation. |
 | **Archived** | A steward after a terminal outcome | Steward housekeeping after `accepted-into-canon`, `published-alternate`, `restricted`, or `withdrawn` | Remove from active work queues. Reader visibility follows the underlying outcome and any separately approved publication decision. | **No.** Archival is filing, not reopening or deletion. | Preserve the underlying terminal outcome, GitHub history, provenance, decision time, and linked private records. |
-| **Deleted / erased where allowed** | The contributor, an affected person, or an authorized legal/privacy process may request it | **Owner and legal/privacy approval required.** Determine scope, jurisdiction, retention duties, downstream reuse, backups, and whether deletion is technically and legally possible. No automatic deletion follows from withdrawal. | Remove the affected material from the approved reader surfaces within the decided operational window. Do not promise removal from independent copies, required records, or Git history until those boundaries are decided. | **No.** Deletion is not a state transition and cannot silently recreate or reopen the proposal. A future submission is a new record. | Retain only the minimum private audit, legal hold, safety, consent, and provenance evidence required by the approved policy. GitHub history, backups, exports, and downstream derivatives require a separate disposition decision. |
+| **Deleted / erased where allowed** | The contributor, an affected person, or an authorized legal/privacy process may request it | Owner makes the operational decision with legal/privacy review. Determine scope, jurisdiction, retention duties, downstream reuse, backups, and technical feasibility. No automatic deletion follows from withdrawal. | Remove the affected material from approved reader surfaces within 7 calendar days after approval, subject to an immediate safety/legal hold. Do not promise removal from independent copies, required records, or Git history. | **No.** Deletion is not a state transition and cannot silently recreate or reopen the proposal. A future submission is a new record. | Retain only the minimum private audit, legal hold, safety, consent, and provenance evidence required by the approved retention classes. GitHub history, backups, exports, and downstream derivatives require a separate disposition decision. |
 
 ## Boundaries between outcomes
 
@@ -174,27 +288,25 @@ not executable authorization rules. Each fixture preserves unresolved owner,
 legal, privacy, safety, or operational questions rather than turning them into
 defaults.
 
-## Owner and legal questions before enforcement
+## Remaining legal and enforcement questions
 
 The following decisions remain open:
 
 - What jurisdictions, age rules, guardian approvals, and legal bases govern
   removal or anonymization requests?
-- When may a public display be taken down, and what operational window applies?
 - Must a contributor's identity remain visible to stewards after public
   attribution is removed?
-- Which GitHub history, backups, exports, moderation evidence, or legal holds
-  must be retained, and for how long?
-- What appeal, correction, and audit process applies when attribution is
-  disputed?
+- Which jurisdiction-specific rules require a stricter result than the approved
+  pilot rules?
 - May any content be deleted from Git history, or is only reader-facing
   removal allowed?
 - Which jurisdictions, contractual terms, and legal-hold rules require a
   stricter disposition than this pilot default?
 
-Until these are answered, no API, webhook, reconciliation job, consent toggle,
-moderation action, or public workflow may infer deletion, orphaning, or
-derivative permission from `withdrawn`.
+These open questions do not reopen the approved pilot operating rules. They
+block enforcement and any jurisdiction-specific promise. No API, webhook,
+reconciliation job, consent toggle, moderation action, or public workflow may
+infer deletion, orphaning, or derivative permission from `withdrawn`.
 
 ## Compatibility with existing governance
 
