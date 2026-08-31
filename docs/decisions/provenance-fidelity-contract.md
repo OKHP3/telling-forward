@@ -3,8 +3,10 @@
 ## Status
 
 **Reader visibility boundary decided for the private pilot (2026-08-21);
-contributor review boundary recorded (2026-08-26); implementation and
-enforcement not approved. No reader or contributor feature added.**
+contributor review boundary recorded (2026-08-26); contributor review approval
+deferred pending owner, legal, and privacy sign-off (2026-08-31);
+implementation and enforcement not approved. No reader or contributor feature
+added.**
 
 This document consolidates the overlapping proposals in ADR-0005, ADR-0006,
 ADR-0007, ADR-0009, ADR-0010, and ADR-0011. It defines the records and release
@@ -128,6 +130,31 @@ revocation, display license, canon decision, or deletion request. A steward’s
 reason may be shown only after removing identity, moderation, legal, safety,
 and other protected details that are not necessary for the contributor to
 understand what they can do next.
+
+#### Contributor review approval register — private pilot gate
+
+**Recorded 2026-08-31. Decision: deferred.** The contributor review rules below
+remain the proposed design baseline, but no explicit owner, legal, or privacy
+sign-off is recorded for this contract. “Deferred” means the rule is retained
+for review and is not authorized for implementation. It is not an approval by
+silence, and it does not authorize a transform endpoint, worker, schema,
+consent toggle, export, or contributor-facing UI.
+
+| Review item | Status | Decision record and required review coverage |
+|---|---|---|
+| Contributor-facing field list | **Deferred** | The limited list in this section remains the proposal. Owner review must confirm that every displayed field is necessary for the contributor’s own review; legal and privacy review must confirm that the presentation and its redaction rules do not expose protected third-party, identity, moderation, safety, legal, or consent details. |
+| Review states and actions | **Deferred** | The four proposed actions — “Use this version,” “Don’t use this version,” “Ask for changes,” and “Ask for another review” — remain the proposal. Owner review must confirm the editorial behavior and wording; legal and privacy review must confirm that no action is represented as a rights grant, revocation, deletion request, or protected-record disclosure. |
+| Appeal path | **Deferred** | The separate `appeal-pending` path and its safe contributor-language outcome remain the proposal. Owner review must confirm who may resolve it and what the contributor can do next; legal and privacy review must confirm that appeal evidence, steward identity, safety details, and protected reasons remain outside the contributor note unless separately cleared. |
+| Plain-language copy | **Deferred** | The wording guide and four action labels remain provisional copy. Owner review must confirm that the copy is understandable and does not imply quality, approval, canon, authorship, or permission; legal and privacy review must confirm that the copy accurately describes the boundary without turning technical or protected details into a disclosure. |
+| Protected-field redactions | **Deferred** | The exclusion list in this contract is the minimum proposed redaction boundary. Legal and privacy review must cover model/provider and operational metadata, raw repository references, private annotations, identity, moderation, safety, legal holds, consent records, retention/deletion decisions, and unrelated contributor material. |
+| Separation from consent | **Deferred** | The proposal-state rules and the consent ladder remain separate by design. Legal and privacy review must confirm that accepting, rejecting, requesting changes, appealing, or withdrawing a proposal cannot grant, revoke, or alter consent, a display license, canon status, authorship, or deletion rights. |
+
+No reviewer names, dates, approval language, or revision instructions have
+been recorded for the owner, legal, or privacy reviews. Until those reviews
+produce an explicit **approved**, **revised**, or **deferred** result beside this
+register, the status remains **deferred** and the implementation gate remains
+closed. If a review is revised, the changed field, state, path, or copy must be
+recorded here before any later approval is considered.
 
 #### Fields that must not appear in a contributor fidelity note
 
