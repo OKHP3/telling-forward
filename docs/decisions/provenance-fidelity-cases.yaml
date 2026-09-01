@@ -74,6 +74,46 @@ cases:
       structural_simplification: described
       audience_calibration: feedback-only
       human_review_status: not-reviewed
+    contributor-facing-fixture:
+      allowed_fields:
+        - source-version-label
+        - output-version-label
+        - change-type
+        - changed-material
+        - preserved-intent
+        - questions-to-check
+        - meaning-check
+        - structure-and-length
+        - intended-audience
+        - review-status-and-safe-event
+      protected_field_categories:
+        - model-provider-and-operational-metadata
+        - github-and-repository-references
+        - machine-scores-and-comparison-material
+        - identity-and-private-annotations
+        - consent-and-attribution-controls
+        - moderation-and-safety-records
+        - legal-retention-and-deletion-records
+        - unreleased-source-and-output-material
+      protected_sentinels:
+        model_provider: private-model-provider-sentinel
+        engine_and_run: "PIE / run-private-001"
+        github_repository: "github:OKHP3/telling-forward"
+        github_commit: deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
+        source_digest: "sha256:private-source-digest"
+        machine_score: 0.97
+        machine_diff: machine-diff-sentinel
+        contributor_identity: github:other-contributor
+        steward_identity: github:private-steward
+        private_annotation: private-reviewer-annotation
+        consent_record: consent-record-private-001
+        moderation_record: moderation-case-private-001
+        safety_evidence: private-safety-evidence
+        legal_hold: legal-hold-private-001
+        retention_decision: retain-until-private-date
+        deletion_decision: deletion-approval-private-001
+        appeal_evidence: private-appeal-evidence
+        unreleased_material: unreleased-private-material
     expected_result: proposed-output-not-authorized
     visibility: contributor-and-steward
     unresolved:
