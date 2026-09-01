@@ -12,7 +12,6 @@ const user = {
 
 let currentUser = null;
 let unreadCountMode = "count";
-let unreadCountRequests = 0;
 
 function json(route, body, status = 200) {
   return route.fulfill({
@@ -25,9 +24,26 @@ function json(route, body, status = 200) {
 async function main() {
   const browser = await chromium.launch();
   const context = await browser.newContext();
-  const page = await context.newPage();
+  const firstPage = await context.newPage();
+  const secondPage = await context.newPage();
+  const unreadCountRequests = new Map([
+    [firstPage, 0],
+    [secondPage, 0],
+  ]);
 
-  await page.route("**/api/**", async (route) => {
+  for (const page of [firstPage, secondPage]) {
+    page.on("request", (request) => {
+      const url = new URL(request.url());
+      if (
+        url.pathname === "/api/me/notifications/unread-count" &&
+        request.method() === "GET"
+      ) {
+        unreadCountRequests.set(page, unreadCountRequests.get(page) + 1);
+      }
+    });
+  }
+
+  await context.route("**/api/**", async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
 
@@ -53,7 +69,6 @@ async function main() {
       path === "/api/me/notifications/unread-count" &&
       request.method() === "GET"
     ) {
-      unreadCountRequests += 1;
       if (unreadCountMode === "unauthorized") {
         return json(route, { error: "Authentication required" }, 401);
       }
@@ -69,56 +84,87 @@ async function main() {
     return route.continue();
   });
 
-  try {
-    await page.goto(`${base}/sign-in`);
-    await page.locator("#sign-in-email").fill(email);
-    await page.locator("#sign-in-password").fill(password);
-    await page.getByRole("button", { name: "Sign in" }).click();
-    await page.waitForURL(`${base}/`);
+  async function signInFromFirstTab() {
+    await firstPage.goto(`${base}/sign-in`);
+    await firstPage.locator("#sign-in-email").fill(email);
+    await firstPage.locator("#sign-in-password").fill(password);
+    await firstPage.getByRole("button", { name: "Sign in" }).click();
+    await firstPage.waitForURL(`${base}/`);
+    await secondPage.goto(`${base}/`);
+    await secondPage.getByTestId("button-logout").waitFor();
+  }
 
+  async function loadUnreadBadge(page) {
     await page.goto(`${base}/inbox`);
     await page.getByTestId("inbox-unread-count").waitFor();
-    assert.equal(
-      await page.getByTestId("inbox-unread-count").innerText(),
-      "4",
-    );
+    assert.equal(await page.getByTestId("inbox-unread-count").innerText(), "4");
+  }
 
-    const requestsBeforeLogout = unreadCountRequests;
-    await page.getByTestId("button-logout").click();
-    await page.getByTestId("button-sign-in").waitFor();
-    assert.equal(await page.getByTestId("inbox-unread-count").count(), 0);
+  async function assertCrossTabLogout(sourcePage, label) {
+    const requestsBeforeLogout = new Map(unreadCountRequests);
+    await sourcePage.getByTestId("button-logout").click();
 
-    await page.goto(`${base}/inbox`);
-    await page.getByText("Sign in to see updates about your scenes.").waitFor();
+    await Promise.all([
+      firstPage.getByTestId("button-sign-in").waitFor(),
+      secondPage.getByTestId("button-sign-in").waitFor(),
+    ]);
+    assert.equal(await firstPage.getByTestId("inbox-unread-count").count(), 0);
+    assert.equal(await secondPage.getByTestId("inbox-unread-count").count(), 0);
+
+    await Promise.all([
+      firstPage.goto(`${base}/inbox`),
+      secondPage.goto(`${base}/inbox`),
+    ]);
+    await Promise.all([
+      firstPage.getByText("Sign in to see updates about your scenes.").waitFor(),
+      secondPage.getByText("Sign in to see updates about your scenes.").waitFor(),
+    ]);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
     assert.equal(
-      unreadCountRequests,
-      requestsBeforeLogout,
-      "signed-out inbox navigation must not request the unread count",
+      unreadCountRequests.get(firstPage),
+      requestsBeforeLogout.get(firstPage),
+      `${label}: first tab requested unread count after sign-out`,
     );
+    assert.equal(
+      unreadCountRequests.get(secondPage),
+      requestsBeforeLogout.get(secondPage),
+      `${label}: second tab requested unread count after sign-out`,
+    );
+  }
+
+  try {
+    await signInFromFirstTab();
+    await Promise.all([loadUnreadBadge(firstPage), loadUnreadBadge(secondPage)]);
+    await assertCrossTabLogout(firstPage, "first-tab logout");
+
+    await signInFromFirstTab();
+    await Promise.all([loadUnreadBadge(firstPage), loadUnreadBadge(secondPage)]);
+    await assertCrossTabLogout(secondPage, "second-tab logout");
 
     // A 401 is a handled, non-retryable response: it must not resurrect a
     // previous count or generate repeated background requests.
     unreadCountMode = "unauthorized";
-    const requestsBeforeUnauthorizedSession = unreadCountRequests;
-    await page.goto(`${base}/sign-in`);
-    await page.locator("#sign-in-email").fill(email);
-    await page.locator("#sign-in-password").fill(password);
-    await page.getByRole("button", { name: "Sign in" }).click();
-    await page.waitForURL(`${base}/`);
-    await page.getByTestId("link-inbox").waitFor();
-    await page.waitForTimeout(100);
-    assert.equal(await page.getByTestId("inbox-unread-count").count(), 0);
+    const requestsBeforeUnauthorizedSession = unreadCountRequests.get(firstPage);
+    await firstPage.goto(`${base}/sign-in`);
+    await firstPage.locator("#sign-in-email").fill(email);
+    await firstPage.locator("#sign-in-password").fill(password);
+    await firstPage.getByRole("button", { name: "Sign in" }).click();
+    await firstPage.waitForURL(`${base}/`);
+    await firstPage.getByTestId("link-inbox").waitFor();
+    await firstPage.waitForTimeout(100);
+    assert.equal(await firstPage.getByTestId("inbox-unread-count").count(), 0);
     assert.equal(
-      unreadCountRequests,
+      unreadCountRequests.get(firstPage),
       requestsBeforeUnauthorizedSession + 1,
       "a 401 unread-count response must not be retried",
     );
 
     console.log(
-      "unread badge logout/cache clearing and unauthenticated no-retry regression passed",
+      "unread badge cross-tab logout/cache clearing and unauthenticated no-retry regression passed",
     );
   } catch (error) {
-    await page.screenshot({
+    await firstPage.screenshot({
       path: "test-results/unread-badge-browser-failure.png",
       fullPage: true,
     });

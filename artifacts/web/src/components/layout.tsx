@@ -3,35 +3,16 @@ import { Link, useLocation } from "wouter";
 import { Bell, BookOpen, Settings, LogOut, PenLine, Lightbulb, GitBranch, Mic2 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
-import {
-  getGetMeQueryKey,
-  useGetMe,
-  useLogout,
-} from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/auth-context";
 import { useUnreadCount } from "@/hooks/use-unread-count";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
-  const queryClient = useQueryClient();
-  const { data: meData } = useGetMe({
-    query: {
-      queryKey: getGetMeQueryKey(),
-      retry: false,
-    },
-  });
-  const logoutMutation = useLogout({
-    mutation: {
-      onSuccess: () => {
-        queryClient.clear();
-      },
-    },
-  });
-  const user = meData?.user ?? null;
+  const { user, isLoggingOut, logout } = useAuth();
   const { data: unreadCount = 0 } = useUnreadCount(!!user);
 
   async function handleLogout() {
-    await logoutMutation.mutateAsync();
+    await logout();
   }
 
   return (
@@ -147,7 +128,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </Link>
                 <button
                   onClick={() => void handleLogout()}
-                  disabled={logoutMutation.isPending}
+                    disabled={isLoggingOut}
                   aria-label="Sign out"
                   title="Sign out"
                   className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
