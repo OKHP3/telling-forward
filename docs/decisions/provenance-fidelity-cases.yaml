@@ -54,6 +54,11 @@ cases:
   - id: proposed-transformation
     kind: transformation
     artifact_kind: scene-draft
+    proposal_lineage_ref: lineage-scene-001
+    version_ref: proposal-version-001
+    predecessor_version_ref: null
+    fidelity_note_ref: fidelity-note-proposal-version-001
+    review_event_refs: []
     source_reference: github:commit:source-sha-001
     output_reference: github:commit:output-sha-001
     ingestion_tier: tier_2_byo_ai
@@ -120,9 +125,112 @@ cases:
       - transform-specific-consent
       - source-specific-derivative-rule
 
+  - id: contributor-requested-revision
+    kind: review-revision
+    artifact_kind: scene-draft
+    proposal_lineage_ref: lineage-scene-001
+    reviewed_version:
+      version_ref: proposal-version-001
+      fidelity_note_ref: fidelity-note-proposal-version-001
+      review_event:
+        event_ref: review-event-request-changes-001
+        action: request-revision
+        resulting_review_state: changes-requested
+        safe_reason: "Please check the scene's sequence and one unclear reference."
+    revised_version:
+      version_ref: proposal-version-002
+      predecessor_version_ref: proposal-version-001
+      fidelity_note_ref: fidelity-note-proposal-version-002
+      review_event_refs: []
+      predecessor_fidelity_note_retained_ref: fidelity-note-proposal-version-001
+      predecessor_review_event_retained_ref: review-event-request-changes-001
+    prior_version_and_note_retained: true
+    expected_result: append-only-revision-with-lineage
+    visibility: contributor-own-lineage-steward-full-lineage
+    required_evidence:
+      - proposal-lineage-reference
+      - predecessor-version-reference
+      - new-output-reference
+      - new-fidelity-note-reference
+      - immutable-prior-review-event
+      - immutable-prior-fidelity-note
+      - no-review-outcome-inherited-by-revised-version
+
+  - id: contributor-accepted-version-is-frozen
+    kind: review-outcome
+    action: accept
+    artifact_kind: scene-draft
+    proposal_lineage_ref: lineage-scene-001
+    reviewed_version_ref: proposal-version-002
+    fidelity_note_ref: fidelity-note-proposal-version-002
+    review_event:
+      event_ref: review-event-accept-002
+      resulting_review_state: accepted-by-contributor
+    expected_result: accepted-version-and-event-append-only
+    visibility: contributor-own-version-steward-full-lineage
+    required_evidence:
+      - exact-reviewed-version-reference
+      - attached-fidelity-note
+      - immutable-acceptance-event
+      - no-canon-or-consent-claim
+
+  - id: contributor-rejected-version-is-frozen
+    kind: review-outcome
+    action: reject
+    artifact_kind: scene-draft
+    proposal_lineage_ref: lineage-scene-001
+    reviewed_version_ref: proposal-version-002
+    fidelity_note_ref: fidelity-note-proposal-version-002
+    review_event:
+      event_ref: review-event-reject-002
+      resulting_review_state: rejected-by-contributor
+    later_attempt:
+      version_ref: proposal-version-003
+      predecessor_version_ref: proposal-version-002
+      fidelity_note_ref: fidelity-note-proposal-version-003
+    expected_result: rejected-version-retained-new-attempt-required
+    visibility: contributor-own-version-steward-full-lineage
+    required_evidence:
+      - exact-reviewed-version-reference
+      - immutable-rejection-event
+      - rejected-fidelity-note-retained
+      - later-attempt-has-new-version-and-note
+      - no-consent-revocation-or-deletion-claim
+
+  - id: steward-decision-appeal-retains-original
+    kind: appeal
+    artifact_kind: scene-draft
+    proposal_lineage_ref: lineage-scene-001
+    affected_version_ref: proposal-version-002
+    steward_decision:
+      decision_ref: steward-decision-002
+      outcome: restricted
+    review_event:
+      event_ref: review-event-appeal-002
+      action: appeal
+      resulting_review_state: appeal-pending
+    resolution:
+      event_ref: review-event-appeal-resolution-002
+      resulting_outcome: changes-requested
+      successor_version_ref: proposal-version-003
+    expected_result: appeal-appends-without-reopening-or-publishing
+    visibility: contributor-safe-appeal-summary-steward-full-record
+    required_evidence:
+      - affected-version-reference
+      - original-steward-decision-retained
+      - appeal-request-retained
+      - safe-contributor-reason
+      - resolution-event-retained
+      - successor-version-and-note-if-changes-allowed
+      - no-auto-publish-or-consent-change
+
   - id: contributor-edit-after-transform
     kind: edit
     artifact_kind: scene-draft
+    proposal_lineage_ref: lineage-scene-001
+    version_ref: proposal-version-003
+    predecessor_version_ref: proposal-version-002
+    fidelity_note_ref: fidelity-note-human-edit-003
     source_reference: github:commit:output-sha-001
     output_reference: github:commit:human-edit-sha-001
     ingestion_tier: human

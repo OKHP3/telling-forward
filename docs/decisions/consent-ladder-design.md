@@ -75,6 +75,14 @@ register](provenance-fidelity-contract.md#contributor-review-approval-register--
 this consent design does not authorize their implementation or any transform
 feature.
 
+Each review action applies to the exact proposal version named by its review
+event. “Ask for changes” creates a new version and fidelity note linked to its
+predecessor; it does not replace the earlier proposal or carry the earlier
+version’s review outcome onto the new text. Acceptance, rejection, and appeal
+likewise append version-bound events, preserving the earlier note, decision,
+and appeal history. The immutable lineage and audience projections are defined
+in the [proposal-version lineage boundary](provenance-fidelity-contract.md#immutable-proposal-version-lineage).
+
 ## Rationale
 
 The ladder preserves meaningful choice at the exact point a contributor takes
@@ -326,6 +334,11 @@ The proposal lifecycle is the operational companion to consent:
 - a steward may archive a completed outcome; and
 - accepted, alternate, restricted, withdrawn, and archived proposal outcomes
   cannot be reopened by a consent toggle.
+
+Proposal review history is also versioned: a returned proposal, contributor
+revision request, contributor decision, or appeal does not mutate the earlier
+proposal version. The lineage retains each version’s fidelity note and
+version-bound review events, while consent changes remain separate records.
 
 Withdrawing a proposal is not a general data-erasure request, and a restricted
 proposal is not proof that the contributor revoked consent or committed

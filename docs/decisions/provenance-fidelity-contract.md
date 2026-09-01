@@ -5,6 +5,7 @@
 **Reader visibility boundary decided for the private pilot (2026-08-21);
 contributor review boundary recorded (2026-08-26); contributor review approval
 deferred pending owner, legal, and privacy sign-off (2026-08-31);
+revised-proposal lineage boundary recorded (2026-08-31);
 implementation and enforcement not approved. No reader or contributor feature
 added.**
 
@@ -117,7 +118,7 @@ consent ladder. In particular, `accepted-by-contributor` never means
 `accepted-into-canon`, and `rejected-by-contributor` never means that consent
 was revoked or that the source should be deleted.
 
-| Contributor action | Resulting proposal state | Effect |
+| Contributor action | Resulting version-level review state | Effect |
 |---|---|---|
 | **Use this version** (accept) | `accepted-by-contributor` | Freezes the reviewed output and its note as the contributor-approved proposal version. It may proceed to a separate steward/editorial decision, but it is not canon, public, licensed for display, or approved for another transformation. |
 | **Don’t use this version** (reject) | `rejected-by-contributor` | Makes this proposed output ineligible for further editorial use. The source remains unchanged; the proposal and review event remain auditable. A later attempt requires a new proposal version and must not overwrite the rejected one. |
@@ -130,6 +131,91 @@ revocation, display license, canon decision, or deletion request. A steward’s
 reason may be shown only after removing identity, moderation, legal, safety,
 and other protected details that are not necessary for the contributor to
 understand what they can do next.
+
+#### Immutable proposal-version lineage
+
+The reviewable unit is a **proposal version**, not a mutable proposal row or
+the latest text attached to a submission. A proposal lineage groups the
+original proposed version and every later version created from it. Lineage is
+an editorial relationship and does not replace the GitHub source, consent
+record, or provenance record.
+
+Every proposal version must carry the following durable relationships in the
+future implementation:
+
+| Relationship | Required rule |
+|---|---|
+| `proposal_lineage_ref` | Stable reference shared by the original proposal and all of its revisions. It is not a contributor-facing identifier. |
+| `version_ref` | Unique reference for this exact proposed output. It must never be reused for different text, a different source, or a different review outcome. |
+| `predecessor_version_ref` | Null only for the first proposed version; every revision has exactly one direct predecessor in the same lineage. A revision may not point only to the latest version by convention or to a mutable proposal ID. |
+| `fidelity_note_ref` | Identifies the fidelity note generated for this exact output. A revision receives a new note; the predecessor’s note remains attached to the predecessor. |
+| `review_event_refs[]` | Append-only events that name the version reviewed, the action taken, the safe reason, and the resulting review state. A later event is added rather than editing the earlier event. |
+| `superseding_version_ref` | Optional link from an earlier version to the new version created by an allowed revision path. This is a relationship record, not a replacement of the earlier version. |
+
+The first proposal version captures the source/output pair and its initial
+fidelity note. A request for changes creates a new child version with a new
+output reference and new fidelity note. The child points to the version that
+was actually reviewed, while the earlier output, note, and request-for-change
+event remain recoverable. The earlier version may be marked as no longer the
+active review target in a separate lineage projection, but its content and
+history are never rewritten.
+
+The following invariants apply to every review action:
+
+1. **Review the snapshot named by the event.** Accept, reject, request
+   revision, and appeal events bind to one `version_ref` and cannot silently
+   apply to a predecessor, successor, or mutable “current proposal.”
+2. **Append, do not overwrite.** A state or reason change creates a new review
+   event with the prior state and event still readable. Replays use an
+   idempotency key and must return the existing event rather than replacing
+   its reason, actor, date, or version reference.
+3. **Request revision creates a child.** The request event remains on the
+   reviewed version. The revised output starts its own review history and
+   points back to the reviewed version; it does not inherit an acceptance,
+   rejection, appeal, or steward decision as though that outcome applied to
+   the new text.
+4. **Acceptance and rejection freeze the reviewed version.** “Use this
+   version” and “Don’t use this version” record an outcome for that exact
+   output. A later attempt is a new version or new proposal according to the
+   applicable policy, never an edit that changes the accepted or rejected
+   record.
+5. **Appeal is a separate review.** An appeal references the steward decision
+   and the contributor’s affected version, retains the original decision and
+   appeal request, and records its resolution as another event. An appeal
+   cannot auto-publish, reopen a proposal, or make a different version appear
+   accepted. If the resolution allows changes, it creates a new child version
+   with a new note.
+6. **Consent remains separate.** A lineage link, review event, or appeal does
+   not grant, revoke, or supersede consent, display permission, authorship,
+   canon status, or deletion rights.
+
+These rules do not add a new value to the nine-state proposal enum. The
+version-level review state (`accepted-by-contributor`, `rejected-by-contributor`,
+`changes-requested`, and `appeal-pending`) is a separate review projection.
+The existing proposal lifecycle remains authoritative for submission,
+steward, canon, restriction, withdrawal, and archival outcomes. A future
+implementation must define the transaction and reconciliation behavior before
+it exposes this design through an endpoint or UI.
+
+##### Audience projections for a lineage
+
+The same append-only lineage is projected differently by audience. The
+projection must be selected at the data boundary, not produced by sending the
+full record to a client and hiding fields during rendering.
+
+| Audience | May show | Must not show |
+|---|---|---|
+| **Contributor** | Their own version labels, the current proposed text they are entitled to review, the attached contributor-safe fidelity note, prior safe review events affecting their material, the current plain-language review status, and the next available action. | Raw version/lineage IDs; repository, branch, issue, PR, commit, source digest, model/provider, operational metadata; another contributor’s material or identity; private steward, moderation, legal, consent, or appeal evidence. |
+| **Steward** | The complete lineage for the storyworld, every predecessor/successor relationship, internal fidelity notes, all review events, safe and protected decision references according to steward authorization, and the distinction between contributor review and steward outcome. | Unrelated storyworld records or control-plane data outside the steward’s authorization. |
+| **Maintainer** | The operational and recovery references needed to reconcile the lineage with GitHub, including immutable source/output references and event idempotency evidence, subject to private control-plane authorization. | A contributor-facing surface assembled from the unrestricted maintainer record. |
+| **Reader** | No proposal lineage or fidelity history by default. A future, separately approved working-laboratory view may expose only the safe reader fields already listed in this contract. | Proposal versions, revision requests, contributor review actions, fidelity-note content, appeal history, unresolved provenance, and all permanently private fields. |
+
+When a contributor opens an older version from the lineage, the view must say
+that it is an earlier proposed version in plain language and show only the
+safe note and review event for that version. It must not silently substitute
+the newest child. When a contributor opens the current version, the view may
+link to an earlier safe version as context, but the current version’s note and
+review status remain the ones being acted on.
 
 #### Contributor review approval register — private pilot gate
 
