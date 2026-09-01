@@ -101,6 +101,9 @@ async function main() {
   }
 
   async function assertCrossTabLogout(sourcePage, label) {
+    // Each tab has an independent React Query cache but shares the browser
+    // session. Signing out in either tab must clear both caches before either
+    // tab can refetch the user-scoped unread count.
     const requestsBeforeLogout = new Map(unreadCountRequests);
     await sourcePage.getByTestId("button-logout").click();
 
