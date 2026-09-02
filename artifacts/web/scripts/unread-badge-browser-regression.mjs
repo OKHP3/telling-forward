@@ -26,6 +26,12 @@ async function main() {
   const context = await browser.newContext();
   const firstPage = await context.newPage();
   const secondPage = await context.newPage();
+  await secondPage.addInitScript(() => {
+    window.__tellingForwardPageShowEvents = [];
+    window.addEventListener("pageshow", (event) => {
+      window.__tellingForwardPageShowEvents.push({ persisted: event.persisted });
+    });
+  });
   const unreadCountRequests = new Map([
     [firstPage, 0],
     [secondPage, 0],
@@ -136,6 +142,47 @@ async function main() {
     );
   }
 
+  async function assertBackForwardRestoreAfterLogout() {
+    // Keep the signed-in inbox in browser history so the second tab can be
+    // restored from BFCache after the first tab signs out. A restored page
+    // must revalidate auth before showing its frozen unread badge.
+    unreadCountMode = "count";
+    await signInFromFirstTab();
+    await loadUnreadBadge(secondPage);
+    await secondPage.goto(`${base}/`);
+
+    const requestsBeforeLogout = unreadCountRequests.get(secondPage);
+    await firstPage.getByTestId("button-logout").click();
+    await firstPage.getByTestId("button-sign-in").waitFor();
+
+    await secondPage.goBack();
+    await secondPage.getByText("Sign in to see updates about your scenes.").waitFor();
+    assert.equal(
+      await secondPage.evaluate(
+        () => performance.getEntriesByType("navigation")[0]?.type,
+      ),
+      "back_forward",
+      "logout scenario did not use back navigation",
+    );
+    const restoredFromBfCache = await secondPage.evaluate(() =>
+      window.__tellingForwardPageShowEvents.some((event) => event.persisted),
+    );
+    if (!restoredFromBfCache) {
+      // Headless Chromium can reload Vite history entries instead of using
+      // BFCache. Dispatch the same persisted pageshow signal so this
+      // regression still exercises the restore handler in that environment.
+      await secondPage.evaluate(() => {
+        window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
+      });
+    }
+    assert.equal(await secondPage.getByTestId("inbox-unread-count").count(), 0);
+    assert.equal(
+      unreadCountRequests.get(secondPage),
+      requestsBeforeLogout,
+      "restored signed-out tab requested unread count after logout",
+    );
+  }
+
   try {
     await signInFromFirstTab();
     await Promise.all([loadUnreadBadge(firstPage), loadUnreadBadge(secondPage)]);
@@ -163,8 +210,10 @@ async function main() {
       "a 401 unread-count response must not be retried",
     );
 
+    await assertBackForwardRestoreAfterLogout();
+
     console.log(
-      "unread badge cross-tab logout/cache clearing and unauthenticated no-retry regression passed",
+      "unread badge cross-tab logout, BFCache restore, and unauthenticated no-retry regression passed",
     );
   } catch (error) {
     await firstPage.screenshot({

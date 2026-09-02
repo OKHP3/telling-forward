@@ -28,6 +28,11 @@ function getAuthSyncChannel(): BroadcastChannel | null {
   return authSyncChannel;
 }
 
+function resetAuthSyncChannel() {
+  authSyncChannel?.close();
+  authSyncChannel = undefined;
+}
+
 function isSignedOutMessage(value: unknown): value is AuthSyncMessage {
   return (
     typeof value === "object" &&
@@ -82,7 +87,7 @@ export function useAuth(): AuthContextValue {
   }, [queryClient]);
 
   useEffect(() => {
-    const channel = getAuthSyncChannel();
+    let channel = getAuthSyncChannel();
     const handledMessageIds = new Set<string>();
     const handleMessage = (value: unknown) => {
       if (!isSignedOutMessage(value) || handledMessageIds.has(value.id)) return;
@@ -100,14 +105,34 @@ export function useAuth(): AuthContextValue {
         // Ignore unrelated or malformed storage events.
       }
     };
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+
+      // A page restored from the back-forward cache may have missed the
+      // cross-tab sign-out event while it was frozen. Hide user-scoped UI and
+      // clear its cache before checking the session again.
+      channel = getAuthSyncChannel();
+      channel?.addEventListener("message", handleChannelMessage);
+      handleRemoteSignOut();
+      void meQuery.refetch();
+    };
+    const handlePageHide = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      channel?.removeEventListener("message", handleChannelMessage);
+      resetAuthSyncChannel();
+    };
 
     channel?.addEventListener("message", handleChannelMessage);
     window.addEventListener("storage", handleStorageEvent);
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("pagehide", handlePageHide);
     return () => {
       channel?.removeEventListener("message", handleChannelMessage);
       window.removeEventListener("storage", handleStorageEvent);
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("pagehide", handlePageHide);
     };
-  }, [handleRemoteSignOut]);
+  }, [handleRemoteSignOut, meQuery.refetch]);
 
   useEffect(() => {
     if (meQuery.data?.user) setSessionCleared(false);
