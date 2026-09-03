@@ -5,20 +5,20 @@ on:
     branches:
       - main
     paths:
-      - 'artifacts/web/**'
-      - 'lib/api-client-react/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - '.github/workflows/web-browser-regression.yml'
+      - "artifacts/web/**"
+      - "lib/api-client-react/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/web-browser-regression.yml"
   pull_request:
     paths:
-      - 'artifacts/web/**'
-      - 'lib/api-client-react/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - '.github/workflows/web-browser-regression.yml'
+      - "artifacts/web/**"
+      - "lib/api-client-react/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/web-browser-regression.yml"
   workflow_dispatch:
 
 permissions:
@@ -55,7 +55,18 @@ jobs:
           cat "$RUNNER_TEMP/telling-forward-web.log"
           exit 1
       - name: Run the contributor cache isolation regression
-        run: pnpm run test:auth-session:browser
+        run: |
+          mkdir -p artifacts/web/test-results
+          pnpm --filter @workspace/web run test:auth-session:browser
+      - name: Upload browser regression diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-session-browser-regression-results
+          if-no-files-found: warn
+          path: |
+            artifacts/web/test-results/
+            ${{ runner.temp }}/telling-forward-web.log
       - name: Stop the canonical web app
         if: always()
         run: |
