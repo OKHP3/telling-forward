@@ -69,11 +69,14 @@ the contributor accepts the proposed output. Conversely, a contributor choosing
 another review” does not grant, revoke, or change any consent record. The
 allowed fidelity fields, protected fields, and proposal-state effects are
 defined in the [contributor fidelity note and review boundary](provenance-fidelity-contract.md#contributor-fidelity-note-and-review-boundary--private-pilot-decision).
-The contributor review rules remain **deferred pending owner, legal, and privacy
-sign-off**, as recorded in the [contributor review approval
+The contributor review rules remain **deferred**. On 2026-09-03, Jamie Hill
+(project owner) recorded a deferred owner decision, while the independent legal
+and privacy reviews were also explicitly deferred because no reviewer has been
+appointed for either authority. These decisions are recorded in the
+[contributor review approval
 register](provenance-fidelity-contract.md#contributor-review-approval-register--private-pilot-gate);
 this consent design does not authorize their implementation or any transform
-feature.
+feature. The enforcement gate remains closed.
 
 Each review action applies to the exact proposal version named by its review
 event. “Ask for changes” creates a new version and fidelity note linked to its

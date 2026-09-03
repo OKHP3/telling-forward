@@ -4,8 +4,9 @@
 
 **Reader visibility boundary decided for the private pilot (2026-08-21);
 contributor review boundary recorded (2026-08-26); contributor review approval
-deferred pending owner, legal, and privacy sign-off (2026-08-31);
-revised-proposal lineage boundary recorded (2026-08-31);
+register updated 2026-09-03 with named owner authority and explicit deferred
+owner, legal, and privacy decisions; revised-proposal lineage boundary recorded
+(2026-08-31);
 implementation and enforcement not approved. No reader or contributor feature
 added.**
 
@@ -219,28 +220,32 @@ review status remain the ones being acted on.
 
 #### Contributor review approval register — private pilot gate
 
-**Recorded 2026-08-31. Decision: deferred.** The contributor review rules below
-remain the proposed design baseline, but no explicit owner, legal, or privacy
-sign-off is recorded for this contract. “Deferred” means the rule is retained
-for review and is not authorized for implementation. It is not an approval by
-silence, and it does not authorize a transform endpoint, worker, schema,
-consent toggle, export, or contributor-facing UI.
+**Recorded 2026-09-03. Decision: deferred by all three review authorities.**
+The named owner authority is **Jamie Hill, project owner**. No independent legal
+reviewer or independent privacy reviewer has been appointed in the repository,
+so those review authorities are recorded as **Legal reviewer: not appointed**
+and **Privacy reviewer: not appointed**, not as implied approvals. The
+contributor review rules remain the proposed design baseline. “Deferred” means
+the rule is retained for review and is not authorized for implementation. It is
+not an approval by silence, and it does not authorize a transform endpoint,
+worker, schema, consent toggle, export, or contributor-facing UI.
 
-| Review item | Status | Decision record and required review coverage |
-|---|---|---|
-| Contributor-facing field list | **Deferred** | The limited list in this section remains the proposal. Owner review must confirm that every displayed field is necessary for the contributor’s own review; legal and privacy review must confirm that the presentation and its redaction rules do not expose protected third-party, identity, moderation, safety, legal, or consent details. |
-| Review states and actions | **Deferred** | The four proposed actions — “Use this version,” “Don’t use this version,” “Ask for changes,” and “Ask for another review” — remain the proposal. Owner review must confirm the editorial behavior and wording; legal and privacy review must confirm that no action is represented as a rights grant, revocation, deletion request, or protected-record disclosure. |
-| Appeal path | **Deferred** | The separate `appeal-pending` path and its safe contributor-language outcome remain the proposal. Owner review must confirm who may resolve it and what the contributor can do next; legal and privacy review must confirm that appeal evidence, steward identity, safety details, and protected reasons remain outside the contributor note unless separately cleared. |
-| Plain-language copy | **Deferred** | The wording guide and four action labels remain provisional copy. Owner review must confirm that the copy is understandable and does not imply quality, approval, canon, authorship, or permission; legal and privacy review must confirm that the copy accurately describes the boundary without turning technical or protected details into a disclosure. |
-| Protected-field redactions | **Deferred** | The exclusion list in this contract is the minimum proposed redaction boundary. Legal and privacy review must cover model/provider and operational metadata, raw repository references, private annotations, identity, moderation, safety, legal holds, consent records, retention/deletion decisions, and unrelated contributor material. |
-| Separation from consent | **Deferred** | The proposal-state rules and the consent ladder remain separate by design. Legal and privacy review must confirm that accepting, rejecting, requesting changes, appealing, or withdrawing a proposal cannot grant, revoke, or alter consent, a display license, canon status, authorship, or deletion rights. |
+| Review item | Owner decision | Legal decision | Privacy decision | Resulting rule and reason |
+|---|---|---|---|---|
+| Contributor-facing field list | **Deferred: Jamie Hill, 2026-09-03** | **Deferred: legal reviewer not appointed, 2026-09-03** | **Deferred: privacy reviewer not appointed, 2026-09-03** | Retain the limited field list as a proposal only. The owner must confirm necessity for the contributor’s own review; legal and privacy review must confirm that presentation and redactions do not expose protected details. No field-list revision is authorized. |
+| Review states and actions | **Deferred: Jamie Hill, 2026-09-03** | **Deferred: legal reviewer not appointed, 2026-09-03** | **Deferred: privacy reviewer not appointed, 2026-09-03** | Retain “Use this version,” “Don’t use this version,” “Ask for changes,” and “Ask for another review” as provisional actions only. No action may be treated as a rights grant, revocation, deletion request, or disclosure. No state or action revision is authorized. |
+| Appeal path | **Deferred: Jamie Hill, 2026-09-03** | **Deferred: legal reviewer not appointed, 2026-09-03** | **Deferred: privacy reviewer not appointed, 2026-09-03** | Retain `appeal-pending` and its safe contributor-language outcome as a proposal only. The resolver, next step, and protected-evidence boundary still require review. No appeal-path revision is authorized. |
+| Plain-language copy | **Deferred: Jamie Hill, 2026-09-03** | **Deferred: legal reviewer not appointed, 2026-09-03** | **Deferred: privacy reviewer not appointed, 2026-09-03** | Retain the wording guide and four action labels as provisional copy. Copy must not imply quality, approval, canon, authorship, permission, or protected disclosure. No copy revision is authorized. |
+| Protected-field redactions | **Deferred: Jamie Hill, 2026-09-03** | **Deferred: legal reviewer not appointed, 2026-09-03** | **Deferred: privacy reviewer not appointed, 2026-09-03** | Retain the exclusion list as the minimum proposed boundary, including model/provider and operational metadata, repository references, private annotations, identity, moderation, safety, legal holds, consent, retention/deletion, and unrelated contributor material. No redaction-boundary revision is authorized. |
+| Separation from consent | **Deferred: Jamie Hill, 2026-09-03** | **Deferred: legal reviewer not appointed, 2026-09-03** | **Deferred: privacy reviewer not appointed, 2026-09-03** | Retain the separation between proposal review and the consent ladder. Review actions and withdrawal cannot grant, revoke, or alter consent, display permission, canon status, authorship, or deletion rights. No separation-rule revision is authorized. |
 
-No reviewer names, dates, approval language, or revision instructions have
-been recorded for the owner, legal, or privacy reviews. Until those reviews
-produce an explicit **approved**, **revised**, or **deferred** result beside this
-register, the status remains **deferred** and the implementation gate remains
-closed. If a review is revised, the changed field, state, path, or copy must be
-recorded here before any later approval is considered.
+The register now records the named owner authority, the legal and privacy
+review-authority status, the review date, and an explicit approved, revised, or
+deferred result for every item. Because all six items are deferred and the
+independent legal and privacy reviewers are not appointed, the overall status
+remains **deferred** and the implementation gate remains **closed**. If any
+review is later revised, the changed field, state, path, or copy and the reason
+must be recorded here before later approval is considered.
 
 #### Fields that must not appear in a contributor fidelity note
 
