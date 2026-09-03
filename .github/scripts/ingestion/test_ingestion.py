@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
-import hashlib
 import shutil
 import struct
 import subprocess
@@ -185,7 +185,7 @@ def test_truncated_model_fails_before_extraction_or_issue_filing(tmp_path: Path)
     assert not extraction_marker.exists()
     assert not issue_marker.exists()
 
-    workflow = (ROOT.parents[2] / "workflows" / "manuscript-ingestion.yml").read_text(
+    workflow = (ROOT.parents[1] / "workflows" / "manuscript-ingestion.yml").read_text(
         encoding="utf-8",
     )
     verify_position = workflow.index("- name: Verify model weights")

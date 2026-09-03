@@ -15,7 +15,6 @@ from __future__ import annotations
 import hashlib
 import re
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -27,10 +26,10 @@ class ModelIntegrityError(ValueError):
     """Raised when a model file is absent or differs from its contract."""
 
 
-@dataclass(frozen=True)
 class ModelIntegrity:
-    size_bytes: int
-    sha256: str
+    def __init__(self, size_bytes: int, sha256: str) -> None:
+        self.size_bytes = size_bytes
+        self.sha256 = sha256
 
 
 def verify_model_integrity(

@@ -175,6 +175,7 @@ in contributor-facing copy until a larger sample supports one.
 ## References
 
 - `.github/workflows/manuscript-ingestion.yml`
+- `.github/scripts/ingestion/verify_model.py`
 - `.github/scripts/ingestion/test_ingestion.py`
 - `.github/scripts/ingestion/requirements.txt`
 - `docs/adr/0004-manuscript-ingestion-and-bring-your-own-ai.md`
