@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import hashlib
 import shutil
 import struct
+import subprocess
+import sys
 import zipfile
 from pathlib import Path
 
@@ -140,6 +143,56 @@ def test_malformed_model_output_fails_closed() -> None:
         extract.parse_model_output_strict("not JSON")
     with pytest.raises(extract.MalformedModelOutputError):
         extract.parse_model_output_strict('[{"kind":"unknown","title":"x","body":"y","confidence":"low"}]')
+
+
+def test_model_integrity_accepts_matching_size_and_sha256(tmp_path: Path) -> None:
+    verify = load_script("verify_model")
+    model = tmp_path / "model.gguf"
+    model.write_bytes(b"valid GGUF fixture")
+    digest = hashlib.sha256(model.read_bytes()).hexdigest()
+
+    result = verify.verify_model_integrity(model, model.stat().st_size, digest)
+
+    assert result.size_bytes == len(b"valid GGUF fixture")
+    assert result.sha256 == digest
+
+
+def test_truncated_model_fails_before_extraction_or_issue_filing(tmp_path: Path) -> None:
+    """A truncated fixture is rejected at the workflow's first model gate."""
+    verify_script = ROOT / "verify_model.py"
+    model = tmp_path / "truncated-model.gguf"
+    model.write_bytes(b"complete model payload"[:-4])
+    expected_size = len(b"complete model payload")
+    expected_sha256 = hashlib.sha256(b"complete model payload").hexdigest()
+    extraction_marker = tmp_path / "extraction-ran"
+    issue_marker = tmp_path / "issue-filing-ran"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(verify_script),
+            str(model),
+            str(expected_size),
+            expected_sha256,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 2
+    assert "model integrity mismatch" in result.stderr
+    assert not extraction_marker.exists()
+    assert not issue_marker.exists()
+
+    workflow = (ROOT.parents[2] / "workflows" / "manuscript-ingestion.yml").read_text(
+        encoding="utf-8",
+    )
+    verify_position = workflow.index("- name: Verify model weights")
+    convert_position = workflow.index("- name: Convert manuscript")
+    extract_position = workflow.index("- name: Extract draft capsules")
+    file_position = workflow.index("- name: File capsules as draft GitHub Issues")
+    assert verify_position < convert_position < extract_position < file_position
 
 
 def test_issue_filing_contract_is_draft_and_typed() -> None:

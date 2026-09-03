@@ -50,6 +50,10 @@ env:
   HF_MODEL_REPO: "unsloth/Phi-4-mini-instruct-GGUF"
   HF_MODEL_REVISION: "78eb92a46fc37e6b524df991ed9aca9bc6aa7b80"
   HF_MODEL_FILE: "Phi-4-mini-instruct-Q4_K_M.gguf"
+  # Published metadata for HF_MODEL_FILE at HF_MODEL_REVISION. Keep these
+  # values together with the revision: a cache hit is not trusted by itself.
+  HF_MODEL_SIZE_BYTES: "2491874272"
+  HF_MODEL_SHA256: "88c00229914083cd112853aab84ed51b87bdf6b9ce42f532d8c85c7c63b1730a"
 
 jobs:
   ingest:
@@ -100,6 +104,16 @@ jobs:
           )
           shutil.copy(path, 'models/${{ env.HF_MODEL_FILE }}')
           "
+
+      # This runs for both cold downloads and cache hits. It must remain
+      # before conversion, segmentation, model initialization, and Issue
+      # filing so a corrupt cache cannot create partial ingestion output.
+      - name: Verify model weights
+        run: |
+          python3 .github/scripts/ingestion/verify_model.py \
+            "models/${{ env.HF_MODEL_FILE }}" \
+            "${{ env.HF_MODEL_SIZE_BYTES }}" \
+            "${{ env.HF_MODEL_SHA256 }}"
 
       - name: Convert manuscript to markdown (Tier 0)
         run: |

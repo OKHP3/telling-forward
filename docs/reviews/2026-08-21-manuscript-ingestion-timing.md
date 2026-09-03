@@ -23,6 +23,29 @@ The workflow uses the pinned model revision
 
 ---
 
+## Model integrity gate
+
+The ingestion workflow now verifies the model for both cold downloads and
+cache hits before manuscript conversion, segmentation, Phi-4 initialization,
+or Issue filing. The expected values are kept with the pinned revision:
+
+- Size: `2,491,874,272` bytes
+- SHA-256: `88c00229914083cd112853aab84ed51b87bdf6b9ce42f532d8c85c7c63b1730a`
+
+These values come from the pinned Hugging Face revision's published file
+metadata, with the SHA-256 taken from the file's LFS object ID. The earlier
+2026-08-26 run recorded a `2,457,166,782`-byte cache; that historical
+observation predates this guard and is retained as run evidence, but is not
+used as the current integrity contract. A missing, truncated, or otherwise
+changed cache now fails the workflow before any downstream ingestion step can
+run.
+
+The local contract suite includes a deliberately truncated GGUF fixture. It
+expects the verification command to fail and checks that the workflow's
+verification step precedes conversion, extraction, and Issue filing.
+
+---
+
 ## Evidence boundary and repository choice
 
 The established `OKHP3/telling-forward-pilot-grove` repository has protected
