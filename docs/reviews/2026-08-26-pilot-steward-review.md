@@ -124,3 +124,57 @@ structural check succeeds **and** the designated steward approval is present.
 This is a gate-readiness assertion, not a decision about canon, rights,
 moderation, or publication; the structural workflow retains read-only contents
 permission and has no merge authority.
+
+## Live re-run after check-name fix
+
+**Date:** 2026-09-03
+**Type:** Owner-approved private-pilot propagation and synthetic gate exercise
+**Disposition:** Workflow fix merged; synthetic pull request closed without merge
+
+The corrected workflow was propagated to the private pilot through workflow-only
+pull request [#4](https://github.com/OKHP3/telling-forward-pilot-grove/pull/4).
+The service identity `telling-forward-platform[bot]` authored the branch and
+pull request; `@OKHP3` supplied the approving owner review. Before approval,
+the exact `validate-storyworld` check had completed successfully while the pull
+request remained `blocked` with no reviews. After the owner approval, GitHub
+reported the pull request as `clean`, and the workflow-only change was merged.
+No storyworld or synthetic content was included in that propagation pull request.
+
+The live protected-branch configuration and workflow now agree:
+
+- `main` required status context: `validate-storyworld`
+- workflow job/check emitted on `main`: `validate-storyworld`
+- required code-owner review: enabled
+- workflow merge authority: none; contents permission remains read-only
+- propagated `main` commit:
+  `0d9ec5e78d36f5f5045530eab55ac904a0f71c75`
+
+### Fresh synthetic pull request matrix
+
+Fresh synthetic pull request
+[#5](https://github.com/OKHP3/telling-forward-pilot-grove/pull/5) was authored
+by `telling-forward-platform[bot]` and reviewed by `@OKHP3`
+([review](https://github.com/OKHP3/telling-forward-pilot-grove/pull/5#pullrequestreview-5096660331)).
+The disposable fixture was never merged.
+
+The same pull request exercised the protected gate in all required states:
+
+| Structural check / emitted context | Steward approval | Observed state |
+| --- | --- | --- |
+| `validate-storyworld` absent; `Validate structural contract` succeeded | present | `blocked` |
+| `validate-storyworld` failed | present | `blocked` |
+| `validate-storyworld` succeeded | present | `clean` |
+
+The absent-context run is recoverable from the
+[check run](https://github.com/OKHP3/telling-forward-pilot-grove/actions/runs/33701034775/job/100480168045);
+the successful final run is recoverable from the
+[check run](https://github.com/OKHP3/telling-forward-pilot-grove/actions/runs/33701059475/job/100480246406).
+The PR was then closed at `2026-09-03T00:48:49Z` with `merged: false`.
+Its temporary branches were deleted after closure. The final PR head was
+`c7274d08b6fbc2f94d27ec6fa115cf5f72f8fdbf`; `main` remained at
+`0d9ec5e78d36f5f5045530eab55ac904a0f71c75`.
+
+This live evidence proves gate behavior only. The structural check remains
+repository-shape evidence and does not decide canon, rights, moderation, or
+publication; those decisions remain with the human steward and the
+application's independent policy controls.
