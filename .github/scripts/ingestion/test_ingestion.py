@@ -195,6 +195,23 @@ def test_truncated_model_fails_before_extraction_or_issue_filing(tmp_path: Path)
     assert verify_position < convert_position < extract_position < file_position
 
 
+def test_workflow_caches_and_measures_dependency_install() -> None:
+    workflow = (ROOT.parents[1] / "workflows" / "manuscript-ingestion.yml").read_text(
+        encoding="utf-8",
+    )
+
+    cache_position = workflow.index("- name: Cache ingestion dependency wheels")
+    install_position = workflow.index("- name: Install ingestion dependencies")
+    contract_position = workflow.index("- name: Verify ingestion contract")
+    assert cache_position < install_position < contract_position
+    assert "path: ~/.cache/pip" in workflow
+    assert "hashFiles('.github/scripts/ingestion/requirements.txt')" in workflow
+    assert "--prefer-binary" in workflow
+    assert 'echo "cache_hit=' in workflow
+    assert 'echo "duration_seconds=' in workflow
+    assert "$GITHUB_STEP_SUMMARY" in workflow
+
+
 def test_issue_filing_contract_is_draft_and_typed() -> None:
     filing = load_script("file_capsules_as_issues")
     body = filing.build_issue_body({

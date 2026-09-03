@@ -136,7 +136,9 @@ contract and legacy-label handling are in
   triggered by an authenticated steward-owned API upload that commits to the
   private intake path and dispatches `workflow_dispatch` on the same branch.
   Caches the pinned model revision via `actions/cache` rather than committing
-  it, and carries the upload id for retry/concurrency control.
+  it, caches pip downloads and the compiled dependency wheel for repeat runs,
+  measures dependency-install time in each run summary, and carries the
+  upload id for retry/concurrency control.
 - `artifacts/mcp-server/` — the Tier-2 MCP server. Three tools:
   `get_capsule_schema`, `read_canon`, `create_draft_capsule`. Uses a
   user-supplied `GITHUB_TOKEN`, never the platform's `GITHUB_PAT`.
@@ -234,4 +236,8 @@ The following prerequisites are resolved:
 The live evidence does not justify a contributor-facing turnaround promise:
 the measured runs spent most of their time installing dependencies and
 loading the model, and the cache-hit path still varied with runner setup.
-Any future estimate must be based on a larger measured sample.
+The workflow now caches the pip build output for the pinned dependency set and
+records cold/repeat install timing in the Actions summary. A new private-pilot
+repeat run is still required to establish whether that cache materially reduces
+setup time; no contributor-facing estimate is supported until that evidence
+exists.

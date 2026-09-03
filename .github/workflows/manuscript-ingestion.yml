@@ -71,8 +71,36 @@ jobs:
         with:
           python-version: "3.12"
 
+      # llama-cpp-python is published as an sdist for this runner, so the
+      # first install compiles it. Cache pip's downloaded files and built
+      # wheel so repeat runs do not rebuild the same pinned dependency set.
+      - name: Cache ingestion dependency wheels
+        id: cache-ingestion-dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ingestion-pip-${{ runner.os }}-python-3.12-${{ hashFiles('.github/scripts/ingestion/requirements.txt') }}
+
       - name: Install ingestion dependencies
-        run: pip install -r .github/scripts/ingestion/requirements.txt
+        id: install-ingestion-dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          install_started=$SECONDS
+          python -m pip install \
+            --cache-dir "$HOME/.cache/pip" \
+            --prefer-binary \
+            -r .github/scripts/ingestion/requirements.txt
+          install_seconds=$((SECONDS - install_started))
+          echo "cache_hit=${{ steps.cache-ingestion-dependencies.outputs.cache-hit }}" >> "$GITHUB_OUTPUT"
+          echo "duration_seconds=$install_seconds" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Dependency installation measurement"
+            echo
+            echo "- pip cache hit: ${{ steps.cache-ingestion-dependencies.outputs.cache-hit }}"
+            echo "- elapsed install time: ${install_seconds}s"
+            echo "- cache key: OS + Python 3.12 + requirements hash"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify ingestion contract
         run: pytest -q .github/scripts/ingestion/test_ingestion.py

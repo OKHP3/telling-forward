@@ -3,6 +3,8 @@
 #
 # python-docx and pdfplumber cover Tier 0 (rules-only conversion).
 # huggingface_hub and llama-cpp-python cover Tier 1 (Actions + Phi-4-mini).
+# The workflow caches pip's downloads and compiled wheels for repeat runs;
+# llama-cpp-python 0.3.35 is an sdist on the pinned Actions target.
 # pandoc itself is a system package, not pip-installable — the workflow
 # installs it via apt before this file is used.
 

@@ -172,6 +172,27 @@ in contributor-facing copy until a larger sample supports one.
 
 ---
 
+## Repeat-run dependency strategy
+
+The baseline runs showed dependency installation taking 6m16s on a cold run
+and 6m50s on a model-cache hit. The pinned
+`llama-cpp-python==0.3.35` release is an sdist for the workflow's
+Ubuntu/Python 3.12 target, so this cost includes compiling the native wheel.
+
+The workflow now caches `~/.cache/pip` with a key based on runner OS, Python
+3.12, and the requirements-file hash. It installs with `--prefer-binary` and
+records both the pip-cache hit/miss and elapsed dependency-install seconds in
+the GitHub Actions run summary. This preserves the model integrity gate and
+does not replace the runner with an unpinned prebuilt artifact.
+
+The cache strategy is implemented, but no post-change private-pilot run has
+yet been observed. Therefore the existing 6m16s/6m50s measurements remain the
+only timing evidence, and no setup-time reduction or contributor-facing
+turnaround estimate is claimed until a cold run followed by a repeat run
+records the new summary fields.
+
+---
+
 ## References
 
 - `.github/workflows/manuscript-ingestion.yml`
