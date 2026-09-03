@@ -8,6 +8,13 @@ on:
       - '**/package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+      - 'docs/decisions/provenance-fidelity-contract.md'
+      - 'docs/decisions/provenance-fidelity-cases.yaml'
+      - 'artifacts/api-server/src/lib/contributor-fidelity.ts'
+      - 'artifacts/api-server/src/lib/__tests__/contributor-fidelity.test.ts'
+      - 'lib/api-spec/openapi.yaml'
+      - 'lib/api-zod/src/generated/**'
+      - 'package.json'
       - 'scripts/check-technology-updates.mjs'
       - '.github/workflows/dependency-health.yml'
   pull_request:
@@ -15,6 +22,13 @@ on:
       - '**/package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+      - 'docs/decisions/provenance-fidelity-contract.md'
+      - 'docs/decisions/provenance-fidelity-cases.yaml'
+      - 'artifacts/api-server/src/lib/contributor-fidelity.ts'
+      - 'artifacts/api-server/src/lib/__tests__/contributor-fidelity.test.ts'
+      - 'lib/api-spec/openapi.yaml'
+      - 'lib/api-zod/src/generated/**'
+      - 'package.json'
       - 'scripts/check-technology-updates.mjs'
       - '.github/workflows/dependency-health.yml'
   workflow_dispatch:
@@ -37,5 +51,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: node --check scripts/check-technology-updates.mjs
       - run: node scripts/check-technology-updates.mjs > technology-inventory-ci.md
+      - name: Verify contributor fidelity contract
+        run: pnpm run check:contributor-fidelity
       - run: pnpm run typecheck
       - run: pnpm run build

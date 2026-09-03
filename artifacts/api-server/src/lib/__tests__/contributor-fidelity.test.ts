@@ -12,6 +12,18 @@ const policyFixturePath = resolve(
   "../../docs/decisions/provenance-fidelity-cases.yaml",
 );
 const policyFixture = readFileSync(policyFixturePath, "utf8");
+const contractDocumentationPath = resolve(
+  process.cwd(),
+  "../../docs/decisions/provenance-fidelity-contract.md",
+);
+const contractDocumentation = readFileSync(contractDocumentationPath, "utf8");
+const apiSpecPath = resolve(process.cwd(), "../../lib/api-spec/openapi.yaml");
+const apiSpec = readFileSync(apiSpecPath, "utf8");
+const generatedApiPath = resolve(
+  process.cwd(),
+  "../../lib/api-zod/src/generated/api.ts",
+);
+const generatedApi = readFileSync(generatedApiPath, "utf8");
 
 const policyFieldNames = {
   "source-version-label": "sourceVersionLabel",
@@ -36,11 +48,81 @@ function allowedFieldsFromPolicy(): string[] {
     .trim()
     .split("\n")
     .map((line) => line.replace(/^\s*-\s+/, ""))
-    .map((field) => policyFieldNames[field as keyof typeof policyFieldNames])
-    .filter(
-      (field): field is (typeof CONTRIBUTOR_FIDELITY_NOTE_FIELDS)[number] =>
-        Boolean(field),
+    .map((field) => {
+      const responseKey =
+        policyFieldNames[field as keyof typeof policyFieldNames];
+      if (!responseKey) {
+        throw new Error(`Unknown contributor fidelity policy field: ${field}`);
+      }
+      return responseKey;
+    });
+}
+
+function responseKeysFromDocumentation(): string[] {
+  const tableStart = contractDocumentation.indexOf(
+    "| Contributor-facing label | Internal source | Response key | Allowed presentation |",
+  );
+  if (tableStart === -1) return [];
+
+  const table = contractDocumentation.slice(tableStart).split(/\r?\n/);
+  const rows: string[] = [];
+  for (const line of table.slice(2)) {
+    if (!line.startsWith("|") || !line.endsWith("|")) break;
+    const cells = line
+      .slice(1, -1)
+      .split("|")
+      .map((cell) => cell.trim());
+    if (cells.length !== 4) break;
+    rows.push(
+      ...cells[2]
+        .replaceAll("`", "")
+        .split(",")
+        .map((key) => key.trim()),
     );
+  }
+  return rows;
+}
+
+function contributorApiSchemaFields(): string[] | null {
+  const schemaHeader = "\n    ContributorFidelityNote:\n";
+  const schemaStart = apiSpec.indexOf(schemaHeader);
+  if (schemaStart === -1) return null;
+
+  const schemaBody = apiSpec.slice(schemaStart + schemaHeader.length);
+  const nextSchema = schemaBody.search(/\n    [A-Za-z][A-Za-z0-9]*:\n/);
+  const schema =
+    nextSchema === -1 ? schemaBody : schemaBody.slice(0, nextSchema);
+  const propertiesStart = schema.indexOf("\n      properties:\n");
+  if (propertiesStart === -1) return [];
+
+  const propertiesBody = schema.slice(
+    propertiesStart + "\n      properties:\n".length,
+  );
+  const propertiesEnd = propertiesBody.search(
+    /\n      required:\n|\n    [A-Za-z][A-Za-z0-9]*:\n/,
+  );
+  const properties =
+    propertiesEnd === -1
+      ? propertiesBody
+      : propertiesBody.slice(0, propertiesEnd);
+
+  return [...properties.matchAll(/^        ([A-Za-z][A-Za-z0-9]*):$/gm)].map(
+    ([, field]) => field,
+  );
+}
+
+function generatedContributorApiSchemaFields(): string[] | null {
+  const schemaHeader = "export const ContributorFidelityNote = zod.object({\n";
+  const schemaStart = generatedApi.indexOf(schemaHeader);
+  if (schemaStart === -1) return null;
+
+  const schemaBody = generatedApi.slice(schemaStart + schemaHeader.length);
+  const schemaEnd = schemaBody.indexOf("\n});");
+  const schema = schemaEnd === -1 ? schemaBody : schemaBody.slice(0, schemaEnd);
+
+  return [...schema.matchAll(/^  ([A-Za-z][A-Za-z0-9]*):/gm)].map(
+    ([, field]) => field,
+  );
 }
 
 const protectedFixtureValues = {
@@ -133,6 +215,22 @@ describe("contributor fidelity note contract", () => {
     }
     for (const value of Object.values(protectedFixtureValues)) {
       expect(policyFixture).toContain(String(value));
+    }
+  });
+
+  it("keeps policy, documentation, serializer, and any API schema synchronized", () => {
+    const serializerFields = [...CONTRIBUTOR_FIDELITY_NOTE_FIELDS];
+    expect(allowedFieldsFromPolicy()).toEqual(serializerFields);
+    expect(responseKeysFromDocumentation()).toEqual(serializerFields);
+
+    const apiFields = contributorApiSchemaFields();
+    if (apiFields) {
+      expect(apiFields).toEqual(serializerFields);
+    }
+
+    const generatedApiFields = generatedContributorApiSchemaFields();
+    if (generatedApiFields) {
+      expect(generatedApiFields).toEqual(serializerFields);
     }
   });
 

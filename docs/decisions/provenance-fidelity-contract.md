@@ -95,21 +95,33 @@ never silently replace the source or an earlier proposal.
 The contributor-facing note is a deliberately smaller, plain-language view of
 the internal fidelity note. These are the only fields it may contain:
 
-| Contributor-facing label | Internal source | Allowed presentation |
-|---|---|---|
-| **This note is for** | `source_version_ref`, `output_version_ref` | App-local names such as “Original scene” and “Proposed version.” Show enough surrounding story context for the contributor to identify the material, but never expose raw repository, branch, commit, pull-request, issue, or internal IDs. |
-| **Change type** | `transform_kind` | A maintained plain-language label such as “Clarity pass” or “Alternative structure.” Do not expose engine, pipeline, job, or provider terminology. |
-| **What changed** | `changed_material[]` | Concrete, scoped changes to claims, structure, wording, named entities, or omissions. Describe the change; do not imply that it is better or approved. |
-| **What was kept** | `preserved_intent[]` | The meaning, constraints, voice markers, plot facts, and author instructions the proposal attempted to retain. |
-| **Questions to check** | `ambiguities_flagged[]` | Unresolved choices the contributor should inspect. Only include questions relevant to the contributor’s material, with protected third-party or safety details redacted. |
-| **Meaning check** | `semantic_preservation` | One qualitative finding: “Meaning appears kept,” “Some meaning may have shifted,” or “Meaning could not be confirmed,” with a short explanation. No numeric score, confidence value, or automated pass/fail claim. |
-| **Structure and length** | `structural_simplification` | What became shorter, longer, reordered, split, combined, or otherwise structurally different. Never describe shorter as inherently better. |
-| **Intended audience** | `audience_calibration` | The requested audience or register and any observed reading consideration, if one exists. This is feedback for the contributor, not a reader-facing density band or acceptance threshold. |
-| **Review status** | `human_review_status` plus the review event | “Waiting for your review,” “You accepted this version,” “You said this needs changes,” or “You declined this version,” with the safe reason and date when available. |
+| Contributor-facing label | Internal source | Response key | Allowed presentation |
+|---|---|---|---|
+| **This note is for** | `source_version_ref`, `output_version_ref` | `sourceVersionLabel`, `outputVersionLabel` | App-local names such as “Original scene” and “Proposed version.” Show enough surrounding story context for the contributor to identify the material, but never expose raw repository, branch, commit, pull-request, issue, or internal IDs. |
+| **Change type** | `transform_kind` | `changeType` | A maintained plain-language label such as “Clarity pass” or “Alternative structure.” Do not expose engine, pipeline, job, or provider terminology. |
+| **What changed** | `changed_material[]` | `changedMaterial` | Concrete, scoped changes to claims, structure, wording, named entities, or omissions. Describe the change; do not imply that it is better or approved. |
+| **What was kept** | `preserved_intent[]` | `preservedIntent` | The meaning, constraints, voice markers, plot facts, and author instructions the proposal attempted to retain. |
+| **Questions to check** | `ambiguities_flagged[]` | `questionsToCheck` | Unresolved choices the contributor should inspect. Only include questions relevant to the contributor’s material, with protected third-party or safety details redacted. |
+| **Meaning check** | `semantic_preservation` | `meaningCheck` | One qualitative finding: “Meaning appears kept,” “Some meaning may have shifted,” or “Meaning could not be confirmed,” with a short explanation. No numeric score, confidence value, or automated pass/fail claim. |
+| **Structure and length** | `structural_simplification` | `structureAndLength` | What became shorter, longer, reordered, split, combined, or otherwise structurally different. Never describe shorter as inherently better. |
+| **Intended audience** | `audience_calibration` | `intendedAudience` | The requested audience or register and any observed reading consideration, if one exists. This is feedback for the contributor, not a reader-facing density band or acceptance threshold. |
+| **Review status** | `human_review_status` plus the review event | `review` | “Waiting for your review,” “You accepted this version,” “You said this needs changes,” or “You declined this version,” with the safe reason and date when available. |
 
 If a field was not checked, the note must say “Not checked” or omit it; it must
 not invent certainty. Any ambiguity that cannot be explained without exposing a
 private record is reported as a generic question or withheld from this view.
+
+#### Contributor note contract synchronization
+
+The contributor-facing allowlist in
+`docs/decisions/provenance-fidelity-cases.yaml`, the **Response key** column
+above, and the serializer output are one contract. The release validation check
+compares all three exact key sets and rejects an unknown or missing policy
+field instead of silently dropping it. If a future API response schema named
+`ContributorFidelityNote` is introduced in `lib/api-spec/openapi.yaml`, its
+properties are checked against the same set automatically, as are generated
+Zod response schemas when present. This check does not add or enable an
+endpoint; the contributor review implementation remains deferred.
 
 #### Review actions and proposal state
 

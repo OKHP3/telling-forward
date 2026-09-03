@@ -8,6 +8,7 @@
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "test:auth-session:browser": "pnpm --filter @workspace/web run test:auth-session:browser",
+    "check:contributor-fidelity": "pnpm --filter @workspace/api-server exec vitest run src/lib/__tests__/contributor-fidelity.test.ts",
     "check:journey-acceptance": "node scripts/check-journey-acceptance.mjs"
   },
   "private": true,
