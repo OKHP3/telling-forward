@@ -275,6 +275,9 @@ importers:
       vitest:
         specifier: ^3.2.7
         version: 3.2.7(@types/node@25.3.5)(jiti@2.6.1)(lightningcss@1.31.1)(supports-color@8.1.1)(terser@5.50.0)(tsx@4.21.0)(yaml@2.8.3)
+      yaml:
+        specifier: 2.8.3
+        version: 2.8.3
 
   artifacts/archive:
     dependencies:

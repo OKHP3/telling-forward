@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 import {
   CONTRIBUTOR_FIDELITY_NOTE_FIELDS,
   serializeContributorFidelityNote,
@@ -24,6 +25,7 @@ const generatedApiPath = resolve(
   "../../lib/api-zod/src/generated/api.ts",
 );
 const generatedApi = readFileSync(generatedApiPath, "utf8");
+const parsedPolicyFixture = parseYaml(policyFixture) as ProvenanceFixture;
 
 const policyFieldNames = {
   "source-version-label": "sourceVersionLabel",
@@ -125,6 +127,295 @@ function generatedContributorApiSchemaFields(): string[] | null {
   );
 }
 
+type FixtureRecord = Record<string, unknown>;
+type ProvenanceFixture = {
+  cases: FixtureRecord[];
+};
+
+function record(value: unknown, label: string): FixtureRecord {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be a mapping`);
+  }
+  return value as FixtureRecord;
+}
+
+function stringField(
+  value: FixtureRecord,
+  field: string,
+  label: string,
+): string {
+  const fieldValue = value[field];
+  if (typeof fieldValue !== "string" || fieldValue.length === 0) {
+    throw new Error(`${label}.${field} must be a non-empty string`);
+  }
+  return fieldValue;
+}
+
+type VersionDeclaration = {
+  version: FixtureRecord;
+  lineage: string;
+  declaredBy: string;
+};
+
+function validateProposalLineageFixture(fixture: ProvenanceFixture): void {
+  if (!Array.isArray(fixture.cases)) {
+    throw new Error("provenance fidelity fixture must contain cases");
+  }
+
+  const versions = new Map<string, VersionDeclaration>();
+  const addVersion = (
+    versionValue: unknown,
+    parentCase: FixtureRecord,
+    declaredBy: string,
+  ) => {
+    if (versionValue === undefined) return;
+    const version = record(versionValue, declaredBy);
+    if (version.version_ref === undefined) return;
+
+    const versionRef = stringField(version, "version_ref", declaredBy);
+    if (versions.has(versionRef)) {
+      throw new Error(`Duplicate proposal version reference: ${versionRef}`);
+    }
+    versions.set(versionRef, {
+      version,
+      lineage: stringField(parentCase, "proposal_lineage_ref", declaredBy),
+      declaredBy,
+    });
+  };
+
+  for (const fixtureCase of fixture.cases) {
+    const caseId = stringField(fixtureCase, "id", "case");
+    addVersion(fixtureCase, fixtureCase, caseId);
+    for (const nestedField of ["revised_version", "later_attempt"]) {
+      addVersion(
+        fixtureCase[nestedField],
+        fixtureCase,
+        `${caseId}.${nestedField}`,
+      );
+    }
+
+    const resolution =
+      fixtureCase.resolution === undefined
+        ? undefined
+        : record(fixtureCase.resolution, `${caseId}.resolution`);
+    if (resolution?.successor_version_ref !== undefined) {
+      const successorVersion: FixtureRecord = {
+        version_ref: resolution.successor_version_ref,
+        predecessor_version_ref: fixtureCase.affected_version_ref,
+        fidelity_note_ref: resolution.successor_fidelity_note_ref,
+        review_event_refs: resolution.successor_review_event_refs,
+        predecessor_fidelity_note_retained_ref:
+          resolution.successor_predecessor_fidelity_note_retained_ref,
+        predecessor_review_event_retained_ref:
+          resolution.successor_predecessor_review_event_retained_ref,
+      };
+      addVersion(
+        successorVersion,
+        fixtureCase,
+        `${caseId}.resolution.successor`,
+      );
+    }
+  }
+
+  for (const [versionRef, declaration] of versions) {
+    const predecessor = declaration.version.predecessor_version_ref;
+    const note = declaration.version.fidelity_note_ref;
+    if (predecessor === null || predecessor === undefined) {
+      if (note === undefined) {
+        throw new Error(
+          `Initial proposal version ${versionRef} is missing a fidelity note`,
+        );
+      }
+      continue;
+    }
+
+    if (typeof predecessor !== "string") {
+      throw new Error(
+        `Proposal version ${versionRef} has an invalid predecessor`,
+      );
+    }
+    const predecessorDeclaration = versions.get(predecessor);
+    if (!predecessorDeclaration) {
+      throw new Error(
+        `Proposal version ${versionRef} points to missing predecessor ${predecessor}`,
+      );
+    }
+    if (predecessorDeclaration.lineage !== declaration.lineage) {
+      throw new Error(
+        `Proposal version ${versionRef} points across lineages to ${predecessor}`,
+      );
+    }
+    if (typeof note !== "string" || note.length === 0) {
+      throw new Error(`Revision ${versionRef} is missing a fidelity note`);
+    }
+  }
+
+  const assertReviewTarget = (
+    eventValue: unknown,
+    expectedVersion: unknown,
+    label: string,
+  ) => {
+    const event = record(eventValue, label);
+    const actualVersion = stringField(event, "version_ref", label);
+    if (actualVersion !== expectedVersion) {
+      throw new Error(
+        `${label} targets ${actualVersion}, expected ${String(expectedVersion)}`,
+      );
+    }
+  };
+
+  const assertRetainedHistory = (
+    childValue: unknown,
+    predecessorVersion: string,
+    predecessorNote: string,
+    predecessorEvent: string,
+    label: string,
+  ) => {
+    const child = record(childValue, label);
+    if (child.predecessor_version_ref !== predecessorVersion) {
+      throw new Error(`${label} has the wrong predecessor`);
+    }
+    if (child.fidelity_note_ref === predecessorNote) {
+      throw new Error(`${label} reuses its predecessor fidelity note`);
+    }
+    if (child.predecessor_fidelity_note_retained_ref !== predecessorNote) {
+      throw new Error(`${label} does not retain its predecessor fidelity note`);
+    }
+    if (child.predecessor_review_event_retained_ref !== predecessorEvent) {
+      throw new Error(
+        `${label} does not retain its predecessor review history`,
+      );
+    }
+    if (
+      !Array.isArray(child.review_event_refs) ||
+      child.review_event_refs.length !== 0
+    ) {
+      throw new Error(`${label} inherits a review outcome`);
+    }
+  };
+
+  const byId = new Map(
+    fixture.cases.map((fixtureCase) => [
+      stringField(fixtureCase, "id", "case"),
+      fixtureCase,
+    ]),
+  );
+  const revision = byId.get("contributor-requested-revision");
+  if (!revision) throw new Error("Missing request-revision fixture");
+  const reviewed = record(
+    revision.reviewed_version,
+    "request reviewed_version",
+  );
+  const requestEvent = record(
+    reviewed.review_event,
+    "request reviewed_version.review_event",
+  );
+  const requestVersion = stringField(
+    reviewed,
+    "version_ref",
+    "request reviewed_version",
+  );
+  const requestNote = stringField(
+    reviewed,
+    "fidelity_note_ref",
+    "request reviewed_version",
+  );
+  const requestEventRef = stringField(
+    requestEvent,
+    "event_ref",
+    "request event",
+  );
+  assertReviewTarget(
+    requestEvent,
+    requestVersion,
+    "request-revision review event",
+  );
+  assertRetainedHistory(
+    revision.revised_version,
+    requestVersion,
+    requestNote,
+    requestEventRef,
+    "request-revision revised version",
+  );
+
+  const accepted = byId.get("contributor-accepted-version-is-frozen");
+  if (!accepted) throw new Error("Missing accept fixture");
+  assertReviewTarget(
+    accepted.review_event,
+    accepted.reviewed_version_ref,
+    "accept review event",
+  );
+  if (accepted.fidelity_note_ref !== "fidelity-note-proposal-version-002") {
+    throw new Error(
+      "accept fixture is not attached to the reviewed version note",
+    );
+  }
+  assertRetainedHistory(
+    revision.revised_version,
+    requestVersion,
+    requestNote,
+    requestEventRef,
+    "accepted version lineage",
+  );
+
+  const rejected = byId.get("contributor-rejected-version-is-frozen");
+  if (!rejected) throw new Error("Missing reject fixture");
+  assertReviewTarget(
+    rejected.review_event,
+    rejected.reviewed_version_ref,
+    "reject review event",
+  );
+  const rejectedAttempt = record(
+    rejected.later_attempt,
+    "reject later_attempt",
+  );
+  assertRetainedHistory(
+    rejectedAttempt,
+    stringField(rejected, "reviewed_version_ref", "reject fixture"),
+    stringField(rejected, "fidelity_note_ref", "reject fixture"),
+    stringField(
+      record(rejected.review_event, "reject event"),
+      "event_ref",
+      "reject event",
+    ),
+    "reject later attempt",
+  );
+
+  const appeal = byId.get("steward-decision-appeal-retains-original");
+  if (!appeal) throw new Error("Missing appeal fixture");
+  assertReviewTarget(
+    appeal.review_event,
+    appeal.affected_version_ref,
+    "appeal review event",
+  );
+  const resolution = record(appeal.resolution, "appeal resolution");
+  assertReviewTarget(
+    resolution,
+    appeal.affected_version_ref,
+    "appeal resolution event",
+  );
+  assertRetainedHistory(
+    {
+      version_ref: resolution.successor_version_ref,
+      predecessor_version_ref: appeal.affected_version_ref,
+      fidelity_note_ref: resolution.successor_fidelity_note_ref,
+      review_event_refs: resolution.successor_review_event_refs,
+      predecessor_fidelity_note_retained_ref:
+        resolution.successor_predecessor_fidelity_note_retained_ref,
+      predecessor_review_event_retained_ref:
+        resolution.successor_predecessor_review_event_retained_ref,
+    },
+    stringField(appeal, "affected_version_ref", "appeal fixture"),
+    "fidelity-note-proposal-version-002",
+    stringField(
+      record(appeal.review_event, "appeal event"),
+      "event_ref",
+      "appeal event",
+    ),
+    "appeal successor version",
+  );
+}
+
 const protectedFixtureValues = {
   modelProvider: "private-model-provider-sentinel",
   engineAndRun: "PIE / run-private-001",
@@ -196,6 +487,63 @@ const internalFixture: InternalFidelityNote = {
 };
 
 describe("contributor fidelity note contract", () => {
+  it("validates immutable proposal lineage fixtures and retained review history", () => {
+    expect(() =>
+      validateProposalLineageFixture(parsedPolicyFixture),
+    ).not.toThrow();
+  });
+
+  it("rejects duplicate versions, cross-lineage predecessors, missing notes, and misbound events", () => {
+    const duplicateVersionFixture = structuredClone(parsedPolicyFixture);
+    const sourceCase = duplicateVersionFixture.cases.find(
+      (fixtureCase) => fixtureCase.id === "proposed-transformation",
+    );
+    if (!sourceCase) throw new Error("Missing source fixture");
+    duplicateVersionFixture.cases.push({
+      ...sourceCase,
+      id: "duplicate-version-fixture",
+    });
+    expect(() =>
+      validateProposalLineageFixture(duplicateVersionFixture),
+    ).toThrow("Duplicate proposal version reference");
+
+    const crossLineageFixture = structuredClone(parsedPolicyFixture);
+    const revision = crossLineageFixture.cases.find(
+      (fixtureCase) => fixtureCase.id === "contributor-requested-revision",
+    );
+    if (!revision) throw new Error("Missing request-revision fixture");
+    revision.proposal_lineage_ref = "lineage-different";
+    expect(() => validateProposalLineageFixture(crossLineageFixture)).toThrow(
+      "across lineages",
+    );
+
+    const missingNoteFixture = structuredClone(parsedPolicyFixture);
+    const missingNoteRevision = missingNoteFixture.cases.find(
+      (fixtureCase) => fixtureCase.id === "contributor-requested-revision",
+    );
+    if (!missingNoteRevision)
+      throw new Error("Missing request-revision fixture");
+    delete record(missingNoteRevision.revised_version, "revised version")
+      .fidelity_note_ref;
+    expect(() => validateProposalLineageFixture(missingNoteFixture)).toThrow(
+      "missing a fidelity note",
+    );
+
+    const misboundEventFixture = structuredClone(parsedPolicyFixture);
+    const misboundRevision = misboundEventFixture.cases.find(
+      (fixtureCase) => fixtureCase.id === "contributor-requested-revision",
+    );
+    if (!misboundRevision) throw new Error("Missing request-revision fixture");
+    record(
+      record(misboundRevision.reviewed_version, "reviewed version")
+        .review_event,
+      "review event",
+    ).version_ref = "proposal-version-002";
+    expect(() => validateProposalLineageFixture(misboundEventFixture)).toThrow(
+      "expected proposal-version-001",
+    );
+  });
+
   it("keeps the policy fixture complete for the protected-field review", () => {
     expect(policyFixture).toContain("contributor-facing-fixture:");
     expect(allowedFieldsFromPolicy()).toEqual([

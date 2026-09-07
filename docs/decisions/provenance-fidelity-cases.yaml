@@ -134,6 +134,7 @@ cases:
       fidelity_note_ref: fidelity-note-proposal-version-001
       review_event:
         event_ref: review-event-request-changes-001
+        version_ref: proposal-version-001
         action: request-revision
         resulting_review_state: changes-requested
         safe_reason: "Please check the scene's sequence and one unclear reference."
@@ -165,6 +166,7 @@ cases:
     fidelity_note_ref: fidelity-note-proposal-version-002
     review_event:
       event_ref: review-event-accept-002
+      version_ref: proposal-version-002
       resulting_review_state: accepted-by-contributor
     expected_result: accepted-version-and-event-append-only
     visibility: contributor-own-version-steward-full-lineage
@@ -183,11 +185,15 @@ cases:
     fidelity_note_ref: fidelity-note-proposal-version-002
     review_event:
       event_ref: review-event-reject-002
+      version_ref: proposal-version-002
       resulting_review_state: rejected-by-contributor
     later_attempt:
       version_ref: proposal-version-003
       predecessor_version_ref: proposal-version-002
       fidelity_note_ref: fidelity-note-proposal-version-003
+      review_event_refs: []
+      predecessor_fidelity_note_retained_ref: fidelity-note-proposal-version-002
+      predecessor_review_event_retained_ref: review-event-reject-002
     expected_result: rejected-version-retained-new-attempt-required
     visibility: contributor-own-version-steward-full-lineage
     required_evidence:
@@ -207,12 +213,18 @@ cases:
       outcome: restricted
     review_event:
       event_ref: review-event-appeal-002
+      version_ref: proposal-version-002
       action: appeal
       resulting_review_state: appeal-pending
     resolution:
       event_ref: review-event-appeal-resolution-002
+      version_ref: proposal-version-002
       resulting_outcome: changes-requested
-      successor_version_ref: proposal-version-003
+      successor_version_ref: proposal-version-004
+      successor_fidelity_note_ref: fidelity-note-proposal-version-004
+      successor_review_event_refs: []
+      successor_predecessor_fidelity_note_retained_ref: fidelity-note-proposal-version-002
+      successor_predecessor_review_event_retained_ref: review-event-appeal-002
     expected_result: appeal-appends-without-reopening-or-publishing
     visibility: contributor-safe-appeal-summary-steward-full-record
     required_evidence:
@@ -228,9 +240,9 @@ cases:
     kind: edit
     artifact_kind: scene-draft
     proposal_lineage_ref: lineage-scene-001
-    version_ref: proposal-version-003
-    predecessor_version_ref: proposal-version-002
-    fidelity_note_ref: fidelity-note-human-edit-003
+    version_ref: proposal-version-005
+    predecessor_version_ref: proposal-version-004
+    fidelity_note_ref: fidelity-note-human-edit-005
     source_reference: github:commit:output-sha-001
     output_reference: github:commit:human-edit-sha-001
     ingestion_tier: human
