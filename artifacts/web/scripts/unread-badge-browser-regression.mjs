@@ -12,6 +12,7 @@ const user = {
 
 let currentUser = null;
 let unreadCountMode = "count";
+let sessionCheckMode = "normal";
 
 function json(route, body, status = 200) {
   return route.fulfill({
@@ -54,6 +55,9 @@ async function main() {
     const path = new URL(request.url()).pathname;
 
     if (path === "/api/auth/me" && request.method() === "GET") {
+      if (sessionCheckMode === "network-error") {
+        return route.abort("failed");
+      }
       return currentUser
         ? json(route, { user: currentUser, github: null })
         : json(route, { error: "Authentication required" }, 401);
@@ -183,6 +187,55 @@ async function main() {
     );
   }
 
+  async function assertBackForwardRestoreDuringSessionFailure() {
+    // A restored page must remain fail-closed when the session revalidation
+    // cannot reach the server. A later persisted pageshow should be able to
+    // recover the signed-in state and re-enable the unread query.
+    unreadCountMode = "count";
+    sessionCheckMode = "normal";
+    await signInFromFirstTab();
+    await loadUnreadBadge(secondPage);
+    await secondPage.goto(`${base}/`);
+
+    const requestsBeforeRestore = unreadCountRequests.get(secondPage);
+    sessionCheckMode = "network-error";
+    await secondPage.goBack();
+    const restoredFromBfCache = await secondPage.evaluate(() =>
+      window.__tellingForwardPageShowEvents.some((event) => event.persisted),
+    );
+    if (!restoredFromBfCache) {
+      // Headless Chromium can reload Vite history entries instead of using
+      // BFCache. Dispatch the same persisted pageshow signal so the failed
+      // revalidation is still exercised as a restored-tab event.
+      await secondPage.evaluate(() => {
+        window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
+      });
+    }
+    await secondPage.getByText("Sign in to see updates about your scenes.").waitFor();
+    assert.equal(
+      await secondPage.getByTestId("inbox-unread-count").count(),
+      0,
+      "restored tab showed an unread badge while session authentication was unknown",
+    );
+    assert.equal(
+      unreadCountRequests.get(secondPage),
+      requestsBeforeRestore,
+      "restored tab requested unread count while session authentication was unknown",
+    );
+
+    sessionCheckMode = "normal";
+    await secondPage.evaluate(() => {
+      window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
+    });
+    await secondPage.getByTestId("inbox-unread-count").waitFor();
+    assert.equal(await secondPage.getByTestId("inbox-unread-count").innerText(), "4");
+    assert.equal(
+      unreadCountRequests.get(secondPage),
+      requestsBeforeRestore + 1,
+      "restored tab did not reload unread count after session revalidation recovered",
+    );
+  }
+
   try {
     await signInFromFirstTab();
     await Promise.all([loadUnreadBadge(firstPage), loadUnreadBadge(secondPage)]);
@@ -210,10 +263,11 @@ async function main() {
       "a 401 unread-count response must not be retried",
     );
 
+    await assertBackForwardRestoreDuringSessionFailure();
     await assertBackForwardRestoreAfterLogout();
 
     console.log(
-      "unread badge cross-tab logout, BFCache restore, and unauthenticated no-retry regression passed",
+      "unread badge cross-tab logout, BFCache restore, temporary session failure, and unauthenticated no-retry regression passed",
     );
   } catch (error) {
     await firstPage.screenshot({
