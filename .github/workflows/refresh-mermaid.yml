@@ -14,7 +14,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  pending:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      exists: ${{ steps.check.outputs.exists }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Test refresh inventory gate
+        run: python3 -m unittest discover -s .github/scripts/tests -v
+      - name: Check for a refresh awaiting review
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pending="$(python3 .github/scripts/pending_mermaid_refresh.py "$GITHUB_REPOSITORY")"
+          echo "exists=$pending" >> "$GITHUB_OUTPUT"
+
   refresh:
+    needs: pending
+    if: needs.pending.outputs.exists == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

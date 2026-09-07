@@ -1,0 +1,28 @@
+name: Maintenance contracts
+
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/pending_mermaid_refresh.py'
+      - '.github/scripts/tests/**'
+      - '.github/workflows/refresh-mermaid.yml'
+      - '.github/workflows/maintenance-contracts.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/pending_mermaid_refresh.py'
+      - '.github/scripts/tests/**'
+      - '.github/workflows/refresh-mermaid.yml'
+      - '.github/workflows/maintenance-contracts.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s .github/scripts/tests -v
