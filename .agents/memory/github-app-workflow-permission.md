@@ -15,3 +15,16 @@ does not prove that the same App can propagate a workflow change.
 workflow-only propagation change, preserve the service identity for synthetic
 test branches, and record the permission boundary rather than repeatedly
 retrying App-authenticated workflow writes.
+
+Before interpreting a pilot run as evidence for a local workflow change,
+verify the run's head commit and executed job-step names. A successful
+workflow dispatch can still execute an older remote workflow, omitting newly
+added cache or measurement steps.
+
+**Why:** The private pilot can remain on a stale workflow when the local
+checkout has advanced but the workflow-file permission boundary prevents
+propagation.
+
+**How to apply:** Treat local source and owner-controlled Actions evidence as
+separate facts; require the remote run to expose the expected step and summary
+fields before claiming behavior from the updated workflow.

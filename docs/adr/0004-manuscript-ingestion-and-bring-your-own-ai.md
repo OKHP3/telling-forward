@@ -205,6 +205,30 @@ was used.
   Issue filing was skipped, and the repository remained at four Issues,
   proving that no partial Issue batch reached GitHub.
 
+### Dependency-cache comparison — 2026-09-08
+
+Two further owner-controlled runs used the same `main` ref, synthetic EPUB,
+upload ID, and head commit
+`f7372ec561ea75d8614ed6b2729fbf2f5d338a0c`:
+
+- [Run 34224326242](https://github.com/OKHP3/telling-forward-pilot-grove-ingestion/actions/runs/34224326242)
+  completed successfully. Dependency installation took 392 seconds
+  (12:07:49–12:14:21 UTC), and the model cache missed, so model download ran.
+- [Run 34225446752](https://github.com/OKHP3/telling-forward-pilot-grove-ingestion/actions/runs/34225446752)
+  completed successfully. Dependency installation took 390 seconds
+  (12:19:57–12:26:27 UTC), and the model cache hit, so model download was
+  skipped.
+
+These runs do not establish dependency savings. The owner-controlled commit
+did not contain the checked-in `Cache ingestion dependency wheels` step, so
+neither run emitted the dependency cache result or the dependency measurement
+summary. The private Actions log and summary endpoints were unavailable
+through the authorized connection, and no measurement artifact was published.
+The 2-second difference is therefore inconclusive rather than evidence against
+the checked-in cache strategy. Contributor-facing turnaround estimates remain
+blocked until the updated workflow is propagated to the private pilot and a
+cold/repeat pair records both summary fields with the same requirements hash.
+
 `artifacts/mcp-server` was smoke-tested end to end with a real MCP client
 (the SDK's own `Client` + `StdioClientTransport`, not a mock): the server
 starts, all three tools register and list correctly, `get_capsule_schema`
@@ -233,11 +257,11 @@ The following prerequisites are resolved:
    under `.github/scripts/ingestion/`; the deployable MCP server lives under
    `artifacts/mcp-server/`; and both locations are recorded in `AGENTS.md`.
 
-The live evidence does not justify a contributor-facing turnaround promise:
-the measured runs spent most of their time installing dependencies and
-loading the model, and the cache-hit path still varied with runner setup.
-The workflow now caches the pip build output for the pinned dependency set and
-records cold/repeat install timing in the Actions summary. A new private-pilot
-repeat run is still required to establish whether that cache materially reduces
-setup time; no contributor-facing estimate is supported until that evidence
-exists.
+The live evidence does not justify a contributor-facing turnaround promise.
+The 2026-09-08 private-pilot pair spent 392s and 390s installing dependencies,
+but it ran the older remote workflow without the checked-in pip-cache step.
+The checked-in workflow caches the pip build output for the pinned dependency
+set and records cold/repeat install timing in the Actions summary; that
+workflow still needs to be propagated through an authorized workflow-file write
+path before the comparison can be repeated. No contributor-facing estimate is
+supported until the updated workflow's summary fields establish the result.

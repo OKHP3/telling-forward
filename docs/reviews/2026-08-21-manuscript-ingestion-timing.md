@@ -179,17 +179,44 @@ and 6m50s on a model-cache hit. The pinned
 `llama-cpp-python==0.3.35` release is an sdist for the workflow's
 Ubuntu/Python 3.12 target, so this cost includes compiling the native wheel.
 
-The workflow now caches `~/.cache/pip` with a key based on runner OS, Python
-3.12, and the requirements-file hash. It installs with `--prefer-binary` and
-records both the pip-cache hit/miss and elapsed dependency-install seconds in
-the GitHub Actions run summary. This preserves the model integrity gate and
-does not replace the runner with an unpinned prebuilt artifact.
+The checked-in workflow caches `~/.cache/pip` with a key based on runner OS,
+Python 3.12, and the requirements-file hash. It installs with
+`--prefer-binary` and records both the pip-cache hit/miss and elapsed
+dependency-install seconds in the GitHub Actions run summary. This preserves
+the model integrity gate and does not replace the runner with an unpinned
+prebuilt artifact.
 
-The cache strategy is implemented, but no post-change private-pilot run has
-yet been observed. Therefore the existing 6m16s/6m50s measurements remain the
-only timing evidence, and no setup-time reduction or contributor-facing
-turnaround estimate is claimed until a cold run followed by a repeat run
-records the new summary fields.
+### Private-pilot comparison — 2026-09-08
+
+Two owner-controlled runs were dispatched against the same `main` ref, the
+same synthetic EPUB, the same upload ID, and the same head commit
+`f7372ec561ea75d8614ed6b2729fbf2f5d338a0c`; therefore they used the same
+requirements-file revision/hash input. Both completed successfully, although
+the remote workflow did not emit that hash:
+
+| Run | Actions evidence | Dependency-install step | Dependency-cache result | Model-cache result |
+|---|---|---:|---|---|
+| Cold candidate, run 7 | [34224326242](https://github.com/OKHP3/telling-forward-pilot-grove-ingestion/actions/runs/34224326242) | **392s** (12:07:49–12:14:21 UTC) | **Not emitted** — the remote job has no dependency-cache step or measurement summary | miss; model download ran 160s |
+| Repeat, run 8 | [34225446752](https://github.com/OKHP3/telling-forward-pilot-grove-ingestion/actions/runs/34225446752) | **390s** (12:19:57–12:26:27 UTC) | **Not emitted** — the remote job has no dependency-cache step or measurement summary | hit; model download skipped |
+
+The two dependency-install timings differ by only 2 seconds, but this is not
+evidence that the checked-in dependency cache is ineffective. The
+owner-controlled pilot ran the older workflow from the commit above: its job
+steps contain `Cache model weights` but do not contain the checked-in
+`Cache ingestion dependency wheels` step. The private Actions log and step
+summary endpoints were also unavailable through the authorized GitHub
+connection (HTTP 403), and the run did not publish a measurement artifact.
+Therefore the required `pip cache hit` value cannot be recovered for either
+run.
+
+This comparison proves that the two pilot ingestions succeeded and that the
+model cache worked on the repeat. It does **not** prove repeat-run dependency
+savings, because the updated dependency-cache workflow was not the workflow
+executed by the pilot. No setup-time reduction or contributor-facing
+turnaround estimate is supported. The checked-in workflow must first be
+propagated to the private pilot through an authorized workflow-file write path;
+then a cold run and a repeat run with the same requirements hash must be
+captured from their summaries.
 
 ---
 
