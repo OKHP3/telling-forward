@@ -178,3 +178,30 @@ This live evidence proves gate behavior only. The structural check remains
 repository-shape evidence and does not decide canon, rights, moderation, or
 publication; those decisions remain with the human steward and the
 application's independent policy controls.
+
+## Repeatable merge-gate evidence harness
+
+The live matrix can be repeated by a maintainer without putting synthetic
+content into canon:
+
+```sh
+pnpm --filter @workspace/api-server run test:github-app:merge-gate \
+  -- --output /tmp/private-pilot-merge-gate.md
+```
+
+The command is intentionally App-only and fixed to the private
+`OKHP3/telling-forward-pilot-grove` repository. It refuses a non-private target
+or a missing required context, creates a service-authored synthetic pull
+request, records the configured required contexts and emitted check names, then
+captures:
+
+1. the initial/no-review blocked state;
+2. the blocked state after required checks succeed but before steward approval;
+3. the clean state after `@OKHP3` approval.
+
+It never calls GitHub's merge endpoint. In all success and failure paths it
+closes the pull request, deletes the temporary branch, and verifies that the
+default branch SHA is unchanged. The command exits non-zero if the pull request
+is merged, the default branch changes, a required state is not observed, or
+cleanup fails. The generated Markdown includes a fenced JSON record so the
+evidence can be appended to this review or parsed by later tooling.
