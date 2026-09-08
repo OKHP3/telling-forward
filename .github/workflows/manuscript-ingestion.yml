@@ -105,6 +105,18 @@ jobs:
       - name: Verify ingestion contract
         run: pytest -q .github/scripts/ingestion/test_ingestion.py
 
+      # Compare the pinned contract with Hugging Face's commit and LFS
+      # metadata before consulting the cache or downloading any model bytes.
+      - name: Verify pinned model metadata
+        run: |
+          python3 .github/scripts/ingestion/verify_model.py \
+            --verify-hf-metadata \
+            "${{ env.HF_MODEL_REPO }}" \
+            "${{ env.HF_MODEL_REVISION }}" \
+            "${{ env.HF_MODEL_FILE }}" \
+            "${{ env.HF_MODEL_SIZE_BYTES }}" \
+            "${{ env.HF_MODEL_SHA256 }}"
+
       # Cache keyed on the pinned revision, so the ~2-4 GB GGUF file only
       # downloads once per revision, not once per workflow run. This is
       # the alternative to committing the model file into the repository

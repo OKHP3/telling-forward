@@ -157,6 +157,131 @@ def test_model_integrity_accepts_matching_size_and_sha256(tmp_path: Path) -> Non
     assert result.sha256 == digest
 
 
+def test_huggingface_metadata_accepts_matching_revision_and_asset(monkeypatch: pytest.MonkeyPatch) -> None:
+    verify = load_script("verify_model")
+    payload = {
+        "sha": "revision-123",
+        "siblings": [
+            {
+                "rfilename": "model.gguf",
+                "lfs": {
+                    "size": 1234,
+                    "sha256": "a" * 64,
+                },
+            },
+        ],
+    }
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self, *args):
+            return json.dumps(payload).encode()
+
+    requested = {}
+
+    def urlopen(request, timeout):
+        requested["url"] = request.full_url
+        requested["timeout"] = timeout
+        return Response()
+
+    monkeypatch.setattr(verify.urllib.request, "urlopen", urlopen)
+
+    result = verify.verify_huggingface_model_metadata(
+        "owner/model",
+        "revision-123",
+        "model.gguf",
+        1234,
+        "a" * 64,
+    )
+
+    assert result.revision == "revision-123"
+    assert result.filename == "model.gguf"
+    assert result.size_bytes == 1234
+    assert result.sha256 == "a" * 64
+    assert "revision=revision-123" in requested["url"]
+    assert "blobs=true" in requested["url"]
+    assert "/resolve/" not in requested["url"]
+
+
+def test_huggingface_metadata_reports_revision_size_and_digest_drift(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    verify = load_script("verify_model")
+    payload = {
+        "sha": "new-revision",
+        "siblings": [
+            {
+                "rfilename": "model.gguf",
+                "lfs": {
+                    "size": 5678,
+                    "sha256": "b" * 64,
+                },
+            },
+        ],
+    }
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self, *args):
+            return json.dumps(payload).encode()
+
+    monkeypatch.setattr(verify.urllib.request, "urlopen", lambda request, timeout: Response())
+
+    with pytest.raises(verify.ModelMetadataError) as error:
+        verify.verify_huggingface_model_metadata(
+            "owner/model",
+            "old-revision",
+            "model.gguf",
+            1234,
+            "a" * 64,
+        )
+
+    message = str(error.value)
+    assert "revision new-revision" in message
+    assert "size 5678 bytes" in message
+    assert "sha256 " + "b" * 64 in message
+    assert "HF_MODEL_SIZE_BYTES" in message
+    assert "HF_MODEL_SHA256" in message
+
+
+def test_huggingface_metadata_requires_published_asset_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    verify = load_script("verify_model")
+    payload = {"sha": "revision-123", "siblings": [{"rfilename": "model.gguf"}]}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self, *args):
+            return json.dumps(payload).encode()
+
+    monkeypatch.setattr(verify.urllib.request, "urlopen", lambda request, timeout: Response())
+
+    with pytest.raises(verify.ModelMetadataError, match="no valid published"):
+        verify.verify_huggingface_model_metadata(
+            "owner/model",
+            "revision-123",
+            "model.gguf",
+            1234,
+            "a" * 64,
+        )
+
+
 def test_truncated_model_fails_before_extraction_or_issue_filing(tmp_path: Path) -> None:
     """A truncated fixture is rejected at the workflow's first model gate."""
     verify_script = ROOT / "verify_model.py"
@@ -210,6 +335,19 @@ def test_workflow_caches_and_measures_dependency_install() -> None:
     assert 'echo "cache_hit=' in workflow
     assert 'echo "duration_seconds=' in workflow
     assert "$GITHUB_STEP_SUMMARY" in workflow
+
+
+def test_workflow_verifies_model_metadata_before_cache_or_download() -> None:
+    workflow = (ROOT.parents[1] / "workflows" / "manuscript-ingestion.yml").read_text(
+        encoding="utf-8",
+    )
+    metadata_position = workflow.index("- name: Verify pinned model metadata")
+    cache_position = workflow.index("- name: Cache model weights")
+    download_position = workflow.index("- name: Download model weights")
+    assert metadata_position < cache_position < download_position
+    assert "--verify-hf-metadata" in workflow
+    assert "hf_hub_download" in workflow
+    assert workflow.index("hf_hub_download") > metadata_position
 
 
 def test_issue_filing_contract_is_draft_and_typed() -> None:
