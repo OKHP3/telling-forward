@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resolveGitHubAuth } from "./github";
+import {
+  GitHubWorkflowPermissionError,
+  isGitHubWorkflowPath,
+  resolveGitHubAuth,
+} from "./github";
 
 describe("GitHub platform authentication", () => {
   it("prefers complete installation-scoped App credentials over the PAT", () => {
@@ -59,5 +63,25 @@ describe("GitHub platform authentication", () => {
 
   it("does not invent credentials when neither boundary is configured", () => {
     expect(resolveGitHubAuth({})).toEqual({ kind: "anonymous" });
+  });
+
+  it("recognizes only files under the GitHub workflow directory", () => {
+    expect(isGitHubWorkflowPath(".github/workflows/validate.yml")).toBe(true);
+    expect(isGitHubWorkflowPath(".github/workflows")).toBe(true);
+    expect(isGitHubWorkflowPath("docs/.github/workflows/notes.md")).toBe(false);
+    expect(isGitHubWorkflowPath(".github/workflow-notes.md")).toBe(false);
+  });
+
+  it("describes a missing workflow permission without including credentials", () => {
+    const error = new GitHubWorkflowPermissionError([
+      ".github/workflows/validate.yml",
+    ]);
+
+    expect(error.name).toBe("GitHubWorkflowPermissionError");
+    expect(error.status).toBe(403);
+    expect(error.message).toContain("Workflows repository permission");
+    expect(error.message).not.toContain("token");
+    expect(error.message).not.toContain("private key");
+    expect(error.paths).toEqual([".github/workflows/validate.yml"]);
   });
 });

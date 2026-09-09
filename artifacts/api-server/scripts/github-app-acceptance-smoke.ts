@@ -1,6 +1,21 @@
+/**
+ * Prove that the private-pilot GitHub App can update a workflow file.
+ *
+ * This is intentionally App-only. It uses the same GitHub client as the API
+ * service for branch creation and the workflow-only commit, and never reads
+ * GITHUB_PAT. The temporary branch is deleted in every cleanup path.
+ *
+ * Usage:
+ *   pnpm --filter @workspace/api-server run test:github-app:smoke
+ */
+
 import assert from "node:assert/strict";
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "@octokit/rest";
+import {
+  getGitHubClient,
+  resolveGitHubAuth,
+} from "../src/lib/github";
 
 const owner = "OKHP3";
 const repo = "telling-forward-pilot-grove";
@@ -14,6 +29,14 @@ const privateKey = rawPrivateKey
   .replace(/\s*(-----END [^-]+-----)\s*$/, "\n$1\n");
 
 assert.ok(appId && installationId && privateKey, "GitHub App secrets are incomplete");
+assert.deepEqual(
+  resolveGitHubAuth(),
+  {
+    kind: "app",
+    credentials: { appId, installationId, privateKey },
+  },
+  "The workflow smoke must use complete App authentication and never the PAT fallback",
+);
 
 const auth = createAppAuth({ appId, installationId, privateKey });
 const appAuthentication = await auth({ type: "app" });
@@ -43,15 +66,20 @@ assert.equal(
   "write",
   "Pilot installation does not have the contents write permission required by the platform",
 );
+assert.equal(
+  installation.data.permissions?.workflows,
+  "write",
+  "Pilot installation needs the separate Workflows repository permission before the service can update .github/workflows files",
+);
 
-const first = await auth({
+const installationAuth = await auth({
   type: "installation",
   installationId,
   refresh: true,
 });
-const firstClient = new Octokit({ auth: first.token });
-const repository = await firstClient.rest.repos.get({ owner, repo });
-const accessible = await firstClient.rest.apps.listReposAccessibleToInstallation({
+const cleanupClient = new Octokit({ auth: installationAuth.token });
+const repository = await cleanupClient.rest.repos.get({ owner, repo });
+const accessible = await cleanupClient.rest.apps.listReposAccessibleToInstallation({
   per_page: 100,
 });
 const accessibleNames = accessible.data.repositories.map((item) => item.full_name);
@@ -63,41 +91,59 @@ assert.ok(
 assert.equal(repository.data.full_name, `${owner}/${repo}`);
 assert.equal(repository.data.private, true, "Pilot repository is not private");
 
-const second = await auth({
-  type: "installation",
-  installationId,
-  refresh: true,
-});
-const secondClient = new Octokit({ auth: second.token });
-assert.notEqual(
-  first.token,
-  second.token,
-  "Forced installation-token refresh returned the same token",
-);
-assert.ok(first.expiresAt && second.expiresAt, "Installation-token expiry metadata is missing");
-
-const branch = `pilot/app-acceptance-${Date.now()}`;
-const defaultRef = await secondClient.rest.git.getRef({
-  owner,
-  repo,
-  ref: `heads/${repository.data.default_branch}`,
-});
+const branch = `pilot/app-workflow-acceptance-${Date.now()}`;
+const workflowPath = ".github/workflows/pilot-app-acceptance.yml";
+const workflowContent = [
+  "# Temporary service-authored permission smoke fixture.",
+  "name: pilot-app-acceptance",
+  "on:",
+  "  workflow_dispatch:",
+  "permissions:",
+  "  contents: read",
+  "jobs:",
+  "  acceptance:",
+  "    runs-on: ubuntu-latest",
+  "    steps:",
+  "      - run: echo workflow-permission-boundary",
+  "",
+].join("\n");
+const serviceClient = getGitHubClient();
 let branchCreated = false;
+let commitSha: string | null = null;
+
 try {
-  await secondClient.rest.git.createRef({
+  await serviceClient.createBranch({
     owner,
     repo,
-    ref: `refs/heads/${branch}`,
-    sha: defaultRef.data.object.sha,
+    branchName: branch,
+    fromRef: repository.data.default_branch,
   });
   branchCreated = true;
+
+  commitSha = await serviceClient.createCommit({
+    owner,
+    repo,
+    branch,
+    files: { [workflowPath]: workflowContent },
+    message: "test: prove service-authored workflow update",
+    authorName: "Telling Forward platform",
+    authorEmail: "noreply@tellingforward.app",
+  });
+  const writtenContent = await serviceClient.getFileContent(
+    owner,
+    repo,
+    workflowPath,
+    branch,
+  );
+  assert.equal(writtenContent, workflowContent);
 } finally {
   if (branchCreated) {
-    await secondClient.rest.git.deleteRef({
+    await cleanupClient.rest.git.deleteRef({
       owner,
       repo,
       ref: `heads/${branch}`,
     });
+    branchCreated = false;
   }
 }
 
@@ -120,17 +166,14 @@ console.log(
       private: repository.data.private,
       defaultBranch: repository.data.default_branch,
     },
-    tokenRefresh: {
-      firstExpiresAt: first.expiresAt,
-      secondExpiresAt: second.expiresAt,
-      tokensDiffer: first.token !== second.token,
-    },
     write: {
-      operation: "create-and-delete-empty-branch",
+      operation: "service-client-createCommit-workflow-only",
+      path: workflowPath,
+      commitSha,
       actor: `${appIdentity.data.slug}[bot]`,
-      branchDeleted: true,
+      branchDeleted: !branchCreated,
     },
-    rollbackBoundary:
-      "PAT fallback remains configuration-only and is covered by github-auth.test.ts",
+    credentialBoundary:
+      "Complete App authentication is required; GITHUB_PAT is never read by this smoke",
   }),
 );

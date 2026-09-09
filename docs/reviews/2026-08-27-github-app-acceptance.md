@@ -23,7 +23,7 @@ or story file was changed.
 - Accessible repository: `OKHP3/telling-forward-pilot-grove`
 - Pilot repository: private, default branch `main`
 - Installation permissions observed: Actions write, Contents write, Issues
-  write, Metadata read, Pull requests write
+  write, Metadata read, Pull requests write; **Workflows write was absent**
 
 The selected installation exposed only the named private pilot repository in
 the accessible-repository response.
@@ -71,3 +71,32 @@ pnpm --filter @workspace/api-server test -- src/lib/github-auth.test.ts
 
 The smoke command requires `GITHUB_APP_ID`,
 `GITHUB_APP_INSTALLATION_ID`, and `GITHUB_APP_PRIVATE_KEY` in Replit Secrets.
+
+## Workflow-file permission boundary
+
+The pilot App installation observed on 2026-09-08 still does not include the
+separate `workflows: write` repository permission. GitHub treats
+`.github/workflows/**` as a privileged write path even when the installation has
+Contents write. The installation client cannot grant itself this permission;
+the App owner must add **Workflows: Read and write** under the App's
+**Permissions & events → Repository permissions**, save the registration, and
+approve the updated permission on the selected pilot installation.
+
+The acceptance smoke now fails closed until that approval is present. Once
+approved, it creates a disposable branch, uses the API service's
+installation-scoped GitHub client to commit exactly one temporary workflow file,
+reads the file back through that same client, and deletes the branch. It never
+reads `GITHUB_PAT`, prints tokens, or persists private-key material:
+
+```bash
+pnpm --filter @workspace/api-server run test:github-app:smoke
+```
+
+Until the App owner approves `workflows: write`, the operational control is
+explicit: the service does not fall back to a maintainer PAT for workflow-file
+writes. Complete App configuration remains installation-scoped, partial App
+configuration fails closed, and the PAT remains limited to the separate
+private-pilot rollback/workspace auto-push boundary. The service-side
+permission error is covered by
+`artifacts/api-server/src/lib/github-auth.test.ts`; no credential details are
+included in the error or test output.

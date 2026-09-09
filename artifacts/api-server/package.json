@@ -9,7 +9,7 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "test:github-app:smoke": "node scripts/github-app-acceptance-smoke.mjs",
+    "test:github-app:smoke": "tsx scripts/github-app-acceptance-smoke.ts",
     "test:github-app:merge-gate": "node scripts/github-app-merge-gate-evidence.mjs"
   },
   "dependencies": {

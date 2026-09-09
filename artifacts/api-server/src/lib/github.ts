@@ -287,6 +287,23 @@ export type GitHubAuthConfig =
   | { kind: "pat"; token: string }
   | { kind: "anonymous" };
 
+export function isGitHubWorkflowPath(path: string): boolean {
+  return path === ".github/workflows" || path.startsWith(".github/workflows/");
+}
+
+export class GitHubWorkflowPermissionError extends Error {
+  readonly paths: string[];
+  readonly status = 403;
+
+  constructor(paths: string[]) {
+    super(
+      `GitHub App cannot update workflow files; request the Workflows repository permission for: ${paths.join(", ")}`,
+    );
+    this.name = "GitHubWorkflowPermissionError";
+    this.paths = paths;
+  }
+}
+
 function normalizeGitHubAppPrivateKey(privateKey: string): string {
   return privateKey
     .replace(/\\r/g, "\r")
@@ -906,6 +923,19 @@ class OctokitGitHubClient implements GitHubClientInterface {
    * Uses the tree/blob API for multi-file commits.
    */
   async createCommit(params: CreateCommitParams): Promise<string> {
+    const workflowPaths = Object.keys(params.files).filter(isGitHubWorkflowPath);
+    try {
+      return await this.createCommitUnchecked(params);
+    } catch (err: unknown) {
+      const status = (err as { status?: number }).status;
+      if (workflowPaths.length > 0 && status === 403) {
+        throw new GitHubWorkflowPermissionError(workflowPaths);
+      }
+      throw err;
+    }
+  }
+
+  private async createCommitUnchecked(params: CreateCommitParams): Promise<string> {
     const { owner, repo, branch, files, message, authorName, authorEmail } =
       params;
 
