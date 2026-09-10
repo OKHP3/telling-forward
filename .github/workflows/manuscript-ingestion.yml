@@ -13,6 +13,11 @@
 name: Manuscript ingestion (Tier 1)
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/manuscript-ingestion.yml"
+      - ".github/scripts/ingestion/verify_model.py"
+      - ".github/scripts/ingestion/test_ingestion.py"
   workflow_dispatch:
     inputs:
       manuscript_path:
@@ -42,7 +47,6 @@ concurrency:
 
 permissions:
   contents: read
-  issues: write
 
 env:
   # Pinned to a specific Hugging Face revision (commit hash), not "main" or
@@ -56,9 +60,39 @@ env:
   HF_MODEL_SHA256: "88c00229914083cd112853aab84ed51b87bdf6b9ce42f532d8c85c7c63b1730a"
 
 jobs:
+  verify-model-contract:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # This metadata-only check never installs ingestion dependencies or
+      # requests model bytes. It catches a stale revision or asset contract
+      # before a maintainer waits for a full, manually dispatched run.
+      - name: Verify pinned model metadata
+        run: |
+          python3 .github/scripts/ingestion/verify_model.py \
+            --verify-hf-metadata \
+            "${{ env.HF_MODEL_REPO }}" \
+            "${{ env.HF_MODEL_REVISION }}" \
+            "${{ env.HF_MODEL_FILE }}" \
+            "${{ env.HF_MODEL_SIZE_BYTES }}" \
+            "${{ env.HF_MODEL_SHA256 }}"
+
   ingest:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
         with:

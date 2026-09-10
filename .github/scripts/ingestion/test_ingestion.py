@@ -341,13 +341,40 @@ def test_workflow_verifies_model_metadata_before_cache_or_download() -> None:
     workflow = (ROOT.parents[1] / "workflows" / "manuscript-ingestion.yml").read_text(
         encoding="utf-8",
     )
-    metadata_position = workflow.index("- name: Verify pinned model metadata")
-    cache_position = workflow.index("- name: Cache model weights")
-    download_position = workflow.index("- name: Download model weights")
+    ingest_job = workflow[workflow.index("  ingest:"):]
+    metadata_position = ingest_job.index("- name: Verify pinned model metadata")
+    cache_position = ingest_job.index("- name: Cache model weights")
+    download_position = ingest_job.index("- name: Download model weights")
     assert metadata_position < cache_position < download_position
-    assert "--verify-hf-metadata" in workflow
-    assert "hf_hub_download" in workflow
-    assert workflow.index("hf_hub_download") > metadata_position
+    assert "--verify-hf-metadata" in ingest_job
+    assert "hf_hub_download" in ingest_job
+    assert ingest_job.index("hf_hub_download") > metadata_position
+
+
+def test_workflow_checks_model_metadata_on_contract_pull_requests_only() -> None:
+    workflow = (ROOT.parents[1] / "workflows" / "manuscript-ingestion.yml").read_text(
+        encoding="utf-8",
+    )
+
+    assert "pull_request:" in workflow
+    for path in (
+        ".github/workflows/manuscript-ingestion.yml",
+        ".github/scripts/ingestion/verify_model.py",
+        ".github/scripts/ingestion/test_ingestion.py",
+    ):
+        assert f'"{path}"' in workflow
+
+    pr_job_start = workflow.index("  verify-model-contract:")
+    ingest_job_start = workflow.index("  ingest:", pr_job_start)
+    pr_job = workflow[pr_job_start:ingest_job_start]
+    assert "if: github.event_name == 'pull_request'" in pr_job
+    assert "--verify-hf-metadata" in pr_job
+    assert "hf_hub_download" not in pr_job
+    assert "models/" not in pr_job
+    assert "issues: write" not in pr_job
+
+    ingest_job = workflow[ingest_job_start:]
+    assert "if: github.event_name == 'workflow_dispatch'" in ingest_job
 
 
 def test_issue_filing_contract_is_draft_and_typed() -> None:
