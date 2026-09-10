@@ -193,6 +193,56 @@ export async function ensureSchema(): Promise<void> {
     -- account ID with each imported proposal before making it user-visible.
     ALTER TABLE proposals ADD COLUMN IF NOT EXISTS github_user_id TEXT;
 
+    CREATE TABLE IF NOT EXISTS proposal_versions (
+      id              SERIAL      PRIMARY KEY,
+      proposal_id     INTEGER     NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
+      proposal_lineage_ref TEXT   NOT NULL,
+      version_ref     TEXT        NOT NULL UNIQUE,
+      predecessor_version_ref TEXT,
+      fidelity_note_ref TEXT      NOT NULL,
+      source_reference TEXT,
+      output_reference TEXT,
+      predecessor_fidelity_note_retained_ref TEXT,
+      predecessor_review_event_retained_ref TEXT,
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_proposal_versions_proposal
+      ON proposal_versions (proposal_id);
+    CREATE INDEX IF NOT EXISTS idx_proposal_versions_lineage
+      ON proposal_versions (proposal_lineage_ref);
+
+    CREATE TABLE IF NOT EXISTS proposal_review_events (
+      id                SERIAL      PRIMARY KEY,
+      event_ref         TEXT        NOT NULL UNIQUE,
+      proposal_id       INTEGER     NOT NULL REFERENCES proposals(id) ON DELETE RESTRICT,
+      proposal_version_id INTEGER   NOT NULL REFERENCES proposal_versions(id) ON DELETE RESTRICT,
+      proposal_lineage_ref TEXT     NOT NULL,
+      version_ref       TEXT        NOT NULL,
+      fidelity_note_ref TEXT        NOT NULL,
+      action            TEXT        NOT NULL CHECK (
+        action IN ('accept', 'reject', 'request-revision', 'appeal')
+      ),
+      resulting_review_state TEXT   NOT NULL CHECK (
+        resulting_review_state IN (
+          'accepted-by-contributor',
+          'rejected-by-contributor',
+          'changes-requested',
+          'appeal-pending'
+        )
+      ),
+      safe_reason       TEXT,
+      steward_decision_ref TEXT,
+      actor_user_id     INTEGER,
+      created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_proposal_review_events_version
+      ON proposal_review_events (proposal_version_id);
+    CREATE INDEX IF NOT EXISTS idx_proposal_review_events_proposal
+      ON proposal_review_events (proposal_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS proposal_review_events_terminal_version_unique
+      ON proposal_review_events (proposal_version_id)
+      WHERE action IN ('accept', 'reject');
+
     CREATE TABLE IF NOT EXISTS editor_questions (
       id                SERIAL      PRIMARY KEY,
       proposal_id       INTEGER     NOT NULL REFERENCES proposals(id),

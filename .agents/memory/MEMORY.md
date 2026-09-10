@@ -17,3 +17,4 @@
 - [GitHub App workflow permissions](github-app-workflow-permission.md) — repository contents write does not permit an App to update .github/workflows without the separate Workflows permission.
 - [Phi-4 Actions runtime](phi4-actions-runtime.md) — the pinned Phi-4 GGUF requires a current llama-cpp-python release on CPU runners; validate the loader with the exact revision.
 - [Private pilot backup policy](private-backup-policy.md) — use private Object Storage, operator-held passphrase, 35-day retention, and an operations-log record for the scheduled drill.
+- [Proposal review immutability](proposal-review-immutability.md) — exact version/note binding needs API checks plus storage-level terminal-event uniqueness.

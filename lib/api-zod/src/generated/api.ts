@@ -947,6 +947,111 @@ export const GetProposalResponse = zod
   );
 
 /**
+ * Registers one exact proposed output in a proposal lineage. A predecessor must be a direct version in the same lineage; the mutable proposal record is never used as a substitute for version_ref. Requires authentication.
+
+ * @summary Register an immutable proposal version
+ */
+export const CreateProposalVersionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const CreateProposalVersionBody = zod.object({
+  proposalLineageRef: zod.string().min(1),
+  versionRef: zod.string().min(1),
+  predecessorVersionRef: zod.string().nullable(),
+  fidelityNoteRef: zod.string().min(1),
+  sourceReference: zod.string().optional(),
+  outputReference: zod.string().optional(),
+});
+
+/**
+ * @summary Accept one exact proposal version
+ */
+
+export const AcceptProposalVersionParams = zod.object({
+  id: zod.coerce.number(),
+  versionRef: zod.coerce.string().min(1),
+});
+
+export const AcceptProposalVersionBody = zod.object({
+  proposalLineageRef: zod.string().min(1),
+  versionRef: zod.string().min(1),
+  fidelityNoteRef: zod.string().min(1),
+  eventRef: zod.string().min(1).optional(),
+  safeReason: zod.string().optional(),
+});
+
+/**
+ * @summary Reject one exact proposal version
+ */
+
+export const RejectProposalVersionParams = zod.object({
+  id: zod.coerce.number(),
+  versionRef: zod.coerce.string().min(1),
+});
+
+export const RejectProposalVersionBody = zod.object({
+  proposalLineageRef: zod.string().min(1),
+  versionRef: zod.string().min(1),
+  fidelityNoteRef: zod.string().min(1),
+  eventRef: zod.string().min(1).optional(),
+  safeReason: zod.string().optional(),
+});
+
+/**
+ * Records the request against the reviewed version and creates a child version with a new version_ref and fidelity_note_ref. The child starts with no inherited review outcome.
+
+ * @summary Request a new proposal version
+ */
+
+export const RequestProposalVersionRevisionParams = zod.object({
+  id: zod.coerce.number(),
+  versionRef: zod.coerce.string().min(1),
+});
+
+export const RequestProposalVersionRevisionBody = zod
+  .object({
+    proposalLineageRef: zod.string().min(1),
+    versionRef: zod.string().min(1),
+    fidelityNoteRef: zod.string().min(1),
+    eventRef: zod.string().min(1).optional(),
+    safeReason: zod.string().optional(),
+  })
+  .and(
+    zod.object({
+      successorVersionRef: zod.string().min(1),
+      successorFidelityNoteRef: zod.string().min(1),
+      predecessorFidelityNoteRetainedRef: zod.string().min(1),
+      predecessorReviewEventRetainedRef: zod.string().min(1),
+    }),
+  );
+
+/**
+ * Appends an appeal event to the affected version. It retains the original steward decision and cannot publish, accept into canon, or change consent.
+
+ * @summary Appeal a steward decision for one exact proposal version
+ */
+
+export const AppealProposalVersionParams = zod.object({
+  id: zod.coerce.number(),
+  versionRef: zod.coerce.string().min(1),
+});
+
+export const AppealProposalVersionBody = zod
+  .object({
+    proposalLineageRef: zod.string().min(1),
+    versionRef: zod.string().min(1),
+    fidelityNoteRef: zod.string().min(1),
+    eventRef: zod.string().min(1).optional(),
+    safeReason: zod.string().optional(),
+  })
+  .and(
+    zod.object({
+      stewardDecisionRef: zod.string().min(1),
+    }),
+  );
+
+/**
  * Transitions a submitted proposal to the "under-review" state, signalling to the contributor that a steward has begun reading it. Requires authentication and steward role for the proposal's storyworld.
 
  * @summary Mark a submission as under steward review

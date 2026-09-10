@@ -18,7 +18,9 @@ import type {
 
 import type {
   AcceptProposalResponse,
+  AcceptProposalVersionBody,
   AddressEditorQuestionBody,
+  AppealProposalVersionBody,
   AuthResponse,
   BadRequestResponse,
   Capsule,
@@ -29,6 +31,8 @@ import type {
   ContributionInput,
   ContributorNotification,
   CreateCapsuleBody,
+  CreateProposalVersionBody,
+  CreateProposalVersionResponse,
   DisruptCapsuleBody,
   EditorQuestion,
   ErrorResponse,
@@ -41,9 +45,12 @@ import type {
   NotFoundResponse,
   Proposal,
   ProposalDetail,
+  ProposalReviewResponse,
   QueueManuscriptIngestionBody,
   QueueManuscriptIngestionResponse,
   RegisterRequest,
+  RejectProposalVersionBody,
+  RequestProposalRevisionBody,
   RestrictProposalBody,
   ReturnProposalBody,
   StewardProposal,
@@ -3037,6 +3044,560 @@ export function useGetProposal<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Registers one exact proposed output in a proposal lineage. A predecessor must be a direct version in the same lineage; the mutable proposal record is never used as a substitute for version_ref. Requires authentication.
+
+ * @summary Register an immutable proposal version
+ */
+export const getCreateProposalVersionUrl = (id: number) => {
+  return `/api/proposals/${id}/versions`;
+};
+
+export const createProposalVersion = async (
+  id: number,
+  createProposalVersionBody: CreateProposalVersionBody,
+  options?: RequestInit,
+): Promise<CreateProposalVersionResponse> => {
+  return customFetch<CreateProposalVersionResponse>(
+    getCreateProposalVersionUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(createProposalVersionBody),
+    },
+  );
+};
+
+export const getCreateProposalVersionMutationOptions = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProposalVersion>>,
+    TError,
+    { id: number; data: BodyType<CreateProposalVersionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createProposalVersion>>,
+  TError,
+  { id: number; data: BodyType<CreateProposalVersionBody> },
+  TContext
+> => {
+  const mutationKey = ["createProposalVersion"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createProposalVersion>>,
+    { id: number; data: BodyType<CreateProposalVersionBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return createProposalVersion(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateProposalVersionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createProposalVersion>>
+>;
+export type CreateProposalVersionMutationBody =
+  BodyType<CreateProposalVersionBody>;
+export type CreateProposalVersionMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+>;
+
+/**
+ * @summary Register an immutable proposal version
+ */
+export const useCreateProposalVersion = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProposalVersion>>,
+    TError,
+    { id: number; data: BodyType<CreateProposalVersionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createProposalVersion>>,
+  TError,
+  { id: number; data: BodyType<CreateProposalVersionBody> },
+  TContext
+> => {
+  return useMutation(getCreateProposalVersionMutationOptions(options));
+};
+
+/**
+ * @summary Accept one exact proposal version
+ */
+export const getAcceptProposalVersionUrl = (id: number, versionRef: string) => {
+  return `/api/proposals/${id}/versions/${versionRef}/review/accept`;
+};
+
+export const acceptProposalVersion = async (
+  id: number,
+  versionRef: string,
+  acceptProposalVersionBody: AcceptProposalVersionBody,
+  options?: RequestInit,
+): Promise<ProposalReviewResponse> => {
+  return customFetch<ProposalReviewResponse>(
+    getAcceptProposalVersionUrl(id, versionRef),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(acceptProposalVersionBody),
+    },
+  );
+};
+
+export const getAcceptProposalVersionMutationOptions = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acceptProposalVersion>>,
+    TError,
+    {
+      id: number;
+      versionRef: string;
+      data: BodyType<AcceptProposalVersionBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof acceptProposalVersion>>,
+  TError,
+  { id: number; versionRef: string; data: BodyType<AcceptProposalVersionBody> },
+  TContext
+> => {
+  const mutationKey = ["acceptProposalVersion"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof acceptProposalVersion>>,
+    {
+      id: number;
+      versionRef: string;
+      data: BodyType<AcceptProposalVersionBody>;
+    }
+  > = (props) => {
+    const { id, versionRef, data } = props ?? {};
+
+    return acceptProposalVersion(id, versionRef, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AcceptProposalVersionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof acceptProposalVersion>>
+>;
+export type AcceptProposalVersionMutationBody =
+  BodyType<AcceptProposalVersionBody>;
+export type AcceptProposalVersionMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+>;
+
+/**
+ * @summary Accept one exact proposal version
+ */
+export const useAcceptProposalVersion = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acceptProposalVersion>>,
+    TError,
+    {
+      id: number;
+      versionRef: string;
+      data: BodyType<AcceptProposalVersionBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof acceptProposalVersion>>,
+  TError,
+  { id: number; versionRef: string; data: BodyType<AcceptProposalVersionBody> },
+  TContext
+> => {
+  return useMutation(getAcceptProposalVersionMutationOptions(options));
+};
+
+/**
+ * @summary Reject one exact proposal version
+ */
+export const getRejectProposalVersionUrl = (id: number, versionRef: string) => {
+  return `/api/proposals/${id}/versions/${versionRef}/review/reject`;
+};
+
+export const rejectProposalVersion = async (
+  id: number,
+  versionRef: string,
+  rejectProposalVersionBody: RejectProposalVersionBody,
+  options?: RequestInit,
+): Promise<ProposalReviewResponse> => {
+  return customFetch<ProposalReviewResponse>(
+    getRejectProposalVersionUrl(id, versionRef),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(rejectProposalVersionBody),
+    },
+  );
+};
+
+export const getRejectProposalVersionMutationOptions = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectProposalVersion>>,
+    TError,
+    {
+      id: number;
+      versionRef: string;
+      data: BodyType<RejectProposalVersionBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectProposalVersion>>,
+  TError,
+  { id: number; versionRef: string; data: BodyType<RejectProposalVersionBody> },
+  TContext
+> => {
+  const mutationKey = ["rejectProposalVersion"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectProposalVersion>>,
+    {
+      id: number;
+      versionRef: string;
+      data: BodyType<RejectProposalVersionBody>;
+    }
+  > = (props) => {
+    const { id, versionRef, data } = props ?? {};
+
+    return rejectProposalVersion(id, versionRef, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectProposalVersionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rejectProposalVersion>>
+>;
+export type RejectProposalVersionMutationBody =
+  BodyType<RejectProposalVersionBody>;
+export type RejectProposalVersionMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+>;
+
+/**
+ * @summary Reject one exact proposal version
+ */
+export const useRejectProposalVersion = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectProposalVersion>>,
+    TError,
+    {
+      id: number;
+      versionRef: string;
+      data: BodyType<RejectProposalVersionBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof rejectProposalVersion>>,
+  TError,
+  { id: number; versionRef: string; data: BodyType<RejectProposalVersionBody> },
+  TContext
+> => {
+  return useMutation(getRejectProposalVersionMutationOptions(options));
+};
+
+/**
+ * Records the request against the reviewed version and creates a child version with a new version_ref and fidelity_note_ref. The child starts with no inherited review outcome.
+
+ * @summary Request a new proposal version
+ */
+export const getRequestProposalVersionRevisionUrl = (
+  id: number,
+  versionRef: string,
+) => {
+  return `/api/proposals/${id}/versions/${versionRef}/review/request-revision`;
+};
+
+export const requestProposalVersionRevision = async (
+  id: number,
+  versionRef: string,
+  requestProposalRevisionBody: RequestProposalRevisionBody,
+  options?: RequestInit,
+): Promise<ProposalReviewResponse> => {
+  return customFetch<ProposalReviewResponse>(
+    getRequestProposalVersionRevisionUrl(id, versionRef),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(requestProposalRevisionBody),
+    },
+  );
+};
+
+export const getRequestProposalVersionRevisionMutationOptions = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof requestProposalVersionRevision>>,
+    TError,
+    {
+      id: number;
+      versionRef: string;
+      data: BodyType<RequestProposalRevisionBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof requestProposalVersionRevision>>,
+  TError,
+  {
+    id: number;
+    versionRef: string;
+    data: BodyType<RequestProposalRevisionBody>;
+  },
+  TContext
+> => {
+  const mutationKey = ["requestProposalVersionRevision"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof requestProposalVersionRevision>>,
+    {
+      id: number;
+      versionRef: string;
+      data: BodyType<RequestProposalRevisionBody>;
+    }
+  > = (props) => {
+    const { id, versionRef, data } = props ?? {};
+
+    return requestProposalVersionRevision(id, versionRef, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RequestProposalVersionRevisionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof requestProposalVersionRevision>>
+>;
+export type RequestProposalVersionRevisionMutationBody =
+  BodyType<RequestProposalRevisionBody>;
+export type RequestProposalVersionRevisionMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+>;
+
+/**
+ * @summary Request a new proposal version
+ */
+export const useRequestProposalVersionRevision = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof requestProposalVersionRevision>>,
+    TError,
+    {
+      id: number;
+      versionRef: string;
+      data: BodyType<RequestProposalRevisionBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof requestProposalVersionRevision>>,
+  TError,
+  {
+    id: number;
+    versionRef: string;
+    data: BodyType<RequestProposalRevisionBody>;
+  },
+  TContext
+> => {
+  return useMutation(getRequestProposalVersionRevisionMutationOptions(options));
+};
+
+/**
+ * Appends an appeal event to the affected version. It retains the original steward decision and cannot publish, accept into canon, or change consent.
+
+ * @summary Appeal a steward decision for one exact proposal version
+ */
+export const getAppealProposalVersionUrl = (id: number, versionRef: string) => {
+  return `/api/proposals/${id}/versions/${versionRef}/review/appeal`;
+};
+
+export const appealProposalVersion = async (
+  id: number,
+  versionRef: string,
+  appealProposalVersionBody: AppealProposalVersionBody,
+  options?: RequestInit,
+): Promise<ProposalReviewResponse> => {
+  return customFetch<ProposalReviewResponse>(
+    getAppealProposalVersionUrl(id, versionRef),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(appealProposalVersionBody),
+    },
+  );
+};
+
+export const getAppealProposalVersionMutationOptions = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof appealProposalVersion>>,
+    TError,
+    {
+      id: number;
+      versionRef: string;
+      data: BodyType<AppealProposalVersionBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof appealProposalVersion>>,
+  TError,
+  { id: number; versionRef: string; data: BodyType<AppealProposalVersionBody> },
+  TContext
+> => {
+  const mutationKey = ["appealProposalVersion"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof appealProposalVersion>>,
+    {
+      id: number;
+      versionRef: string;
+      data: BodyType<AppealProposalVersionBody>;
+    }
+  > = (props) => {
+    const { id, versionRef, data } = props ?? {};
+
+    return appealProposalVersion(id, versionRef, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AppealProposalVersionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof appealProposalVersion>>
+>;
+export type AppealProposalVersionMutationBody =
+  BodyType<AppealProposalVersionBody>;
+export type AppealProposalVersionMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+>;
+
+/**
+ * @summary Appeal a steward decision for one exact proposal version
+ */
+export const useAppealProposalVersion = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof appealProposalVersion>>,
+    TError,
+    {
+      id: number;
+      versionRef: string;
+      data: BodyType<AppealProposalVersionBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof appealProposalVersion>>,
+  TError,
+  { id: number; versionRef: string; data: BodyType<AppealProposalVersionBody> },
+  TContext
+> => {
+  return useMutation(getAppealProposalVersionMutationOptions(options));
+};
 
 /**
  * Transitions a submitted proposal to the "under-review" state, signalling to the contributor that a steward has begun reading it. Requires authentication and steward role for the proposal's storyworld.

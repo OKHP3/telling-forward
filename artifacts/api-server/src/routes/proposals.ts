@@ -21,6 +21,8 @@ import {
   proposalsTable,
   storyworldsTable,
   storyPathsTable,
+  proposalVersionsTable,
+  proposalReviewEventsTable,
   editorQuestionsTable,
   stewardsTable,
   userGithubLinksTable,
@@ -44,6 +46,11 @@ import {
   WithdrawProposalResponse,
   ArchiveProposalParams,
   ArchiveProposalResponse,
+  CreateProposalVersionBody,
+  AcceptProposalVersionBody,
+  RejectProposalVersionBody,
+  RequestProposalVersionRevisionBody,
+  AppealProposalVersionBody,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
 import { requireStewardForProposal } from "../middlewares/steward";
@@ -65,6 +72,14 @@ import {
   verifyAcceptanceDecisionNote,
   writeAcceptedProvenance,
 } from "../lib/provenance";
+import {
+  validateExactReviewReferences,
+  validatePredecessor,
+  validateRevision,
+  resultingStateForAction,
+  type ContributorReviewAction,
+  type ProposalVersionRecord,
+} from "../lib/proposal-review";
 
 const router: IRouter = Router();
 
@@ -163,6 +178,444 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to load proposal" });
   }
 });
+
+// ---------------------------------------------------------------------------
+// POST /api/proposals/:id/versions — register an immutable proposal version
+// ---------------------------------------------------------------------------
+
+router.post("/:id/versions", requireAuth, async (req, res) => {
+  const params = GetProposalParams.safeParse(req.params);
+  const body = CreateProposalVersionBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: "Invalid proposal version" });
+    return;
+  }
+
+  try {
+    const [proposal] = await db
+      .select()
+      .from(proposalsTable)
+      .where(eq(proposalsTable.id, params.data.id))
+      .limit(1);
+    if (!proposal) {
+      res.status(404).json({ error: "Proposal not found" });
+      return;
+    }
+
+    const [existingVersion] = await db
+      .select()
+      .from(proposalVersionsTable)
+      .where(eq(proposalVersionsTable.versionRef, body.data.versionRef))
+      .limit(1);
+    if (existingVersion) {
+      res.status(409).json({ error: "version_ref is already registered" });
+      return;
+    }
+
+    let predecessor: ProposalVersionRecord | undefined;
+    if (body.data.predecessorVersionRef !== null) {
+      const [predecessorRow] = await db
+        .select()
+        .from(proposalVersionsTable)
+        .where(
+          and(
+            eq(
+              proposalVersionsTable.versionRef,
+              body.data.predecessorVersionRef,
+            ),
+            eq(proposalVersionsTable.proposalId, proposal.id),
+          ),
+        )
+        .limit(1);
+      predecessor = predecessorRow;
+      if (!predecessor) {
+        res.status(422).json({
+          error: "predecessor_version_ref must identify a version in this proposal",
+        });
+        return;
+      }
+    }
+
+    const candidate: ProposalVersionRecord = {
+      proposalId: proposal.id,
+      proposalLineageRef: body.data.proposalLineageRef,
+      versionRef: body.data.versionRef,
+      predecessorVersionRef: body.data.predecessorVersionRef,
+      fidelityNoteRef: body.data.fidelityNoteRef,
+    };
+    const predecessorError = validatePredecessor(candidate, predecessor);
+    if (predecessorError) {
+      res.status(422).json({ error: predecessorError });
+      return;
+    }
+
+    const [created] = await db
+      .insert(proposalVersionsTable)
+      .values({
+        proposalId: proposal.id,
+        proposalLineageRef: body.data.proposalLineageRef,
+        versionRef: body.data.versionRef,
+        predecessorVersionRef: body.data.predecessorVersionRef,
+        fidelityNoteRef: body.data.fidelityNoteRef,
+        sourceReference: body.data.sourceReference ?? null,
+        outputReference: body.data.outputReference ?? null,
+      })
+      .returning();
+    if (!created) {
+      res.status(500).json({ error: "Failed to create proposal version" });
+      return;
+    }
+
+    res.status(201).json({ ...created, reviewEventRefs: [] });
+  } catch (err) {
+    req.log.error({ err }, "createProposalVersion error");
+    res.status(500).json({ error: "Failed to create proposal version" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/proposals/:id/versions/:versionRef/review/:action
+//
+// Contributor review is version-bound. The mutable proposal row is never
+// updated here; each decision is an append-only event for one exact version.
+// ---------------------------------------------------------------------------
+
+router.post(
+  "/:id/versions/:versionRef/review/:action",
+  requireAuth,
+  async (req, res) => {
+    const proposalParams = GetProposalParams.safeParse(req.params);
+    const versionRef =
+      typeof req.params.versionRef === "string" ? req.params.versionRef : "";
+    const action = req.params.action as ContributorReviewAction;
+    if (
+      !proposalParams.success ||
+      versionRef.length === 0 ||
+      ![
+        "accept",
+        "reject",
+        "request-revision",
+        "appeal",
+      ].includes(action)
+    ) {
+      res.status(400).json({ error: "Invalid proposal review target" });
+      return;
+    }
+
+    const bodySchemas = {
+      accept: AcceptProposalVersionBody,
+      reject: RejectProposalVersionBody,
+      "request-revision": RequestProposalVersionRevisionBody,
+      appeal: AppealProposalVersionBody,
+    } as const;
+    const parsedBody = bodySchemas[action].safeParse(req.body);
+    if (!parsedBody.success) {
+      res.status(400).json({
+        error: "Review request must include the exact version and fidelity note references",
+      });
+      return;
+    }
+    const body = parsedBody.data;
+    const eventRef =
+      body.eventRef ??
+      (typeof req.header("Idempotency-Key") === "string"
+        ? req.header("Idempotency-Key")
+        : undefined) ??
+      `review-event-${randomUUID()}`;
+
+    try {
+      const [proposal] = await db
+        .select()
+        .from(proposalsTable)
+        .where(eq(proposalsTable.id, proposalParams.data.id))
+        .limit(1);
+      if (!proposal) {
+        res.status(404).json({ error: "Proposal not found" });
+        return;
+      }
+
+      const [versionRow] = await db
+        .select()
+        .from(proposalVersionsTable)
+        .where(
+          and(
+            eq(proposalVersionsTable.proposalId, proposal.id),
+            eq(proposalVersionsTable.versionRef, versionRef),
+          ),
+        )
+        .limit(1);
+      if (!versionRow) {
+        res.status(404).json({ error: "Proposal version not found" });
+        return;
+      }
+
+      const version: ProposalVersionRecord = {
+        proposalId: versionRow.proposalId,
+        proposalLineageRef: versionRow.proposalLineageRef,
+        versionRef: versionRow.versionRef,
+        predecessorVersionRef: versionRow.predecessorVersionRef,
+        fidelityNoteRef: versionRow.fidelityNoteRef,
+      };
+      const referenceError = validateExactReviewReferences({
+        pathVersionRef: versionRef,
+        requestVersionRef: body.versionRef,
+        requestFidelityNoteRef: body.fidelityNoteRef,
+        version,
+      });
+      if (referenceError || body.proposalLineageRef !== version.proposalLineageRef) {
+        res.status(422).json({
+          error:
+            referenceError ??
+            "proposal_lineage_ref must identify the immutable version lineage",
+        });
+        return;
+      }
+
+      const [predecessorRow] = version.predecessorVersionRef
+        ? await db
+            .select()
+            .from(proposalVersionsTable)
+            .where(
+              and(
+                eq(
+                  proposalVersionsTable.proposalId,
+                  proposal.id,
+                ),
+                eq(
+                  proposalVersionsTable.versionRef,
+                  version.predecessorVersionRef,
+                ),
+              ),
+            )
+            .limit(1)
+        : [undefined];
+      const predecessor = predecessorRow
+        ? ({
+            proposalId: predecessorRow.proposalId,
+            proposalLineageRef: predecessorRow.proposalLineageRef,
+            versionRef: predecessorRow.versionRef,
+            predecessorVersionRef: predecessorRow.predecessorVersionRef,
+            fidelityNoteRef: predecessorRow.fidelityNoteRef,
+          } satisfies ProposalVersionRecord)
+        : undefined;
+      const predecessorError = validatePredecessor(version, predecessor);
+      if (predecessorError) {
+        res.status(422).json({ error: predecessorError });
+        return;
+      }
+
+      const existingEvents = await db
+        .select()
+        .from(proposalReviewEventsTable)
+        .where(eq(proposalReviewEventsTable.proposalVersionId, versionRow.id))
+        .orderBy(
+          asc(proposalReviewEventsTable.createdAt),
+          asc(proposalReviewEventsTable.id),
+        );
+      const existingEvent = await db
+        .select()
+        .from(proposalReviewEventsTable)
+        .where(eq(proposalReviewEventsTable.eventRef, eventRef))
+        .limit(1);
+      const replay = existingEvent[0];
+      if (replay) {
+        if (
+          replay.proposalVersionId !== versionRow.id ||
+          replay.versionRef !== body.versionRef ||
+          replay.fidelityNoteRef !== body.fidelityNoteRef ||
+          replay.action !== action
+        ) {
+          res.status(409).json({
+            error: "event_ref was already used for a different review event",
+          });
+          return;
+        }
+        const replayEventRefs = existingEvents.map((event) => event.eventRef);
+        res.json({
+          proposalId: proposal.id,
+          proposalLineageRef: version.proposalLineageRef,
+          versionRef: version.versionRef,
+          fidelityNoteRef: version.fidelityNoteRef,
+          proposalVersion: {
+            ...versionRow,
+            reviewEventRefs: replayEventRefs.includes(replay.eventRef)
+              ? replayEventRefs
+              : [...replayEventRefs, replay.eventRef],
+          },
+          reviewEvent: replay,
+          reviewEventRefs: replayEventRefs.includes(replay.eventRef)
+            ? replayEventRefs
+            : [...replayEventRefs, replay.eventRef],
+        });
+        return;
+      }
+
+      if (
+        (action === "accept" || action === "reject") &&
+        existingEvents.length > 0
+      ) {
+        res.status(409).json({
+          error: "This proposal version is frozen; create a new version before trying again",
+        });
+        return;
+      }
+
+      if (action === "request-revision") {
+        const revisionBody =
+          body as typeof RequestProposalVersionRevisionBody["_output"];
+        const revisionError = validateRevision(
+          version,
+          {
+            proposalLineageRef: revisionBody.proposalLineageRef,
+            versionRef: revisionBody.successorVersionRef,
+            predecessorVersionRef: revisionBody.versionRef,
+            fidelityNoteRef: revisionBody.successorFidelityNoteRef,
+            predecessorFidelityNoteRetainedRef:
+              revisionBody.predecessorFidelityNoteRetainedRef,
+            predecessorReviewEventRetainedRef:
+              revisionBody.predecessorReviewEventRetainedRef,
+          },
+          existingEvents.map((event) => event.eventRef),
+        );
+        if (revisionError) {
+          res.status(422).json({ error: revisionError });
+          return;
+        }
+
+        const [existingSuccessor] = await db
+          .select()
+          .from(proposalVersionsTable)
+          .where(
+            eq(
+              proposalVersionsTable.versionRef,
+              revisionBody.successorVersionRef,
+            ),
+          )
+          .limit(1);
+        if (existingSuccessor) {
+          res.status(409).json({
+            error: "successor version_ref is already registered",
+          });
+          return;
+        }
+
+        const [createdVersion, createdEvent] = await db.transaction(async (tx) => {
+          const [successor] = await tx
+            .insert(proposalVersionsTable)
+            .values({
+              proposalId: proposal.id,
+              proposalLineageRef: version.proposalLineageRef,
+              versionRef: revisionBody.successorVersionRef,
+              predecessorVersionRef: version.versionRef,
+              fidelityNoteRef: revisionBody.successorFidelityNoteRef,
+              predecessorFidelityNoteRetainedRef:
+                revisionBody.predecessorFidelityNoteRetainedRef,
+              predecessorReviewEventRetainedRef:
+                revisionBody.predecessorReviewEventRetainedRef,
+            })
+            .returning();
+          if (!successor) {
+            throw new Error("Failed to create successor proposal version");
+          }
+          const [event] = await tx
+            .insert(proposalReviewEventsTable)
+            .values({
+              eventRef,
+              proposalId: proposal.id,
+              proposalVersionId: versionRow.id,
+              proposalLineageRef: version.proposalLineageRef,
+              versionRef: version.versionRef,
+              fidelityNoteRef: version.fidelityNoteRef,
+              action,
+              resultingReviewState: resultingStateForAction(action),
+              safeReason: revisionBody.safeReason ?? null,
+              actorUserId: req.session.userId ?? null,
+            })
+            .returning();
+          if (!event) throw new Error("Failed to record proposal review event");
+          return [successor, event] as const;
+        });
+        res.status(201).json({
+          proposalId: proposal.id,
+          proposalLineageRef: version.proposalLineageRef,
+          versionRef: version.versionRef,
+          fidelityNoteRef: version.fidelityNoteRef,
+          proposalVersion: {
+            ...createdVersion,
+            reviewEventRefs: [],
+          },
+          reviewEvent: createdEvent,
+          reviewEventRefs: [],
+          successorVersion: {
+            ...createdVersion,
+            reviewEventRefs: [],
+          },
+        });
+        return;
+      }
+
+      const eventValues = {
+        eventRef,
+        proposalId: proposal.id,
+        proposalVersionId: versionRow.id,
+        proposalLineageRef: version.proposalLineageRef,
+        versionRef: version.versionRef,
+        fidelityNoteRef: version.fidelityNoteRef,
+        action,
+        resultingReviewState: resultingStateForAction(action),
+        safeReason: "safeReason" in body ? body.safeReason ?? null : null,
+        stewardDecisionRef:
+          action === "appeal"
+            ? (
+                body as typeof AppealProposalVersionBody["_output"]
+              ).stewardDecisionRef
+            : null,
+        actorUserId: req.session.userId ?? null,
+      };
+      const [createdEvent] = await db
+        .insert(proposalReviewEventsTable)
+        .values(eventValues)
+        .returning();
+      if (!createdEvent) {
+        res.status(500).json({ error: "Failed to record proposal review" });
+        return;
+      }
+
+      res.status(201).json({
+        proposalId: proposal.id,
+        proposalLineageRef: version.proposalLineageRef,
+        versionRef: version.versionRef,
+        fidelityNoteRef: version.fidelityNoteRef,
+        proposalVersion: {
+          ...versionRow,
+          reviewEventRefs: [
+            ...existingEvents.map((event) => event.eventRef),
+            createdEvent.eventRef,
+          ],
+        },
+        reviewEvent: createdEvent,
+        reviewEventRefs: [
+          ...existingEvents.map((event) => event.eventRef),
+          createdEvent.eventRef,
+        ],
+      });
+    } catch (err) {
+      req.log.error({ err }, "proposal review error");
+      if (
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        err.code === "23505"
+      ) {
+        res.status(409).json({
+          error: "This proposal version already has a conflicting review event",
+        });
+        return;
+      }
+      res.status(500).json({ error: "Failed to record proposal review" });
+    }
+  },
+);
 
 // POST /api/proposals/:id/editor-questions/:questionId/address
 // Only the contributor who owns the proposal may acknowledge a question.

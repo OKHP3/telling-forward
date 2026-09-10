@@ -7,6 +7,7 @@ import {
   bigint,
   boolean,
   unique,
+  uniqueIndex,
   index,
   pgEnum,
   check,
@@ -186,6 +187,83 @@ export const proposalsTable = pgTable("proposals", {
   index("idx_proposals_contributor").on(t.contributorId),
   index("idx_proposals_github_user").on(t.githubUserId),
 ]);
+
+// Immutable proposal output versions. The mutable proposals row stores the
+// GitHub submission lifecycle; this table stores the exact reviewable output.
+export const proposalVersionsTable = pgTable(
+  "proposal_versions",
+  {
+    id: serial("id").primaryKey(),
+    proposalId: integer("proposal_id")
+      .notNull()
+      .references(() => proposalsTable.id, { onDelete: "cascade" }),
+    proposalLineageRef: text("proposal_lineage_ref").notNull(),
+    versionRef: text("version_ref").notNull(),
+    predecessorVersionRef: text("predecessor_version_ref"),
+    fidelityNoteRef: text("fidelity_note_ref").notNull(),
+    sourceReference: text("source_reference"),
+    outputReference: text("output_reference"),
+    predecessorFidelityNoteRetainedRef: text(
+      "predecessor_fidelity_note_retained_ref",
+    ),
+    predecessorReviewEventRetainedRef: text(
+      "predecessor_review_event_retained_ref",
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("proposal_versions_version_ref_unique").on(t.versionRef),
+    index("idx_proposal_versions_proposal").on(t.proposalId),
+    index("idx_proposal_versions_lineage").on(t.proposalLineageRef),
+  ],
+);
+
+// Append-only contributor review decisions. No route updates or deletes rows
+// in this table; a later decision is a new event tied to an exact version.
+export const proposalReviewEventsTable = pgTable(
+  "proposal_review_events",
+  {
+    id: serial("id").primaryKey(),
+    eventRef: text("event_ref").notNull(),
+    proposalId: integer("proposal_id")
+      .notNull()
+      .references(() => proposalsTable.id, { onDelete: "restrict" }),
+    proposalVersionId: integer("proposal_version_id")
+      .notNull()
+      .references(() => proposalVersionsTable.id, { onDelete: "restrict" }),
+    proposalLineageRef: text("proposal_lineage_ref").notNull(),
+    versionRef: text("version_ref").notNull(),
+    fidelityNoteRef: text("fidelity_note_ref").notNull(),
+    action: text("action").notNull(),
+    resultingReviewState: text("resulting_review_state").notNull(),
+    safeReason: text("safe_reason"),
+    stewardDecisionRef: text("steward_decision_ref"),
+    actorUserId: integer("actor_user_id"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("proposal_review_events_event_ref_unique").on(t.eventRef),
+    uniqueIndex("proposal_review_events_terminal_version_unique")
+      .on(t.proposalVersionId)
+      .where(
+        sql`${t.action} IN ('accept', 'reject')`,
+      ),
+    index("idx_proposal_review_events_version").on(t.proposalVersionId),
+    index("idx_proposal_review_events_proposal").on(t.proposalId),
+    check(
+      "proposal_review_events_action_check",
+      sql`${t.action} IN ('accept', 'reject', 'request-revision', 'appeal')`,
+    ),
+    check(
+      "proposal_review_events_state_check",
+      sql`${t.resultingReviewState} IN ('accepted-by-contributor', 'rejected-by-contributor', 'changes-requested', 'appeal-pending')`,
+    ),
+  ],
+);
 
 // Maps to PR review comments
 export const editorQuestionsTable = pgTable("editor_questions", {
@@ -382,6 +460,26 @@ export const insertProposalSchema = createInsertSchema(proposalsTable).omit({
 export const selectProposalSchema = createSelectSchema(proposalsTable);
 export type InsertProposal = z.infer<typeof insertProposalSchema>;
 export type Proposal = typeof proposalsTable.$inferSelect;
+
+export const insertProposalVersionSchema = createInsertSchema(
+  proposalVersionsTable,
+).omit({ id: true, createdAt: true });
+export const selectProposalVersionSchema = createSelectSchema(
+  proposalVersionsTable,
+);
+export type InsertProposalVersion = z.infer<typeof insertProposalVersionSchema>;
+export type ProposalVersion = typeof proposalVersionsTable.$inferSelect;
+
+export const insertProposalReviewEventSchema = createInsertSchema(
+  proposalReviewEventsTable,
+).omit({ id: true, createdAt: true });
+export const selectProposalReviewEventSchema = createSelectSchema(
+  proposalReviewEventsTable,
+);
+export type InsertProposalReviewEvent = z.infer<
+  typeof insertProposalReviewEventSchema
+>;
+export type ProposalReviewEvent = typeof proposalReviewEventsTable.$inferSelect;
 
 export const insertEditorQuestionSchema = createInsertSchema(
   editorQuestionsTable,

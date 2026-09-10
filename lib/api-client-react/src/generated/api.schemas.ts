@@ -442,6 +442,117 @@ export interface ReturnProposalBody {
   editorQuestion: string;
 }
 
+export interface ProposalVersion {
+  id: number;
+  proposalId: number;
+  /** @minLength 1 */
+  proposalLineageRef: string;
+  /** @minLength 1 */
+  versionRef: string;
+  predecessorVersionRef: string | null;
+  /** @minLength 1 */
+  fidelityNoteRef: string;
+  sourceReference?: string | null;
+  outputReference?: string | null;
+  predecessorFidelityNoteRetainedRef?: string | null;
+  predecessorReviewEventRetainedRef?: string | null;
+  createdAt: string;
+  reviewEventRefs: string[];
+}
+
+export interface CreateProposalVersionBody {
+  /** @minLength 1 */
+  proposalLineageRef: string;
+  /** @minLength 1 */
+  versionRef: string;
+  predecessorVersionRef: string | null;
+  /** @minLength 1 */
+  fidelityNoteRef: string;
+  sourceReference?: string;
+  outputReference?: string;
+}
+
+export type CreateProposalVersionResponse = ProposalVersion;
+
+export interface ProposalVersionReviewIdentity {
+  /** @minLength 1 */
+  proposalLineageRef: string;
+  /** @minLength 1 */
+  versionRef: string;
+  /** @minLength 1 */
+  fidelityNoteRef: string;
+  /** @minLength 1 */
+  eventRef?: string;
+  safeReason?: string;
+}
+
+export type AcceptProposalVersionBody = ProposalVersionReviewIdentity;
+
+export type RejectProposalVersionBody = ProposalVersionReviewIdentity;
+
+export type RequestProposalRevisionBody = ProposalVersionReviewIdentity & {
+  /** @minLength 1 */
+  successorVersionRef: string;
+  /** @minLength 1 */
+  successorFidelityNoteRef: string;
+  /** @minLength 1 */
+  predecessorFidelityNoteRetainedRef: string;
+  /** @minLength 1 */
+  predecessorReviewEventRetainedRef: string;
+};
+
+export type AppealProposalVersionBody = ProposalVersionReviewIdentity & {
+  /** @minLength 1 */
+  stewardDecisionRef: string;
+};
+
+export type ProposalReviewEventAction =
+  (typeof ProposalReviewEventAction)[keyof typeof ProposalReviewEventAction];
+
+export const ProposalReviewEventAction = {
+  accept: "accept",
+  reject: "reject",
+  "request-revision": "request-revision",
+  appeal: "appeal",
+} as const;
+
+export type ProposalReviewEventResultingReviewState =
+  (typeof ProposalReviewEventResultingReviewState)[keyof typeof ProposalReviewEventResultingReviewState];
+
+export const ProposalReviewEventResultingReviewState = {
+  "accepted-by-contributor": "accepted-by-contributor",
+  "rejected-by-contributor": "rejected-by-contributor",
+  "changes-requested": "changes-requested",
+  "appeal-pending": "appeal-pending",
+} as const;
+
+export interface ProposalReviewEvent {
+  id: number;
+  eventRef: string;
+  proposalId: number;
+  proposalVersionId: number;
+  proposalLineageRef: string;
+  versionRef: string;
+  fidelityNoteRef: string;
+  action: ProposalReviewEventAction;
+  resultingReviewState: ProposalReviewEventResultingReviewState;
+  safeReason?: string | null;
+  stewardDecisionRef?: string | null;
+  actorUserId?: number | null;
+  createdAt: string;
+}
+
+export interface ProposalReviewResponse {
+  proposalId: number;
+  proposalLineageRef: string;
+  versionRef: string;
+  fidelityNoteRef: string;
+  proposalVersion: ProposalVersion;
+  reviewEvent: ProposalReviewEvent;
+  reviewEventRefs: string[];
+  successorVersion?: ProposalVersion | null;
+}
+
 export type ProposalState = (typeof ProposalState)[keyof typeof ProposalState];
 
 export const ProposalState = {

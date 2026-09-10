@@ -994,6 +994,222 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /proposals/{id}/versions:
+    post:
+      operationId: createProposalVersion
+      tags: [proposals]
+      summary: Register an immutable proposal version
+      description: >
+        Registers one exact proposed output in a proposal lineage. A
+        predecessor must be a direct version in the same lineage; the mutable
+        proposal record is never used as a substitute for version_ref.
+        Requires authentication.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProposalVersionBody"
+      responses:
+        "201":
+          description: Immutable proposal version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateProposalVersionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version reference is already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Predecessor is missing or crosses proposal lineages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /proposals/{id}/versions/{versionRef}/review/accept:
+    post:
+      operationId: acceptProposalVersion
+      tags: [proposals]
+      summary: Accept one exact proposal version
+      parameters:
+        - $ref: "#/components/parameters/ProposalId"
+        - $ref: "#/components/parameters/ProposalVersionRef"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptProposalVersionBody"
+      responses:
+        "201":
+          description: Append-only contributor acceptance event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProposalReviewResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version is already frozen or event reference conflicts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Exact version, note, or lineage reference is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /proposals/{id}/versions/{versionRef}/review/reject:
+    post:
+      operationId: rejectProposalVersion
+      tags: [proposals]
+      summary: Reject one exact proposal version
+      parameters:
+        - $ref: "#/components/parameters/ProposalId"
+        - $ref: "#/components/parameters/ProposalVersionRef"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectProposalVersionBody"
+      responses:
+        "201":
+          description: Append-only contributor rejection event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProposalReviewResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version is already frozen or event reference conflicts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Exact version, note, or lineage reference is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /proposals/{id}/versions/{versionRef}/review/request-revision:
+    post:
+      operationId: requestProposalVersionRevision
+      tags: [proposals]
+      summary: Request a new proposal version
+      description: >
+        Records the request against the reviewed version and creates a child
+        version with a new version_ref and fidelity_note_ref. The child starts
+        with no inherited review outcome.
+      parameters:
+        - $ref: "#/components/parameters/ProposalId"
+        - $ref: "#/components/parameters/ProposalVersionRef"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestProposalRevisionBody"
+      responses:
+        "201":
+          description: Append-only revision request and new proposal version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProposalReviewResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Successor or event reference conflicts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Predecessor, retained note, or retained event is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /proposals/{id}/versions/{versionRef}/review/appeal:
+    post:
+      operationId: appealProposalVersion
+      tags: [proposals]
+      summary: Appeal a steward decision for one exact proposal version
+      description: >
+        Appends an appeal event to the affected version. It retains the
+        original steward decision and cannot publish, accept into canon, or
+        change consent.
+      parameters:
+        - $ref: "#/components/parameters/ProposalId"
+        - $ref: "#/components/parameters/ProposalVersionRef"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppealProposalVersionBody"
+      responses:
+        "201":
+          description: Append-only appeal event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProposalReviewResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Event reference conflicts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Exact version, note, or lineage reference is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /proposals/{id}/review:
     post:
       operationId: markProposalUnderReview
@@ -1306,6 +1522,21 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
 components:
+  parameters:
+    ProposalId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    ProposalVersionRef:
+      name: versionRef
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+
   schemas:
     HealthStatus:
       type: object
@@ -1966,6 +2197,230 @@ components:
             on GitHub.
       required:
         - editorQuestion
+
+    ProposalVersion:
+      type: object
+      properties:
+        id:
+          type: integer
+        proposalId:
+          type: integer
+        proposalLineageRef:
+          type: string
+          minLength: 1
+        versionRef:
+          type: string
+          minLength: 1
+        predecessorVersionRef:
+          type: string
+          nullable: true
+        fidelityNoteRef:
+          type: string
+          minLength: 1
+        sourceReference:
+          type: string
+          nullable: true
+        outputReference:
+          type: string
+          nullable: true
+        predecessorFidelityNoteRetainedRef:
+          type: string
+          nullable: true
+        predecessorReviewEventRetainedRef:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        reviewEventRefs:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - proposalId
+        - proposalLineageRef
+        - versionRef
+        - predecessorVersionRef
+        - fidelityNoteRef
+        - createdAt
+        - reviewEventRefs
+
+    CreateProposalVersionBody:
+      type: object
+      properties:
+        proposalLineageRef:
+          type: string
+          minLength: 1
+        versionRef:
+          type: string
+          minLength: 1
+        predecessorVersionRef:
+          type: string
+          nullable: true
+        fidelityNoteRef:
+          type: string
+          minLength: 1
+        sourceReference:
+          type: string
+        outputReference:
+          type: string
+      required:
+        - proposalLineageRef
+        - versionRef
+        - predecessorVersionRef
+        - fidelityNoteRef
+
+    CreateProposalVersionResponse:
+      allOf:
+        - $ref: "#/components/schemas/ProposalVersion"
+
+    ProposalVersionReviewIdentity:
+      type: object
+      properties:
+        proposalLineageRef:
+          type: string
+          minLength: 1
+        versionRef:
+          type: string
+          minLength: 1
+        fidelityNoteRef:
+          type: string
+          minLength: 1
+        eventRef:
+          type: string
+          minLength: 1
+        safeReason:
+          type: string
+      required:
+        - proposalLineageRef
+        - versionRef
+        - fidelityNoteRef
+
+    AcceptProposalVersionBody:
+      allOf:
+        - $ref: "#/components/schemas/ProposalVersionReviewIdentity"
+
+    RejectProposalVersionBody:
+      allOf:
+        - $ref: "#/components/schemas/ProposalVersionReviewIdentity"
+
+    RequestProposalRevisionBody:
+      allOf:
+        - $ref: "#/components/schemas/ProposalVersionReviewIdentity"
+        - type: object
+          properties:
+            successorVersionRef:
+              type: string
+              minLength: 1
+            successorFidelityNoteRef:
+              type: string
+              minLength: 1
+            predecessorFidelityNoteRetainedRef:
+              type: string
+              minLength: 1
+            predecessorReviewEventRetainedRef:
+              type: string
+              minLength: 1
+          required:
+            - successorVersionRef
+            - successorFidelityNoteRef
+            - predecessorFidelityNoteRetainedRef
+            - predecessorReviewEventRetainedRef
+
+    AppealProposalVersionBody:
+      allOf:
+        - $ref: "#/components/schemas/ProposalVersionReviewIdentity"
+        - type: object
+          properties:
+            stewardDecisionRef:
+              type: string
+              minLength: 1
+          required:
+            - stewardDecisionRef
+
+    ProposalReviewEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        eventRef:
+          type: string
+        proposalId:
+          type: integer
+        proposalVersionId:
+          type: integer
+        proposalLineageRef:
+          type: string
+        versionRef:
+          type: string
+        fidelityNoteRef:
+          type: string
+        action:
+          type: string
+          enum: [accept, reject, request-revision, appeal]
+        resultingReviewState:
+          type: string
+          enum:
+            - accepted-by-contributor
+            - rejected-by-contributor
+            - changes-requested
+            - appeal-pending
+        safeReason:
+          type: string
+          nullable: true
+        stewardDecisionRef:
+          type: string
+          nullable: true
+        actorUserId:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - eventRef
+        - proposalId
+        - proposalVersionId
+        - proposalLineageRef
+        - versionRef
+        - fidelityNoteRef
+        - action
+        - resultingReviewState
+        - createdAt
+
+    ProposalReviewResponse:
+      type: object
+      properties:
+        proposalId:
+          type: integer
+        proposalLineageRef:
+          type: string
+        versionRef:
+          type: string
+        fidelityNoteRef:
+          type: string
+        proposalVersion:
+          $ref: "#/components/schemas/ProposalVersion"
+        reviewEvent:
+          $ref: "#/components/schemas/ProposalReviewEvent"
+        reviewEventRefs:
+          type: array
+          items:
+            type: string
+        successorVersion:
+          allOf:
+            - $ref: "#/components/schemas/ProposalVersion"
+          nullable: true
+      required:
+        - proposalId
+        - proposalLineageRef
+        - versionRef
+        - fidelityNoteRef
+        - proposalVersion
+        - reviewEvent
+        - reviewEventRefs
 
     AcceptProposalResponse:
       type: object
