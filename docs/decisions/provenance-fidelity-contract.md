@@ -7,6 +7,7 @@ contributor review boundary recorded (2026-08-26); contributor review approval
 register updated 2026-09-03 with named owner authority and explicit deferred
 owner, legal, and privacy decisions; revised-proposal lineage boundary recorded
 (2026-08-31);
+contributor review gate reconciled 2026-09-10 and remains closed;
 implementation and enforcement not approved. No reader or contributor feature
 added.**
 
@@ -258,6 +259,34 @@ independent legal and privacy reviewers are not appointed, the overall status
 remains **deferred** and the implementation gate remains **closed**. If any
 review is later revised, the changed field, state, path, or copy and the reason
 must be recorded here before later approval is considered.
+
+#### Contributor review gate reconciliation — 2026-09-10
+
+The six rows above have been reconciled against the same gate in
+`consent-ladder-design.md`. The reconciliation result is **CLOSED — NOT
+APPROVED FOR IMPLEMENTATION OR ENFORCEMENT**. All six rows have an explicit
+recorded decision and a retained rule/reason, but every row is currently
+**deferred**, so the threshold for reopening has not been met.
+
+A row is eligible for reopening only when the owner, legal, and privacy
+decision cells each contain an explicit **approved** or **revised** decision,
+the decision record names the authority and date, and the resulting contract
+text states what changed and why. **Deferred**, missing, or implied approval
+fails the row. The gate may reopen only when all six rows pass that test; one
+unresolved row keeps the gate closed.
+
+The synchronized gate language for both decision records is:
+
+- **Contributor review status:** deferred unless all six rows pass the
+  reconciliation test above.
+- **Implementation and enforcement authorization:** not approved.
+- **Protected surfaces:** no transform endpoint, worker, schema, consent
+  toggle, export, or contributor-facing UI may advance on this policy review.
+
+Reconciliation is not implementation authorization. Any future authorization
+must be recorded separately with its approving authority, date, exact scope,
+policy revision, enabled surfaces, and validation evidence. It must not be
+inferred from six approved policy rows or from a contributor review action.
 
 #### Fields that must not appear in a contributor fidelity note
 

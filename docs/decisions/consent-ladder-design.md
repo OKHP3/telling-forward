@@ -2,8 +2,9 @@
 
 ## Status
 
-**Private-pilot policy approved; enforcement not approved.** This records the
-Stage 0–1 design required by open questions 15.10 and 15.14. It defines the
+**Private-pilot policy approved; contributor review gate reconciled 2026-09-10
+and remains closed; enforcement not approved.** This records the Stage 0–1
+design required by open questions 15.10 and 15.14. It defines the
 source-specific Disrupt and Invert decision, but does not authorize a consent
 screen, API gate, database migration, or public-contribution feature.
 
@@ -77,6 +78,22 @@ appointed for either authority. These decisions are recorded in the
 register](provenance-fidelity-contract.md#contributor-review-approval-register--private-pilot-gate);
 this consent design does not authorize their implementation or any transform
 feature. The enforcement gate remains closed.
+
+The six-row contributor review register was reconciled on 2026-09-10 against
+the matching gate in `provenance-fidelity-contract.md`. All six rows have
+explicit recorded decisions and resulting rule text, but each remains
+**deferred**; therefore the contributor review status is **deferred** and
+implementation and enforcement authorization is **not approved**. The gate
+cannot reopen until every row has an explicit owner, legal, and privacy
+decision of **approved** or **revised**, with the authority, date, reason, and
+resulting contract text recorded. A missing, deferred, or implied decision on
+any one row keeps the gate closed.
+
+This reconciliation does not authorize a transform endpoint, worker, schema,
+consent toggle, export, or contributor-facing UI. Any later implementation
+authorization must be a separate evidence record naming its authority, date,
+scope, policy revision, enabled surfaces, and validation evidence; it cannot be
+inferred from the policy register or from a contributor review action.
 
 Each review action applies to the exact proposal version named by its review
 event. “Ask for changes” creates a new version and fidelity note linked to its
