@@ -151,6 +151,20 @@ function stringField(
   return fieldValue;
 }
 
+function canonicalFixtureValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(canonicalFixtureValue);
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as FixtureRecord)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, nestedValue]) => [key, canonicalFixtureValue(nestedValue)]),
+    );
+  }
+  return value;
+}
+
 type VersionDeclaration = {
   version: FixtureRecord;
   lineage: string;
@@ -183,8 +197,49 @@ function validateProposalLineageFixture(fixture: ProvenanceFixture): void {
     });
   };
 
+  const reviewEvents = new Map<
+    string,
+    { definition: string; declaredBy: string }
+  >();
+  const registerReviewEvent = (value: FixtureRecord, label: string) => {
+    const eventRef = stringField(value, "event_ref", label);
+    const definition = JSON.stringify(canonicalFixtureValue(value)) ?? "";
+    const previous = reviewEvents.get(eventRef);
+    if (previous) {
+      if (previous.definition !== definition) {
+        throw new Error(
+          `Conflicting review event definition: ${eventRef} (${previous.declaredBy} vs ${label})`,
+        );
+      }
+      throw new Error(
+        `Duplicate review event reference: ${eventRef} (${previous.declaredBy} and ${label})`,
+      );
+    }
+    reviewEvents.set(eventRef, { definition, declaredBy: label });
+  };
+  const collectReviewEvents = (value: unknown, label: string): void => {
+    if (!value || typeof value !== "object") return;
+    if (Array.isArray(value)) {
+      value.forEach((item, index) =>
+        collectReviewEvents(item, `${label}[${index}]`),
+      );
+      return;
+    }
+
+    const recordValue = value as FixtureRecord;
+    if (recordValue.event_ref !== undefined) {
+      registerReviewEvent(recordValue, label);
+    }
+    for (const [field, nestedValue] of Object.entries(recordValue)) {
+      if (field !== "event_ref") {
+        collectReviewEvents(nestedValue, `${label}.${field}`);
+      }
+    }
+  };
+
   for (const fixtureCase of fixture.cases) {
     const caseId = stringField(fixtureCase, "id", "case");
+    collectReviewEvents(fixtureCase, caseId);
     addVersion(fixtureCase, fixtureCase, caseId);
     for (const nestedField of ["revised_version", "later_attempt"]) {
       addVersion(
@@ -542,6 +597,56 @@ describe("contributor fidelity note contract", () => {
     expect(() => validateProposalLineageFixture(misboundEventFixture)).toThrow(
       "expected proposal-version-001",
     );
+  });
+
+  it("rejects duplicate and conflicting review event definitions", () => {
+    const duplicateEventFixture = structuredClone(parsedPolicyFixture);
+    const duplicateEventSource = duplicateEventFixture.cases.find(
+      (fixtureCase) =>
+        fixtureCase.id === "contributor-accepted-version-is-frozen",
+    );
+    const duplicateEventTarget = duplicateEventFixture.cases.find(
+      (fixtureCase) =>
+        fixtureCase.id === "contributor-rejected-version-is-frozen",
+    );
+    if (!duplicateEventSource || !duplicateEventTarget) {
+      throw new Error("Missing review outcome fixture");
+    }
+    duplicateEventTarget.review_event = structuredClone(
+      duplicateEventSource.review_event,
+    );
+    expect(() => validateProposalLineageFixture(duplicateEventFixture)).toThrow(
+      "Duplicate review event reference",
+    );
+
+    const conflictingEventFixture = structuredClone(parsedPolicyFixture);
+    const conflictingEventSource = conflictingEventFixture.cases.find(
+      (fixtureCase) =>
+        fixtureCase.id === "contributor-accepted-version-is-frozen",
+    );
+    const conflictingEventTarget = conflictingEventFixture.cases.find(
+      (fixtureCase) =>
+        fixtureCase.id === "contributor-rejected-version-is-frozen",
+    );
+    if (!conflictingEventSource || !conflictingEventTarget) {
+      throw new Error("Missing review outcome fixture");
+    }
+    const sourceEvent = record(
+      conflictingEventSource.review_event,
+      "accept review event",
+    );
+    const targetEvent = record(
+      conflictingEventTarget.review_event,
+      "reject review event",
+    );
+    targetEvent.event_ref = stringField(
+      sourceEvent,
+      "event_ref",
+      "accept review event",
+    );
+    expect(() =>
+      validateProposalLineageFixture(conflictingEventFixture),
+    ).toThrow("Conflicting review event definition");
   });
 
   it("keeps the policy fixture complete for the protected-field review", () => {
