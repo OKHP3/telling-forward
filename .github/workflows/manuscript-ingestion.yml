@@ -78,6 +78,7 @@ jobs:
       # before a maintainer waits for a full, manually dispatched run.
       - name: Verify pinned model metadata
         run: |
+          set -euo pipefail
           python3 .github/scripts/ingestion/verify_model.py \
             --verify-hf-metadata \
             "${{ env.HF_MODEL_REPO }}" \
@@ -143,6 +144,7 @@ jobs:
       # metadata before consulting the cache or downloading any model bytes.
       - name: Verify pinned model metadata
         run: |
+          set -euo pipefail
           python3 .github/scripts/ingestion/verify_model.py \
             --verify-hf-metadata \
             "${{ env.HF_MODEL_REPO }}" \

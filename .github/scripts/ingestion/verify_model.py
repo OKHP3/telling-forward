@@ -35,7 +35,15 @@ class ModelIntegrityError(ValueError):
 
 
 class ModelMetadataError(ValueError):
-    """Raised when Hugging Face metadata differs from the pinned contract."""
+    """Base class for failures in the Hugging Face metadata gate."""
+
+
+class ModelMetadataServiceError(ModelMetadataError):
+    """Raised when Hugging Face cannot provide a usable metadata response."""
+
+
+class ModelMetadataContractError(ModelMetadataError):
+    """Raised when usable metadata does not satisfy the pinned contract."""
 
 
 class ModelIntegrity:
@@ -54,15 +62,17 @@ class ModelMetadata:
 
 def _validate_expected_contract(expected_size_bytes: int, expected_sha256: str) -> None:
     if expected_size_bytes < 1:
-        raise ModelMetadataError("expected model size must be a positive integer")
+        raise ModelMetadataContractError("expected model size must be a positive integer")
     if not SHA256_RE.fullmatch(expected_sha256):
-        raise ModelMetadataError("expected model SHA-256 must be 64 hexadecimal characters")
+        raise ModelMetadataContractError(
+            "expected model SHA-256 must be 64 hexadecimal characters"
+        )
 
 
 def _fetch_huggingface_model_info(repo_id: str, revision: str) -> dict:
     """Fetch model metadata without requesting any model file contents."""
     if not repo_id or not revision:
-        raise ModelMetadataError("model repository and revision must not be empty")
+        raise ModelMetadataContractError("model repository and revision must not be empty")
 
     query = urllib.parse.urlencode({"revision": revision, "blobs": "true"})
     url = HF_MODEL_INFO_URL.format(
@@ -76,19 +86,26 @@ def _fetch_huggingface_model_info(repo_id: str, revision: str) -> dict:
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             payload = json.load(response)
-    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise ModelMetadataError(
+    except urllib.error.HTTPError as exc:
+        raise ModelMetadataServiceError(
+            f"Hugging Face metadata request returned HTTP {exc.code} for "
+            f"{repo_id}@{revision}; the metadata service is unavailable"
+        ) from exc
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise ModelMetadataServiceError(
             f"could not fetch Hugging Face metadata for {repo_id}@{revision}; "
-            "check network access and confirm the repository/revision"
+            "the metadata service is unavailable"
         ) from exc
     except (json.JSONDecodeError, TypeError, ValueError) as exc:
-        raise ModelMetadataError(
-            f"Hugging Face returned invalid metadata for {repo_id}@{revision}"
+        raise ModelMetadataServiceError(
+            f"Hugging Face metadata response was malformed for "
+            f"{repo_id}@{revision}"
         ) from exc
 
     if not isinstance(payload, dict):
-        raise ModelMetadataError(
-            f"Hugging Face returned an unexpected metadata shape for {repo_id}@{revision}"
+        raise ModelMetadataServiceError(
+            f"Hugging Face metadata response had an unexpected shape for "
+            f"{repo_id}@{revision}"
         )
     return payload
 
@@ -103,7 +120,7 @@ def verify_huggingface_model_metadata(
     """Require Hugging Face metadata to match the workflow's pinned contract."""
     _validate_expected_contract(expected_size_bytes, expected_sha256)
     if not expected_filename:
-        raise ModelMetadataError("expected model filename must not be empty")
+        raise ModelMetadataContractError("expected model filename must not be empty")
 
     payload = _fetch_huggingface_model_info(repo_id, expected_revision)
     actual_revision = payload.get("sha")
@@ -130,8 +147,8 @@ def verify_huggingface_model_metadata(
             f"file {expected_filename!r} is missing from the pinned Hugging Face revision"
         )
         if mismatches:
-            raise ModelMetadataError("model metadata mismatch: " + "; ".join(mismatches))
-        raise ModelMetadataError(
+            raise ModelMetadataContractError("model metadata mismatch: " + "; ".join(mismatches))
+        raise ModelMetadataContractError(
             f"model metadata mismatch: file {expected_filename!r} is missing from "
             "the pinned Hugging Face revision"
         )
@@ -159,7 +176,7 @@ def verify_huggingface_model_metadata(
         )
 
     if mismatches:
-        raise ModelMetadataError("model metadata mismatch: " + "; ".join(mismatches))
+        raise ModelMetadataContractError("model metadata mismatch: " + "; ".join(mismatches))
 
     return ModelMetadata(
         revision=actual_revision,
@@ -217,8 +234,19 @@ def main() -> int:
                 expected_size_bytes,
                 sys.argv[6],
             )
-        except ModelMetadataError as exc:
-            print(f"Model metadata check failed: {exc}", file=sys.stderr)
+        except ModelMetadataServiceError as exc:
+            print(
+                "Model metadata check failed: "
+                f"Hugging Face metadata service unavailable: {exc}",
+                file=sys.stderr,
+            )
+            return 2
+        except ModelMetadataContractError as exc:
+            print(
+                "Model metadata check failed: "
+                f"model metadata contract mismatch: {exc}",
+                file=sys.stderr,
+            )
             return 2
 
         print(

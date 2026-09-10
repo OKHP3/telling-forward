@@ -9,6 +9,7 @@ import shutil
 import struct
 import subprocess
 import sys
+import urllib.error
 import zipfile
 from pathlib import Path
 
@@ -254,6 +255,161 @@ def test_huggingface_metadata_reports_revision_size_and_digest_drift(
     assert "HF_MODEL_SHA256" in message
 
 
+@pytest.mark.parametrize(
+    ("failure", "expected_message"),
+    [
+        (
+            urllib.error.HTTPError(
+                "https://huggingface.co/api/models/owner/model",
+                503,
+                "busy",
+                {},
+                None,
+            ),
+            "HTTP 503",
+        ),
+        (urllib.error.URLError("offline"), "metadata service is unavailable"),
+        (TimeoutError("timed out"), "metadata service is unavailable"),
+    ],
+)
+def test_huggingface_metadata_service_failures_are_explicit(
+    monkeypatch: pytest.MonkeyPatch,
+    failure: Exception,
+    expected_message: str,
+) -> None:
+    verify = load_script("verify_model")
+
+    def urlopen(request, timeout):
+        raise failure
+
+    monkeypatch.setattr(verify.urllib.request, "urlopen", urlopen)
+
+    with pytest.raises(verify.ModelMetadataServiceError, match=expected_message):
+        verify.verify_huggingface_model_metadata(
+            "owner/model",
+            "revision-123",
+            "model.gguf",
+            1234,
+            "a" * 64,
+        )
+
+
+def test_huggingface_metadata_malformed_json_is_service_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    verify = load_script("verify_model")
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self, *args):
+            return b'{"sha":'
+
+    monkeypatch.setattr(
+        verify.urllib.request,
+        "urlopen",
+        lambda request, timeout: Response(),
+    )
+
+    with pytest.raises(verify.ModelMetadataServiceError, match="response was malformed"):
+        verify.verify_huggingface_model_metadata(
+            "owner/model",
+            "revision-123",
+            "model.gguf",
+            1234,
+            "a" * 64,
+        )
+
+
+def test_huggingface_metadata_missing_revision_is_contract_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    verify = load_script("verify_model")
+    payload = {
+        "siblings": [
+            {
+                "rfilename": "model.gguf",
+                "lfs": {"size": 1234, "sha256": "a" * 64},
+            },
+        ],
+    }
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self, *args):
+            return json.dumps(payload).encode()
+
+    monkeypatch.setattr(
+        verify.urllib.request,
+        "urlopen",
+        lambda request, timeout: Response(),
+    )
+
+    with pytest.raises(verify.ModelMetadataContractError, match="revision is missing"):
+        verify.verify_huggingface_model_metadata(
+            "owner/model",
+            "revision-123",
+            "model.gguf",
+            1234,
+            "a" * 64,
+        )
+
+
+def test_metadata_cli_distinguishes_service_and_contract_failures(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    verify = load_script("verify_model")
+    args = [
+        "verify_model.py",
+        "--verify-hf-metadata",
+        "owner/model",
+        "revision-123",
+        "model.gguf",
+        "1234",
+        "a" * 64,
+    ]
+    monkeypatch.setattr(verify.sys, "argv", args)
+    monkeypatch.setattr(
+        verify.urllib.request,
+        "urlopen",
+        lambda request, timeout: (_ for _ in ()).throw(TimeoutError("timed out")),
+    )
+
+    assert verify.main() == 2
+    assert "Hugging Face metadata service unavailable:" in capsys.readouterr().err
+
+    payload = {
+        "siblings": [
+            {"rfilename": "model.gguf", "lfs": {"size": 1234, "sha256": "a" * 64}},
+        ],
+    }
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self, *args):
+            return json.dumps(payload).encode()
+
+    monkeypatch.setattr(verify.urllib.request, "urlopen", lambda request, timeout: Response())
+
+    assert verify.main() == 2
+    assert "model metadata contract mismatch:" in capsys.readouterr().err
+
+
 def test_huggingface_metadata_requires_published_asset_metadata(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -272,7 +428,7 @@ def test_huggingface_metadata_requires_published_asset_metadata(
 
     monkeypatch.setattr(verify.urllib.request, "urlopen", lambda request, timeout: Response())
 
-    with pytest.raises(verify.ModelMetadataError, match="no valid published"):
+    with pytest.raises(verify.ModelMetadataContractError, match="no valid published"):
         verify.verify_huggingface_model_metadata(
             "owner/model",
             "revision-123",
@@ -349,6 +505,9 @@ def test_workflow_verifies_model_metadata_before_cache_or_download() -> None:
     assert "--verify-hf-metadata" in ingest_job
     assert "hf_hub_download" in ingest_job
     assert ingest_job.index("hf_hub_download") > metadata_position
+    metadata_step = ingest_job[metadata_position:cache_position]
+    assert "set -euo pipefail" in metadata_step
+    assert "hf_hub_download" not in metadata_step
 
 
 def test_workflow_checks_model_metadata_on_contract_pull_requests_only() -> None:
