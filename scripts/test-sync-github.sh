@@ -13,6 +13,10 @@ cat > "$test_root/bin/git" <<'EOF'
 printf '%s\n' "$*" >> "$TEST_GIT_LOG"
 if [ "${1:-}" = remote ] && [ "${2:-}" = get-url ] && [ "${TEST_WRONG_REMOTE:-0}" != 1 ]; then
   "$REAL_GIT" "$@" >/dev/null || exit $?
+  if [ "${3:-}" = --push ] && [ -n "${TEST_PUSH_URLS:-}" ]; then
+    printf '%s\n' "$TEST_PUSH_URLS"
+    exit 0
+  fi
   echo https://github.com/OKHP3/telling-forward.git
   exit 0
 fi
@@ -41,6 +45,12 @@ reject() { if sync_run "$@" > "$test_root/rejected.log" 2>&1; then echo 'Expecte
 
 sync_run --check
 echo 'PASS aligned preflight and origin fallback'
+export TEST_PUSH_URLS=$'https://github.com/OKHP3/telling-forward.git\nhttps://github.com/OKHP3/telling-forward'
+sync_run --check
+export TEST_PUSH_URLS=$'https://github.com/OKHP3/telling-forward.git\nhttps://other.invalid/repo'
+reject --check
+unset TEST_PUSH_URLS
+echo 'PASS every push URL validated; mixed destinations refused'
 echo local >> content
 git commit -qam local
 before="$(git --git-dir="$test_root/remote.git" rev-parse main)"
@@ -89,6 +99,24 @@ echo 'PASS new branch publishes to the same repository'
 git switch -q main
 TEST_WRONG_REMOTE=1 reject --check
 echo 'PASS non-canonical remote rejected'
+
+# Use a genuinely restricted clone, not just a stubbed fetch response.
+git clone -q --single-branch --branch main "$test_root/remote.git" "$test_root/narrow"
+(
+  cd "$test_root/narrow"
+  git switch -qc narrow-review
+  sync_run
+  test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/narrow-review)"
+)
+git -C "$test_root/peer" fetch -q origin narrow-review
+git -C "$test_root/peer" switch -q -c narrow-review FETCH_HEAD
+echo narrow > "$test_root/peer/narrow-file"
+git -C "$test_root/peer" add narrow-file
+git -C "$test_root/peer" commit -qm narrow-update
+git -C "$test_root/peer" push -q origin narrow-review
+(cd "$test_root/narrow" && sync_run && test -f narrow-file)
+git -C "$test_root/peer" switch -q main
+echo 'PASS single-branch clone publishes, verifies and fast-forwards a new branch'
 
 sh scripts/setup-hooks.sh
 test "$(git config --get pull.ff)" = only
