@@ -19,7 +19,8 @@ case "$1" in
 esac
 }
 validate_url "$(git remote get-url "$remote")"
-validate_url "$(git remote get-url --push --all "$remote")"
+push_urls="$(git remote get-url --push --all "$remote")"
+printf '%s\n' "$push_urls" | while IFS= read -r url; do validate_url "$url"; done
 if [ -n "${GITHUB_PAT:-}" ]; then
   GIT_ASKPASS="$root/scripts/git-askpass.sh"
   export GIT_ASKPASS
@@ -34,9 +35,10 @@ export GIT_TERMINAL_PROMPT
 for operation in MERGE_HEAD rebase-merge rebase-apply CHERRY_PICK_HEAD; do
   [ ! -e "$(git rev-parse --git-path "$operation")" ] || { echo '[sync] Finish the current Git operation first.' >&2; exit 1; }
 done
-transport fetch --no-prune "$remote"
 target="refs/remotes/$remote/$branch"
-if git show-ref --verify --quiet "$target"; then
+# Do not depend on clone-wide fetch mappings: single-branch clones omit new branches.
+if transport ls-remote --exit-code --heads "$remote" "refs/heads/$branch" >/dev/null; then
+  transport fetch --no-prune "$remote" "refs/heads/$branch:$target"
   counts="$(git rev-list --left-right --count "HEAD...$target")"
   set -- $counts
   ahead=$1 behind=$2
@@ -50,6 +52,10 @@ if git show-ref --verify --quiet "$target"; then
     [ -z "$(git status --porcelain)" ] || { echo '[sync] Preserve and review uncommitted changes before updating.' >&2; exit 1; }
     git merge --ff-only "$target"
   fi
+else
+  lookup_status=$?
+  # Git returns 2 for an absent branch; authentication/transport errors must stop.
+  [ "$lookup_status" -eq 2 ] || exit "$lookup_status"
 fi
 if [ "$mode" = --check ]; then
   transport push --dry-run "$remote" "HEAD:refs/heads/$branch"
@@ -60,7 +66,7 @@ transport push --set-upstream "$remote" "HEAD:refs/heads/$branch" || {
   echo '[sync] Push failed; commits are still local. Read the Git error above. Workflow permission or protected-main failures need the appropriate credential or PR, not a force-push.' >&2
   exit 1
 }
-transport fetch --no-prune "$remote"
+transport fetch --no-prune "$remote" "refs/heads/$branch:$target"
 [ "$(git rev-parse HEAD)" = "$(git rev-parse "$target")" ] || { echo '[sync] Remote moved during verification; inspect before retrying.' >&2; exit 1; }
 echo "[sync] Verified $branch = $remote/$branch at $(git rev-parse HEAD)"
 git status --short --branch
