@@ -27,6 +27,8 @@ mkdir -p "$TMPDIR/scripts"
 # Copy the scripts that setup-hooks.sh and the hook itself depend on.
 cp "$SCRIPT_DIR/setup-hooks.sh"  "$TMPDIR/scripts/setup-hooks.sh"
 cp "$SCRIPT_DIR/git-askpass.sh"  "$TMPDIR/scripts/git-askpass.sh"
+cp "$SCRIPT_DIR/sync-github.sh"  "$TMPDIR/scripts/sync-github.sh"
+cp "$SCRIPT_DIR/git-credential-replit.sh" "$TMPDIR/scripts/git-credential-replit.sh"
 chmod +x "$TMPDIR/scripts/setup-hooks.sh"
 chmod +x "$TMPDIR/scripts/git-askpass.sh"
 

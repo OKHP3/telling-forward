@@ -67,7 +67,7 @@ The repository documents this stack (see `replit.md`):
 3. PostgreSQL with Drizzle ORM is the data layer (`lib/db`).
 4. Zod (`zod/v4`) and `drizzle-zod` provide validation; Orval generates API hooks and Zod schemas from an OpenAPI spec (`lib/api-spec`).
 5. esbuild produces a CJS bundle for deployment.
-6. Every commit made in Replit auto-pushes to `github.com/OKHP3/telling-forward` via a `post-commit` hook that is not tracked by git and must be re-created after a fresh clone (see `replit.md` for the exact script).
+6. Every commit made in Replit attempts a guarded auto-push via the installed `post-commit` hook. Re-create it with `sh scripts/setup-hooks.sh` after cloning. Use `sh scripts/sync-github.sh` or `git sync` for explicit synchronization; this uses the repository askpass path, refuses divergence, and verifies the published SHA. A local commit is not proof of a successful push. See `replit.md`.
 
 ## Technology and environments
 
