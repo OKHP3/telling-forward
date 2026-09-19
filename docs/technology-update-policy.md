@@ -6,7 +6,26 @@ Research date: 2026-09-19 UTC (2026-09-18 America/Chicago).
 
 The [inventory](technology-inventory.md), [full JSON](technology-inventory.json), and [transitive appendix](technology-transitive-inventory.md) identify the source-controlled technology set and compare it with publisher releases. This plan keeps updates moving through a proposal, validation, review, release, and verification cycle.
 
-**Confirmed:** these changes are prepared in the local checkout. They are not active on GitHub until merged into the default branch. No application packages, host runtimes, database versions, models, deployments, repository permissions, or auto-merge settings were upgraded by this audit.
+**Confirmed:** the maintenance change was merged in [PR #16](https://github.com/OKHP3/telling-forward/pull/16). Its inventory, full build, model metadata and Linux native ingestion dependency checks passed. The first complete [Technology watch run](https://github.com/OKHP3/telling-forward/actions/runs/35421726169) passed and produced a fresh artifact at 2026-09-19T04:42:05Z from commit `caf938b845e2723cce05ea505a6d4d4c915a30b2`. Python and Actions Dependabot proposals #17 through #22 demonstrate that those update channels are active. The pnpm 11 updater gap below remains open.
+
+**Confirmed:** [PR #15](https://github.com/OKHP3/telling-forward/pull/15) subsequently upgraded Mermaid from 11.17.2 to 12.0.0. Full build, contributor account-switch regression, and a Chromium smoke using the story graph's Mermaid configuration, path classes, pointer selection and keyboard selection passed. This does not establish older Safari compatibility; Mermaid 12 requires Safari 17.4+ and Node 22.12+. No host runtimes, database versions, models, deployment settings, repository permissions, or auto-merge settings were changed. The committed inventory and the first artifact describe their recorded source revisions; consult a newer watch artifact for subsequent dependency changes.
+
+### Replit workspace observations
+
+The Shell returned these executable versions on 2026-09-19 UTC. They describe the development workspace, not a published deployment or resolved native dependency closure.
+
+| Executable | Observed version |
+| --- | --- |
+| Node.js | 24.13.0 |
+| pnpm | 10.26.1 |
+| Python | 3.13.11 |
+| Git | 2.50.1 |
+| Bash | 5.2.37 |
+| Pandoc | 3.6 |
+| Redis | 7.2.10 |
+| Nix | Determinate Nix 3.11.2 / Nix 2.31.1 |
+
+Replit's pnpm differs from the 11.19.0 used by Windows and CI. Coordinate a package-manager pin and frozen-install verification before claiming identical environments. The live PostgreSQL patch and published runtime remain unverified. Shell authentication and guarded synchronization passed, while the graphical Git provider separately returned `UNAUTHENTICATED`; GitHub account confirmation is still required for that connection. Matching Git commits does not certify the provider connection or running services.
 
 **Confirmed:** existing Dependabot configuration covers npm and a separate daily workflow refreshes Mermaid. This change adds Python and Actions coverage, separates routine updates from major proposals, groups the Expo/React family, and avoids duplicate Mermaid proposals. The new weekly Technology watch produces a fresh source-linked inventory as an Actions artifact and job summary. It has read-only repository permissions and cannot install a production upgrade.
 
@@ -83,16 +102,16 @@ Local validation completed for this maintenance change:
 
 - Four inventory tests passed, including catalog resolution, multiple locked versions, prerelease/yanked release filtering, numeric comparison and full repository extraction.
 - `pnpm run typecheck` and `pnpm run build` passed. Build warnings include existing source-map/chunk-size notices and Expo compatibility mismatches; a successful bundle does not resolve those warnings.
-- All 18 synthetic ingestion tests passed under isolated Python 3.12.10 with the repository's pytest/pdfplumber/python-docx pins and checksum-verified Pandoc 3.11. The Linux native llama-cpp-python installation and import job is defined but has not run on GitHub yet.
+- All 18 synthetic ingestion tests passed under isolated Python 3.12.10 with the repository's pytest/pdfplumber/python-docx pins and checksum-verified Pandoc 3.11. The Linux native llama-cpp-python installation, imports, dependency check and synthetic tests also passed in [PR #16's ingestion run](https://github.com/OKHP3/telling-forward/actions/runs/35421134813).
 - The changed workflows passed actionlint 1.7.12 (shellcheck/pyflakes were unavailable and disabled). Dependabot and the Renovate candidate passed JSON-schema validation. These checks do not establish a successful hosted updater dry run.
 
 | Claim | Tier | Evidence | Consequence if false | Next check |
 | --- | --- | --- | --- | --- |
 | Local source and GitHub main baseline matched at audit start | Confirmed | Both refs 8f79f5f90be2b1d116886054b29c21b45309f0e4; GitHub connector package.json matched | Audit could otherwise compare the wrong baseline | Recheck before publication |
-| Replit executes those exact locked versions | Unknown | Connector returned UNAUTHORIZED; Chrome attempt timed out | Published runtime could differ from source | Authenticate and collect version-only host evidence |
+| Replit executes those exact locked versions | Unknown | Workspace executable versions recorded above; pnpm differs from CI; published packages not inspected | Published runtime could differ from source | Coordinate pnpm and verify frozen install plus deployed package versions |
 | Every native library has a known installed version | Unknown | .replit lists packages and a channel, not resolved derivations | Native/browser compatibility cannot be certified | Record Replit derivation closure and executable versions |
 | Python transitive environment is reproducible | Unknown | Requirements pin six direct packages but no full Python lock | Future installation can change transitive packages | Capture a resolved environment in Python 3.12 and introduce a reviewed lock |
 | Dependency bot can update pnpm 11 correctly | Unknown | Official Dependabot table stops at v10 | Updates may stall or churn lockfiles | Successful real update PR and frozen install |
 | All newer stable releases are compatible | Proposal only | Version comparison is not runtime testing | Blind upgrades can break native clients or behavior | Validate each bounded upgrade using the gates above |
 
-The next action is to publish this maintenance change through a reviewed PR, run Technology watch on GitHub, and verify the pnpm 11 updater before declaring continuous upgrades operational.
+The next actions are to review the generated update proposals, coordinate the pnpm versions, and verify the pnpm 11 updater before declaring all continuous upgrade channels operational.
