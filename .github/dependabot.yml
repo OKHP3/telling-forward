@@ -24,8 +24,34 @@ updates:
       interval: daily
     open-pull-requests-limit: 10
     versioning-strategy: increase
+    cooldown:
+      default-days: 3
+    ignore:
+      # One owner for Mermaid: refresh-mermaid.yml already updates and validates it.
+      - dependency-name: mermaid
     groups:
-      production-dependencies:
-        dependency-type: production
-      development-dependencies:
-        dependency-type: development
+      expo-react-family:
+        patterns: ['expo', 'expo-*', '@expo/*', 'react', 'react-dom', 'react-native', 'react-native-*', '@react-native*/*', '@types/react', '@types/react-dom', '@clerk/expo']
+      routine-updates:
+        patterns: ['*']
+        update-types: [minor, patch]
+  - package-ecosystem: pip
+    directory: /.github/scripts/ingestion
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    open-pull-requests-limit: 3
+    groups:
+      ingestion-compatible:
+        patterns: ['*']
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      actions-compatible:
+        patterns: ['*']
+        update-types: [minor, patch]

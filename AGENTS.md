@@ -88,6 +88,7 @@ The repository documents this stack (see `replit.md`):
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only).
 - `pnpm --filter @workspace/api-server run dev` — run the API server locally.
 - Run `git diff --check` before handoff.
+- Technology inventory: `node scripts/check-technology-updates.mjs --include-transitive --write`; extraction tests: `node --test scripts/check-technology-updates.test.mjs`. See `docs/technology-update-policy.md` for update ownership, activation steps, and runtime evidence boundaries. The weekly Technology watch is read-only; version reports do not authorize automatic major upgrades or model changes.
 - Inspect the final diff and preserve unrelated user changes.
 
 Do not claim a command was executed unless it was actually run in a suitable environment.

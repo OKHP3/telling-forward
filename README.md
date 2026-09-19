@@ -91,3 +91,5 @@ The platform code and documentation are separate from any protected fiction, dra
 - [Dream platform specification](docs/product/dream-platform-specification.md)
 - [Attainable delivery roadmap](docs/product/attainable-delivery-roadmap.md)
 - [Open questions log](docs/decisions/open-questions.md)
+- [Technology inventory](docs/technology-inventory.md)
+- [Technology update policy and activation plan](docs/technology-update-policy.md)
