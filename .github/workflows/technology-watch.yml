@@ -1,0 +1,73 @@
+name: Technology watch
+
+on:
+  schedule:
+    - cron: '41 8 * * 1'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/check-technology-updates*'
+      - '.github/workflows/technology-watch.yml'
+      - '.github/dependabot.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: technology-watch-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Test inventory extraction and stable release selection
+        run: node --test scripts/check-technology-updates.test.mjs
+      - name: Refresh complete inventory from publisher registries
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Never upload the committed snapshot as if this run refreshed it.
+          rm -f docs/technology-inventory.md docs/technology-inventory.json docs/technology-transitive-inventory.md
+          node scripts/check-technology-updates.mjs --include-transitive --write
+      - name: Summarize updates
+        if: always() && github.event_name != 'pull_request'
+        run: |
+          node --input-type=module <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          import fs from 'node:fs';
+          if (!fs.existsSync('docs/technology-inventory.json')) {
+            console.log('Inventory failed before a fresh report was produced. See the failed step.');
+            process.exit(0);
+          }
+          const report = JSON.parse(fs.readFileSync('docs/technology-inventory.json', 'utf8'));
+          console.log('# Technology watch\n');
+          console.log(`Checked ${report.generatedAt}; source ${report.sourceCommit}.\n`);
+          for (const row of [...report.npm.filter(r => r.scope !== 'transitive'), ...report.pip, ...report.actions]) {
+            if (['update available', 'review', 'unknown'].includes(row.status))
+              console.log(`- ${row.name}: ${row.current.join(', ') || 'unknown'} -> ${row.latest || 'unknown'} (${row.status})`);
+          }
+          console.log('\nFull inventory and runtime review targets are in the attached artifact. Follow docs/technology-update-policy.md. No deployment was changed.');
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always() && github.event_name != 'pull_request'
+        with:
+          name: technology-inventory
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            docs/technology-inventory.md
+            docs/technology-inventory.json
+            docs/technology-transitive-inventory.md

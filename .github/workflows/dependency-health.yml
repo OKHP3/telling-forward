@@ -16,6 +16,7 @@ on:
       - 'lib/api-zod/src/generated/**'
       - 'package.json'
       - 'scripts/check-technology-updates.mjs'
+      - 'scripts/check-technology-updates.test.mjs'
       - '.github/workflows/dependency-health.yml'
   pull_request:
     paths:
@@ -30,6 +31,7 @@ on:
       - 'lib/api-zod/src/generated/**'
       - 'package.json'
       - 'scripts/check-technology-updates.mjs'
+      - 'scripts/check-technology-updates.test.mjs'
       - '.github/workflows/dependency-health.yml'
   workflow_dispatch:
 
@@ -49,8 +51,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: node --check scripts/check-technology-updates.mjs
-      - run: node scripts/check-technology-updates.mjs > technology-inventory-ci.md
+      - run: node --test scripts/check-technology-updates.test.mjs
+      # Registry availability belongs to the scheduled watch, not the PR gate.
+      - run: node scripts/check-technology-updates.mjs --offline > technology-inventory-ci.md
       - name: Verify contributor fidelity contract
         run: pnpm run check:contributor-fidelity
       - run: pnpm run typecheck

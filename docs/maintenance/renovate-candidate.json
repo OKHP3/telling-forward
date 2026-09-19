@@ -1,0 +1,40 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["npm"],
+  "ignorePaths": ["**/node_modules/**", ".agents/**", "skills/**"],
+  "automerge": false,
+  "ignoreUnstable": true,
+  "respectLatest": true,
+  "minimumReleaseAge": "3 days",
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "rangeStrategy": "bump",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "packageRules": [
+    {
+      "description": "Group ordinary minor and patch proposals; CI and owner review remain mandatory.",
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "compatible package updates"
+    },
+    {
+      "description": "Major migrations require an explicit dashboard decision before a PR is raised.",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Preserve Expo alignment across shared React catalogs and the mobile client.",
+      "matchPackageNames": ["expo", "expo-*", "@expo/*", "react", "react-dom", "react-native", "react-native-*", "@react-native*/*", "@types/react", "@types/react-dom", "@clerk/expo"],
+      "groupName": "expo and react compatibility",
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "The existing Mermaid refresh workflow owns this package.",
+      "matchPackageNames": ["mermaid"],
+      "enabled": false
+    }
+  ]
+}
