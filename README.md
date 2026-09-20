@@ -6,6 +6,8 @@ Telling Forward is a voice-first, agent-assisted collaborative storytelling plat
 
 The larger idea is **open-canon collaborative fiction**: an originating author can open a storyworld, other people can extend it through distinct paths, and readers can follow the resulting narrative lineage without confusing a community branch with the author's canon.
 
+**[Explore the live prototype](https://okhp3.github.io/telling-forward/)** · **[Read the OverKill Hill project page](https://overkillhill.com/projects/telling-forward/)** · **[View the source](https://github.com/OKHP3/telling-forward)**
+
 ## Why it exists
 
 Everyone has a story to share, but not everyone sees themselves as an author. Writing mechanics, blank-page anxiety, editing, continuity, and unfamiliar publishing tools can all make sharing feel harder than it needs to be.

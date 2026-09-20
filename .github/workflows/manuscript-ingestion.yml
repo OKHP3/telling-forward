@@ -66,10 +66,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -87,11 +87,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -117,14 +117,14 @@ jobs:
       contents: read
       issues: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
       - name: Install pandoc
         run: sudo apt-get update && sudo apt-get install -y pandoc
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -133,7 +133,7 @@ jobs:
       # wheel so repeat runs do not rebuild the same pinned dependency set.
       - name: Cache ingestion dependency wheels
         id: cache-ingestion-dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/pip
           key: ingestion-pip-${{ runner.os }}-python-3.12-${{ hashFiles('.github/scripts/ingestion/requirements.txt') }}
@@ -183,7 +183,7 @@ jobs:
       # enough for a model file pulled on every ingestion run).
       - name: Cache model weights
         id: cache-model
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: models/${{ env.HF_MODEL_FILE }}
           key: model-${{ env.HF_MODEL_REPO }}-${{ env.HF_MODEL_REVISION }}-${{ env.HF_MODEL_FILE }}

@@ -12,19 +12,19 @@ const policyFixturePath = resolve(
   process.cwd(),
   "../../docs/decisions/provenance-fidelity-cases.yaml",
 );
-const policyFixture = readFileSync(policyFixturePath, "utf8");
+const policyFixture = readFileSync(policyFixturePath, "utf8").replace(/\r\n/g, "\n");
 const contractDocumentationPath = resolve(
   process.cwd(),
   "../../docs/decisions/provenance-fidelity-contract.md",
 );
-const contractDocumentation = readFileSync(contractDocumentationPath, "utf8");
+const contractDocumentation = readFileSync(contractDocumentationPath, "utf8").replace(/\r\n/g, "\n");
 const apiSpecPath = resolve(process.cwd(), "../../lib/api-spec/openapi.yaml");
-const apiSpec = readFileSync(apiSpecPath, "utf8");
+const apiSpec = readFileSync(apiSpecPath, "utf8").replace(/\r\n/g, "\n");
 const generatedApiPath = resolve(
   process.cwd(),
   "../../lib/api-zod/src/generated/api.ts",
 );
-const generatedApi = readFileSync(generatedApiPath, "utf8");
+const generatedApi = readFileSync(generatedApiPath, "utf8").replace(/\r\n/g, "\n");
 const parsedPolicyFixture = parseYaml(policyFixture) as ProvenanceFixture;
 
 const policyFieldNames = {
