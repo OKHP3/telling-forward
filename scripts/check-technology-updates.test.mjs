@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { collectNpm, compare, inventory, npmRelease, packageKey, pypiRelease, stable, status } from './check-technology-updates.mjs';
@@ -45,4 +49,21 @@ test('repository inventory resolves every direct dependency without network acce
     assert.equal(row.latest, null);
   }
   assert.ok(report.system.packages.includes('redis'));
+});
+
+
+test('scheduled setup failure cannot upload a committed inventory as fresh', () => {
+  const workflow = fs.readFileSync(new URL('../.github/workflows/technology-watch.yml', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const cleanup = workflow.indexOf('run: rm -f docs/technology-inventory.md');
+  assert.ok(cleanup > 0 && cleanup < workflow.indexOf('uses: pnpm/action-setup'));
+  assert.ok(workflow.includes("if: github.event_name != 'pull_request'"));
+  const summary = workflow.split("<<'NODE' >> \"$GITHUB_STEP_SUMMARY\"\n")[1].split('          NODE')[0];
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'telling-watch-failure-'));
+  try {
+    const output = execFileSync(process.execPath, ['--input-type=module'], { cwd: temporary, input: summary, encoding: 'utf8' });
+    assert.match(output, /failed before a fresh report was produced/);
+    assert.doesNotMatch(output, /Checked /);
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
 });

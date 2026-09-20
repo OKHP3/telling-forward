@@ -22,9 +22,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
+      - name: Clear committed inventory before fallible setup
+        if: github.event_name != 'pull_request'
+        run: rm -f docs/technology-inventory.md docs/technology-inventory.json docs/technology-transitive-inventory.md
       - uses: pnpm/action-setup@v4
         with:
           version: 11.19.0
@@ -40,8 +43,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Never upload the committed snapshot as if this run refreshed it.
-          rm -f docs/technology-inventory.md docs/technology-inventory.json docs/technology-transitive-inventory.md
           node scripts/check-technology-updates.mjs --include-transitive --write
       - name: Summarize updates
         if: always() && github.event_name != 'pull_request'
