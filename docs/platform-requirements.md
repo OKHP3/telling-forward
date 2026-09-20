@@ -439,6 +439,8 @@ Directly answering the "Vite, Tailwind, TypeScript, Playwright" question: here's
 
 The primary decisions log is `docs/decisions/open-questions.md`. The items below reflect current status; see that file for full decision text and rationale.
 
+**Reconciliation note (2026-09-20):** this table was resynced against `docs/decisions/open-questions.md`, which had advanced to items 15.16–15.21 and recorded two more decisions (15.10, 15.13) since this section was last edited. Separately, the 2026-08-27 gap analysis (`docs/reviews/2026-08-27-public-vision-vs-implementation-gap-analysis.md`) found this document's neighbors — `CHANGELOG.md` and the still-unbuilt Stage 0/1 traceability matrix — falling further behind the shipped codebase, with four follow-up questions to the project owner still open. That review's own remediation plan is the authoritative next step for closing that broader drift; this reconciliation only covers the Section 15 table itself.
+
 | # | Topic | Status |
 |---|---|---|
 | 15.1 | One repo per storyworld | **Decided 2026-08-19** — one repo per storyworld, Storyworld Kit template |
@@ -447,11 +449,19 @@ The primary decisions log is `docs/decisions/open-questions.md`. The items below
 | 15.4 | Code license | **Decided 2026-08-19** — proprietary/all-rights-reserved placeholder; root `LICENSE` file added |
 | 15.5 | `attached_assets/` boundary | **Decided 2026-08-19** — `content/pilot-storyworld/` is the authorized location for pilot source material |
 | 15.6 | GitHub App vs. PAT | **Decided 2026-08-19** — migrate to GitHub App; PAT is Stage 1 tech debt |
-| 15.7 | Mobile scope and timing | **Open** — Expo client is scaffolded and implemented in checkout; product acceptance and timing remain unresolved |
+| 15.7 | Mobile scope and timing | **Open** — Expo client is scaffolded and implemented in checkout; product acceptance and timing remain unresolved. The 2026-08-27 gap analysis flags ongoing mobile dependency work as scope creep against this still-open question |
+| 15.10 | Consent boundary for Disrupt/Invert derivatives | **Decided for private-pilot policy 2026-08-26; enforcement not approved** — see `consent-ladder-design.md` |
 | 15.11 | Four-vs-six submission states | **Decided 2026-08-19** — six-state model locked; four-state references are stale |
 | 15.12 | Capsules table / term ledger | **Decided 2026-08-19** — no capsules table; GitHub Issues with `capsule:*` labels are canonical |
-| 15.14 | Per-action consent ladder | **Decided 2026-08-19** — design only in Stage 0–1 |
-| 15.15 | Baseline moderation tooling | **Decided 2026-08-19** — design only in Stage 0–1 |
+| 15.13 | Reader accessibility/density metadata | **Decided — deferred, 2026-08-26** — no field approved; revisit only on demonstrated need |
+| 15.14 | Per-action consent ladder | **Decided 2026-08-19** — design only in Stage 0–1; enforcement unapproved |
+| 15.15 | Baseline moderation tooling | **Decided 2026-08-19** — design only in Stage 0–1; enforcement unapproved |
+| 15.16 | Public reporting rules and launch authorization | **Decided 2026-08-20** — private-pilot rules approved; public report surface explicitly declined until listed gates are evidenced |
+| 15.17 | Disposition of accepted derivatives | **Decided for private-pilot policy 2026-08-31; enforcement not approved** — see `withdrawal-preservation-policy.md` |
+| 15.18 | Reader-visible provenance boundary | **Decided for private pilot 2026-08-21; enforcement not approved** — working-laboratory opt-in not enabled; see `provenance-fidelity-contract.md` |
+| 15.19 | Reader interest signal granularity | **Open** — per-path vs. per-capsule rollup on reader `react` actions, ADR-0015 |
+| 15.20 | Cross-storyworld structural reuse consent | **Open** — the Transpose action pointed at a non-public-domain storyworld, ADR-0016 |
+| 15.21 | Public-domain sourcing verification | **Open** — verification step and provenance-record location for the classics seed library, ADR-0016 |
 
 Don't convert any remaining Open items into implementation assumptions. Record decisions in `docs/decisions/open-questions.md` when the project owner makes them.
 
