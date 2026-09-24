@@ -2,7 +2,7 @@
 
 ## Status
 
-**Open.** This ADR proposes two independent, separately-decidable items, not one accept/reject decision. See "Recommendation" for the per-item call and "Next action" for what closes it.
+**Accepted.** Both items are now decided. Item 1 (scene-purpose framing) was accepted by the project owner on 2026-09-24 as design intent, implementation deferred until Concept Board is actually built. Item 2 ("GitHub holds / Replit executes") was already accepted via ADR-0003 and ADR-0013 and is retained here as historical evidence only.
 
 ## Numbering note
 
@@ -34,7 +34,9 @@ Per `telling_forward_ui_vision.md`, Concept Board's **Promote to scene** action 
 
 The other three questions (dramatic problem solved, reader takeaway, larger-architecture fit) read as more useful at a *world/steward* level than a per-scene level, and risk turning a lightweight promotion action into a form. They are noted but not part of the minimal proposal.
 
-**Status of this item:** proposed shape only, not drafted copy, not a schema field. If accepted, the field(s) should land in whatever table backs promoted scenes, following the same "reserve now" pattern ADR-0005 and ADR-0006 already use for their own metadata proposals.
+**Disposition:** Accepted by the project owner on 2026-09-24. This is a design-intent acceptance, not a build authorization — the field(s) are reserved for whenever Concept Board's data model is actually designed. If a `capsules`/scene schema effort starts before that, this ADR is the reference to check against so the three fields aren't retrofitted later.
+
+**Status of this item:** accepted design intent; not implemented, no schema exists yet to attach it to.
 
 ### 2. "GitHub holds / Replit executes" as historical evidence for ADR-0003
 
@@ -63,32 +65,29 @@ or code change is authorized by this ADR.
 
 ## Non-goals of this ADR
 
-- Does not require the item 1 purpose note; Concept Board's "epiphany, not default detail" ethos (per `telling_forward_ui_vision.md`) argues against making it mandatory.
+- Item 1's acceptance is design intent, not a build authorization. Concept Board's "epiphany, not default detail" ethos (per `telling_forward_ui_vision.md`) still argues for offering the note, not requiring it, whenever it's built.
 - Does not reopen ADR-0003 or open-questions 15.1/15.2/15.6; item 2 records
   an accepted boundary already decided in ADR-0003 and clarified by ADR-0013.
 - Does not adopt the saga's own book order, naming, Notion architecture, or three-surface platform split — none of it is TF-relevant.
 - Does not touch the historical four-state submission sketch superseded by the
   six-state model (ADR-0004) or reopen ADR-0005/0006's open items.
-- Does not authorize building anything; Concept Board has no implementation footprint yet per `telling_forward_ui_vision.md`, so item 1 is a design note for whenever that work starts, not a standalone build task.
+- Does not itself authorize building Concept Board; item 1 is a reserved design note for whenever that work starts, not a standalone build task.
 
 ## Recommendation
 
 | Item | Recommendation |
 |---|---|
-| 1. Scene-purpose framing at Promote-to-scene | Log as proposed; low cost if adopted alongside Concept Board's first implementation, easy to skip if it doesn't earn its place |
+| 1. Scene-purpose framing at Promote-to-scene | **Accepted 2026-09-24** as design intent; implement the three fields when Concept Board's data model is scoped |
 | 2. "GitHub holds / Replit executes" | **Accepted in ADR-0003 and clarified by ADR-0013; retained here as evidence** |
 
 ## Consequences
 
-- If item 1 is accepted, the purpose-note fields should be designed into the capsule/scene data model's first version rather than retrofitted later.
+- Item 1: the purpose-note fields (why it exists, what it advances, how it hands off) should be designed into the capsule/scene data model's first version rather than retrofitted later. No implementation work is authorized by this acceptance alone — it fires when Concept Board's build is actually scoped.
 - Item 2 is already recorded by ADR-0003 and ADR-0013. The remaining
   15.1/15.2/15.6 decisions are operational details and do not reopen the
   source-of-truth boundary.
-- If neither is implemented, no cost — this ADR just records both ideas and their source so they aren't rediscovered from scratch.
+- Both items are now decided; this ADR needs no further owner action unless Concept Board's design surfaces a reason to revisit item 1's field shape.
 
 ## Next action
 
-The project owner should confirm whether item 1 is worth carrying into Concept
-Board's eventual implementation. Item 2 is closed as a proposal here because
-the boundary is already recorded in ADR-0003 and ADR-0013. Update this ADR's
-Status once item 1 is decided.
+None outstanding. Item 1 is accepted as design intent — carry the three-field shape into Concept Board's data model when that work is scoped, referencing this ADR. Item 2 stays closed as historical evidence per ADR-0003/ADR-0013.

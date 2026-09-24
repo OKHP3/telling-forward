@@ -28,6 +28,8 @@ Agents may triage the maintainer-facing stream and prepare recommendations (rout
 
 `docs/platform-requirements.md` Section 7.3 has since defined the authoritative contributor submission state machine and explicitly maps each of the five states above onto it (Submitted, Under review, Returned with notes, Accepted into canon, Published as an alternate path). That mapping is consistent with this ADR, not a change to it; Section 7.3 governs submission state, this ADR governs what the contributor is told about it.
 
+The live `proposalStateEnum` has nine values, not six: the six editorial states this ADR's five notifications map onto (Draft has no notification, since nothing has been submitted yet), plus three post-acceptance disposition states, restricted, withdrawn, and archived, decided later under open-questions 15.17. Those three are deliberately **not** folded into this ADR's five-state list: they are not review progress, they are what happens to a scene after a contributor withdraws it, a steward restricts it, or its disposition is otherwise resolved. Their contributor-facing wording is defined separately in `docs/decisions/withdrawal-preservation-policy.md`, "Contributor-facing wording" (for example, "This submission is restricted" / "A steward has made this submission unavailable. This is not a public finding about you."). A contributor-facing surface needs both this ADR and that policy to cover every state the enum can reach; neither one alone is complete.
+
 ## Consequences
 
 - Any future notification, email, or in-app messaging feature should be built against the five contributor-facing states above, not by exposing raw GitHub webhook payloads or Action run results to contributors.

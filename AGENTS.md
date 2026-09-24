@@ -13,7 +13,7 @@
 
 **Confirmed:** Telling Forward is a voice-first, agent-assisted collaborative storytelling platform. It helps people contribute characters, story arcs, memories, and possibilities through conversation, then turns those contributions into readable, attributable works. The larger idea is open-canon collaborative fiction: an originating author can open a storyworld, other people can extend it through distinct paths, and readers can follow the resulting narrative lineage without confusing a community branch with the author's canon.
 
-**Confirmed:** This repository is an early concept and prototype seed. The product model, contribution rules, agent skills, and content governance are expected to evolve through documented experiments (see `README.md`, "Repository status").
+**Confirmed:** This repository contains a substantive Stage 0-1 prototype, not a bare scaffold or early concept seed: a private Author App, a reader application, configured companion reader surfaces, an API and PostgreSQL index, an Expo mobile client scaffold, GitHub-backed provenance and reconciliation code, proposal-state safeguards, and API/core-flow tests. The canonical Author App has a verified public GitHub Pages deployment (see `README.md`, "Repository status" and "Verified public deployment"). The product model, contribution rules, agent skills, and content governance are still expected to evolve through documented decisions in `docs/decisions/open-questions.md`, but "early concept and prototype seed" is no longer an accurate description of the checkout.
 
 **Confirmed:** The checkout contains a working pnpm/TypeScript monorepo (API server, shared libraries, database layer) alongside product and mission documentation. It is not a documentation-only repository.
 
