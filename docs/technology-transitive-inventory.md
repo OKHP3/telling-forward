@@ -1,6 +1,6 @@
 # Transitive npm inventory
 
-Generated: 2026-09-19T04:13:34.731Z. Queries enabled: true.
+Generated: 2026-09-26T15:29:48.172Z. Queries enabled: true.
 
 All lockfile package names, including optional platform binaries. Some are not installed on this host. Update via parent dependencies and lockfile maintenance. Direct packages can also have older transitive copies: these appear in lockedAll in the JSON inventory.
 
@@ -8,7 +8,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | --- | --- | --- | --- | --- | --- |
 | @0no-co/graphql.web | indirect | 1.3.3 | 1.3.4 | update available |  [publisher](https://registry.npmjs.org/%400no-co%2Fgraphql.web/latest) |
 | @adraffy/ens-normalize | indirect | 1.11.1 | 1.11.1 | current or newer |  [publisher](https://registry.npmjs.org/%40adraffy%2Fens-normalize/latest) |
-| @antfu/install-pkg | indirect | 1.1.0 | 2.1.0 | update available |  [publisher](https://registry.npmjs.org/%40antfu%2Finstall-pkg/latest) |
+| @antfu/install-pkg | indirect | 2.1.0 | 2.1.0 | current or newer |  [publisher](https://registry.npmjs.org/%40antfu%2Finstall-pkg/latest) |
 | @babel/code-frame | indirect | 7.10.4, 7.29.0, 7.29.7 | 8.0.6 | update available |  [publisher](https://registry.npmjs.org/%40babel%2Fcode-frame/latest) |
 | @babel/compat-data | indirect | 7.29.0, 7.29.7 | 8.0.5 | update available |  [publisher](https://registry.npmjs.org/%40babel%2Fcompat-data/latest) |
 | @babel/generator | indirect | 7.29.1, 7.29.8 | 8.0.6 | update available |  [publisher](https://registry.npmjs.org/%40babel%2Fgenerator/latest) |
@@ -100,12 +100,16 @@ All lockfile package names, including optional platform binaries. Some are not i
 | @babel/runtime | indirect | 7.28.6 | 8.0.5 | update available |  [publisher](https://registry.npmjs.org/%40babel%2Fruntime/latest) |
 | @babel/template | indirect | 7.28.6, 7.29.7 | 8.0.0 | update available |  [publisher](https://registry.npmjs.org/%40babel%2Ftemplate/latest) |
 | @babel/types | indirect | 7.29.0, 7.29.8 | 8.0.6 | update available |  [publisher](https://registry.npmjs.org/%40babel%2Ftypes/latest) |
-| @base-org/account | indirect | 2.0.1 | 2.5.10 | update available |  [publisher](https://registry.npmjs.org/%40base-org%2Faccount/latest) |
+| @base-org/account | indirect | 2.0.1 | 2.5.13 | update available |  [publisher](https://registry.npmjs.org/%40base-org%2Faccount/latest) |
 | @braintree/sanitize-url | indirect | 7.1.2 | 7.1.2 | current or newer |  [publisher](https://registry.npmjs.org/%40braintree%2Fsanitize-url/latest) |
+| @chevrotain/cst-dts-gen | indirect | 11.1.2 | 13.2.0 | update available |  [publisher](https://registry.npmjs.org/%40chevrotain%2Fcst-dts-gen/latest) |
+| @chevrotain/gast | indirect | 11.1.2 | 13.2.0 | update available |  [publisher](https://registry.npmjs.org/%40chevrotain%2Fgast/latest) |
+| @chevrotain/regexp-to-ast | indirect | 11.1.2 | 13.2.0 | update available |  [publisher](https://registry.npmjs.org/%40chevrotain%2Fregexp-to-ast/latest) |
 | @chevrotain/types | indirect | 11.1.2 | 13.2.0 | update available |  [publisher](https://registry.npmjs.org/%40chevrotain%2Ftypes/latest) |
-| @clerk/backend | indirect | 3.16.6 | 3.18.1 | update available |  [publisher](https://registry.npmjs.org/%40clerk%2Fbackend/latest) |
-| @clerk/clerk-js | indirect | 6.29.1 | 6.32.1 | update available |  [publisher](https://registry.npmjs.org/%40clerk%2Fclerk-js/latest) |
-| @coinbase/wallet-sdk | indirect | 4.3.7 | 4.3.7 | current or newer |  [publisher](https://registry.npmjs.org/%40coinbase%2Fwallet-sdk/latest) |
+| @chevrotain/utils | indirect | 11.1.2 | 13.2.0 | update available |  [publisher](https://registry.npmjs.org/%40chevrotain%2Futils/latest) |
+| @clerk/backend | indirect | 3.16.6 | 3.20.1 | update available |  [publisher](https://registry.npmjs.org/%40clerk%2Fbackend/latest) |
+| @clerk/clerk-js | indirect | 6.29.1 | 6.34.1 | update available |  [publisher](https://registry.npmjs.org/%40clerk%2Fclerk-js/latest) |
+| @coinbase/wallet-sdk | indirect | 4.3.7 | 4.4.0 | update available |  [publisher](https://registry.npmjs.org/%40coinbase%2Fwallet-sdk/latest) |
 | @commander-js/extra-typings | indirect | 14.0.0 | 15.0.0 | update available |  [publisher](https://registry.npmjs.org/%40commander-js%2Fextra-typings/latest) |
 | @date-fns/tz | indirect | 1.4.1 | 1.5.0 | update available |  [publisher](https://registry.npmjs.org/%40date-fns%2Ftz/latest) |
 | @drizzle-team/brocli | indirect | 0.10.2 | 0.12.1 | update available |  [publisher](https://registry.npmjs.org/%40drizzle-team%2Fbrocli/latest) |
@@ -151,7 +155,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | @gerrit0/mini-shiki | indirect | 3.23.0 | 3.23.0 | current or newer |  [publisher](https://registry.npmjs.org/%40gerrit0%2Fmini-shiki/latest) |
 | @hono/node-server | indirect | 2.1.1 | 2.1.1 | current or newer |  [publisher](https://registry.npmjs.org/%40hono%2Fnode-server/latest) |
 | @iconify/types | indirect | 2.0.0 | 2.0.0 | current or newer |  [publisher](https://registry.npmjs.org/%40iconify%2Ftypes/latest) |
-| @iconify/utils | indirect | 3.1.4 | 3.1.7 | update available |  [publisher](https://registry.npmjs.org/%40iconify%2Futils/latest) |
+| @iconify/utils | indirect | 3.1.7 | 3.1.7 | current or newer |  [publisher](https://registry.npmjs.org/%40iconify%2Futils/latest) |
 | @ioredis/commands | indirect | 2.0.0 | 2.0.0 | current or newer |  [publisher](https://registry.npmjs.org/%40ioredis%2Fcommands/latest) |
 | @isaacs/fs-minipass | indirect | 4.0.1 | 4.0.1 | current or newer |  [publisher](https://registry.npmjs.org/%40isaacs%2Ffs-minipass/latest) |
 | @isaacs/ttlcache | indirect | 1.4.1 | 2.1.5 | update available |  [publisher](https://registry.npmjs.org/%40isaacs%2Fttlcache/latest) |
@@ -169,7 +173,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | @jridgewell/source-map | indirect | 0.3.11 | 0.3.11 | current or newer |  [publisher](https://registry.npmjs.org/%40jridgewell%2Fsource-map/latest) |
 | @jridgewell/sourcemap-codec | indirect | 1.5.5 | 1.6.0 | update available |  [publisher](https://registry.npmjs.org/%40jridgewell%2Fsourcemap-codec/latest) |
 | @jridgewell/trace-mapping | indirect | 0.3.31 | 0.3.31 | current or newer |  [publisher](https://registry.npmjs.org/%40jridgewell%2Ftrace-mapping/latest) |
-| @mermaid-js/parser | indirect | 1.2.1 | 2.0.0 | update available |  [publisher](https://registry.npmjs.org/%40mermaid-js%2Fparser/latest) |
+| @mermaid-js/parser | indirect | 2.0.0 | 2.0.0 | current or newer |  [publisher](https://registry.npmjs.org/%40mermaid-js%2Fparser/latest) |
 | @noble/ciphers | indirect | 1.3.0 | 2.4.0 | update available |  [publisher](https://registry.npmjs.org/%40noble%2Fciphers/latest) |
 | @noble/curves | indirect | 1.9.1, 1.9.7 | 2.4.0 | update available |  [publisher](https://registry.npmjs.org/%40noble%2Fcurves/latest) |
 | @noble/hashes | indirect | 1.4.0, 1.8.0 | 2.4.0 | update available |  [publisher](https://registry.npmjs.org/%40noble%2Fhashes/latest) |
@@ -191,17 +195,17 @@ All lockfile package names, including optional platform binaries. Some are not i
 | @octokit/request | indirect | 10.0.15, 9.2.4 | 10.0.16 | update available |  [publisher](https://registry.npmjs.org/%40octokit%2Frequest/latest) |
 | @octokit/request-error | indirect | 6.1.8, 7.1.1 | 7.1.2 | update available |  [publisher](https://registry.npmjs.org/%40octokit%2Frequest-error/latest) |
 | @octokit/types | indirect | 13.10.0, 14.1.0, 17.0.0 | 18.0.0 | update available |  [publisher](https://registry.npmjs.org/%40octokit%2Ftypes/latest) |
-| @orval/angular | indirect | 8.5.3 | 8.34.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fangular/latest) |
-| @orval/axios | indirect | 8.5.3 | 8.34.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Faxios/latest) |
-| @orval/core | indirect | 8.5.3 | 8.34.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fcore/latest) |
-| @orval/fetch | indirect | 8.5.3 | 8.34.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Ffetch/latest) |
-| @orval/hono | indirect | 8.5.3 | 8.34.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fhono/latest) |
-| @orval/mcp | indirect | 8.5.3 | 8.34.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fmcp/latest) |
-| @orval/mock | indirect | 8.5.3 | 8.34.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fmock/latest) |
-| @orval/query | indirect | 8.5.3 | 8.34.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fquery/latest) |
-| @orval/solid-start | indirect | 8.5.3 | 8.34.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fsolid-start/latest) |
-| @orval/swr | indirect | 8.5.3 | 8.34.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fswr/latest) |
-| @orval/zod | indirect | 8.5.3 | 8.34.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fzod/latest) |
+| @orval/angular | indirect | 8.5.3 | 8.37.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fangular/latest) |
+| @orval/axios | indirect | 8.5.3 | 8.37.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Faxios/latest) |
+| @orval/core | indirect | 8.5.3 | 8.37.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fcore/latest) |
+| @orval/fetch | indirect | 8.5.3 | 8.37.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Ffetch/latest) |
+| @orval/hono | indirect | 8.5.3 | 8.37.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fhono/latest) |
+| @orval/mcp | indirect | 8.5.3 | 8.37.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fmcp/latest) |
+| @orval/mock | indirect | 8.5.3 | 8.37.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fmock/latest) |
+| @orval/query | indirect | 8.5.3 | 8.37.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fquery/latest) |
+| @orval/solid-start | indirect | 8.5.3 | 8.37.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fsolid-start/latest) |
+| @orval/swr | indirect | 8.5.3 | 8.37.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fswr/latest) |
+| @orval/zod | indirect | 8.5.3 | 8.37.0 | update available |  [publisher](https://registry.npmjs.org/%40orval%2Fzod/latest) |
 | @paralleldrive/cuid2 | indirect | 2.3.1 | 3.3.0 | update available |  [publisher](https://registry.npmjs.org/%40paralleldrive%2Fcuid2/latest) |
 | @pinojs/redact | indirect | 0.4.0 | 0.4.0 | current or newer |  [publisher](https://registry.npmjs.org/%40pinojs%2Fredact/latest) |
 | @radix-ui/number | indirect | 1.1.1 | 1.1.3 | update available |  [publisher](https://registry.npmjs.org/%40radix-ui%2Fnumber/latest) |
@@ -250,18 +254,18 @@ All lockfile package names, including optional platform binaries. Some are not i
 | @react-navigation/native-stack | indirect | 7.18.8 | 7.19.2 | update available |  [publisher](https://registry.npmjs.org/%40react-navigation%2Fnative-stack/latest) |
 | @react-navigation/routers | indirect | 7.6.4 | 7.6.4 | current or newer |  [publisher](https://registry.npmjs.org/%40react-navigation%2Frouters/latest) |
 | @rolldown/pluginutils | indirect | 1.0.0-rc.3 | 1.0.1 | review |  [publisher](https://registry.npmjs.org/%40rolldown%2Fpluginutils/latest) |
-| @rollup/rollup-darwin-arm64 | indirect | 4.59.0 | 4.63.3 | update available |  [publisher](https://registry.npmjs.org/%40rollup%2Frollup-darwin-arm64/latest) |
-| @rollup/rollup-darwin-x64 | indirect | 4.59.0 | 4.63.3 | update available |  [publisher](https://registry.npmjs.org/%40rollup%2Frollup-darwin-x64/latest) |
-| @rollup/rollup-linux-x64-gnu | indirect | 4.59.0 | 4.63.3 | update available |  [publisher](https://registry.npmjs.org/%40rollup%2Frollup-linux-x64-gnu/latest) |
-| @rollup/rollup-win32-arm64-msvc | indirect | 4.59.0 | 4.63.3 | update available |  [publisher](https://registry.npmjs.org/%40rollup%2Frollup-win32-arm64-msvc/latest) |
-| @rollup/rollup-win32-ia32-msvc | indirect | 4.59.0 | 4.63.3 | update available |  [publisher](https://registry.npmjs.org/%40rollup%2Frollup-win32-ia32-msvc/latest) |
-| @rollup/rollup-win32-x64-gnu | indirect | 4.59.0 | 4.63.3 | update available |  [publisher](https://registry.npmjs.org/%40rollup%2Frollup-win32-x64-gnu/latest) |
-| @rollup/rollup-win32-x64-msvc | indirect | 4.59.0 | 4.63.3 | update available |  [publisher](https://registry.npmjs.org/%40rollup%2Frollup-win32-x64-msvc/latest) |
-| @scalar/helpers | indirect | 0.2.18 | 0.12.0 | update available |  [publisher](https://registry.npmjs.org/%40scalar%2Fhelpers/latest) |
-| @scalar/json-magic | indirect | 0.11.7 | 0.14.0 | update available |  [publisher](https://registry.npmjs.org/%40scalar%2Fjson-magic/latest) |
-| @scalar/openapi-parser | indirect | 0.24.17 | 0.29.3 | update available |  [publisher](https://registry.npmjs.org/%40scalar%2Fopenapi-parser/latest) |
-| @scalar/openapi-types | indirect | 0.5.3, 0.5.4 | 0.9.6 | update available |  [publisher](https://registry.npmjs.org/%40scalar%2Fopenapi-types/latest) |
-| @scalar/openapi-upgrader | indirect | 0.1.11 | 0.2.17 | update available |  [publisher](https://registry.npmjs.org/%40scalar%2Fopenapi-upgrader/latest) |
+| @rollup/rollup-darwin-arm64 | indirect | 4.59.0 | 4.63.5 | update available |  [publisher](https://registry.npmjs.org/%40rollup%2Frollup-darwin-arm64/latest) |
+| @rollup/rollup-darwin-x64 | indirect | 4.59.0 | 4.63.5 | update available |  [publisher](https://registry.npmjs.org/%40rollup%2Frollup-darwin-x64/latest) |
+| @rollup/rollup-linux-x64-gnu | indirect | 4.59.0 | 4.63.5 | update available |  [publisher](https://registry.npmjs.org/%40rollup%2Frollup-linux-x64-gnu/latest) |
+| @rollup/rollup-win32-arm64-msvc | indirect | 4.59.0 | 4.63.5 | update available |  [publisher](https://registry.npmjs.org/%40rollup%2Frollup-win32-arm64-msvc/latest) |
+| @rollup/rollup-win32-ia32-msvc | indirect | 4.59.0 | 4.63.5 | update available |  [publisher](https://registry.npmjs.org/%40rollup%2Frollup-win32-ia32-msvc/latest) |
+| @rollup/rollup-win32-x64-gnu | indirect | 4.59.0 | 4.63.5 | update available |  [publisher](https://registry.npmjs.org/%40rollup%2Frollup-win32-x64-gnu/latest) |
+| @rollup/rollup-win32-x64-msvc | indirect | 4.59.0 | 4.63.5 | update available |  [publisher](https://registry.npmjs.org/%40rollup%2Frollup-win32-x64-msvc/latest) |
+| @scalar/helpers | indirect | 0.2.18 | 0.15.0 | update available |  [publisher](https://registry.npmjs.org/%40scalar%2Fhelpers/latest) |
+| @scalar/json-magic | indirect | 0.11.7 | 0.15.2 | update available |  [publisher](https://registry.npmjs.org/%40scalar%2Fjson-magic/latest) |
+| @scalar/openapi-parser | indirect | 0.24.17 | 0.29.7 | update available |  [publisher](https://registry.npmjs.org/%40scalar%2Fopenapi-parser/latest) |
+| @scalar/openapi-types | indirect | 0.5.3, 0.5.4 | 0.9.7 | update available |  [publisher](https://registry.npmjs.org/%40scalar%2Fopenapi-types/latest) |
+| @scalar/openapi-upgrader | indirect | 0.1.11 | 0.4.0 | update available |  [publisher](https://registry.npmjs.org/%40scalar%2Fopenapi-upgrader/latest) |
 | @scure/base | indirect | 1.2.6 | 2.4.0 | update available |  [publisher](https://registry.npmjs.org/%40scure%2Fbase/latest) |
 | @scure/bip32 | indirect | 1.7.0 | 2.4.0 | update available |  [publisher](https://registry.npmjs.org/%40scure%2Fbip32/latest) |
 | @scure/bip39 | indirect | 1.6.0 | 2.4.0 | update available |  [publisher](https://registry.npmjs.org/%40scure%2Fbip39/latest) |
@@ -274,7 +278,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | @sinclair/typebox | indirect | 0.27.12 | 0.34.52 | update available |  [publisher](https://registry.npmjs.org/%40sinclair%2Ftypebox/latest) |
 | @sindresorhus/is | indirect | 4.6.0 | 8.1.0 | update available |  [publisher](https://registry.npmjs.org/%40sindresorhus%2Fis/latest) |
 | @sindresorhus/merge-streams | indirect | 4.0.0 | 4.0.0 | current or newer |  [publisher](https://registry.npmjs.org/%40sindresorhus%2Fmerge-streams/latest) |
-| @sinonjs/commons | indirect | 3.0.1 | 3.0.1 | current or newer |  [publisher](https://registry.npmjs.org/%40sinonjs%2Fcommons/latest) |
+| @sinonjs/commons | indirect | 3.0.1 | 3.0.1 | current or newer |  [publisher](https://registry.npmjs.org/%40sinonjs%2Fcommons) |
 | @sinonjs/fake-timers | indirect | 10.3.0 | 15.4.0 | update available |  [publisher](https://registry.npmjs.org/%40sinonjs%2Ffake-timers/latest) |
 | @solana-mobile/mobile-wallet-adapter-protocol | indirect | 2.2.9 | 2.3.0 | update available |  [publisher](https://registry.npmjs.org/%40solana-mobile%2Fmobile-wallet-adapter-protocol/latest) |
 | @solana-mobile/mobile-wallet-adapter-protocol-web3js | indirect | 2.2.9 | 2.3.0 | update available |  [publisher](https://registry.npmjs.org/%40solana-mobile%2Fmobile-wallet-adapter-protocol-web3js/latest) |
@@ -333,7 +337,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | @solana/wallet-standard-wallet-adapter-base | indirect | 1.1.5 | 1.1.6 | update available |  [publisher](https://registry.npmjs.org/%40solana%2Fwallet-standard-wallet-adapter-base/latest) |
 | @solana/wallet-standard-wallet-adapter-react | indirect | 1.1.6 | 1.1.7 | update available |  [publisher](https://registry.npmjs.org/%40solana%2Fwallet-standard-wallet-adapter-react/latest) |
 | @stablelib/base64 | indirect | 1.0.1 | 2.0.1 | update available |  [publisher](https://registry.npmjs.org/%40stablelib%2Fbase64/latest) |
-| @stripe/stripe-js | indirect | 5.6.0 | 9.16.0 | update available |  [publisher](https://registry.npmjs.org/%40stripe%2Fstripe-js/latest) |
+| @stripe/stripe-js | indirect | 5.6.0 | 9.17.0 | update available |  [publisher](https://registry.npmjs.org/%40stripe%2Fstripe-js/latest) |
 | @swc/helpers | indirect | 0.5.21 | 0.5.23 | update available |  [publisher](https://registry.npmjs.org/%40swc%2Fhelpers/latest) |
 | @szmarczak/http-timer | indirect | 4.0.6 | 5.0.1 | update available |  [publisher](https://registry.npmjs.org/%40szmarczak%2Fhttp-timer/latest) |
 | @tabby_ai/hijri-converter | indirect | 1.0.5 | 1.0.5 | current or newer |  [publisher](https://registry.npmjs.org/%40tabby_ai%2Fhijri-converter/latest) |
@@ -343,8 +347,8 @@ All lockfile package names, including optional platform binaries. Some are not i
 | @tailwindcss/oxide-wasm32-wasi | indirect | 4.2.1 | 4.3.3 | update available |  [publisher](https://registry.npmjs.org/%40tailwindcss%2Foxide-wasm32-wasi/latest) |
 | @tailwindcss/oxide-win32-arm64-msvc | indirect | 4.2.1 | 4.3.3 | update available |  [publisher](https://registry.npmjs.org/%40tailwindcss%2Foxide-win32-arm64-msvc/latest) |
 | @tailwindcss/oxide-win32-x64-msvc | indirect | 4.2.1 | 4.3.3 | update available |  [publisher](https://registry.npmjs.org/%40tailwindcss%2Foxide-win32-x64-msvc/latest) |
-| @tanstack/query-core | indirect | 5.101.4, 5.90.19, 5.90.20 | 5.103.1 | update available |  [publisher](https://registry.npmjs.org/%40tanstack%2Fquery-core/latest) |
-| @tanstack/query-persist-client-core | indirect | 5.91.18 | 5.103.1 | update available |  [publisher](https://registry.npmjs.org/%40tanstack%2Fquery-persist-client-core/latest) |
+| @tanstack/query-core | indirect | 5.101.4, 5.90.19, 5.90.20 | 5.104.0 | update available |  [publisher](https://registry.npmjs.org/%40tanstack%2Fquery-core/latest) |
+| @tanstack/query-persist-client-core | indirect | 5.91.18 | 5.104.0 | update available |  [publisher](https://registry.npmjs.org/%40tanstack%2Fquery-persist-client-core/latest) |
 | @types/babel__core | indirect | 7.20.5 | 7.20.5 | current or newer |  [publisher](https://registry.npmjs.org/%40types%2Fbabel__core/latest) |
 | @types/babel__generator | indirect | 7.27.0 | 7.27.0 | current or newer |  [publisher](https://registry.npmjs.org/%40types%2Fbabel__generator/latest) |
 | @types/babel__template | indirect | 7.4.4 | 7.4.4 | current or newer |  [publisher](https://registry.npmjs.org/%40types%2Fbabel__template/latest) |
@@ -378,7 +382,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | @types/d3-random | indirect | 3.0.4 | 3.0.4 | current or newer |  [publisher](https://registry.npmjs.org/%40types%2Fd3-random/latest) |
 | @types/d3-scale | indirect | 4.0.9 | 4.0.9 | current or newer |  [publisher](https://registry.npmjs.org/%40types%2Fd3-scale/latest) |
 | @types/d3-scale-chromatic | indirect | 3.1.0 | 3.1.0 | current or newer |  [publisher](https://registry.npmjs.org/%40types%2Fd3-scale-chromatic/latest) |
-| @types/d3-selection | indirect | 3.0.11 | 3.0.12 | update available |  [publisher](https://registry.npmjs.org/%40types%2Fd3-selection/latest) |
+| @types/d3-selection | indirect | 3.0.12 | 3.0.12 | current or newer |  [publisher](https://registry.npmjs.org/%40types%2Fd3-selection/latest) |
 | @types/d3-shape | indirect | 3.1.8, 3.2.0 | 3.2.0 | update available |  [publisher](https://registry.npmjs.org/%40types%2Fd3-shape/latest) |
 | @types/d3-time | indirect | 3.0.4 | 3.0.4 | current or newer |  [publisher](https://registry.npmjs.org/%40types%2Fd3-time/latest) |
 | @types/d3-time-format | indirect | 4.0.3 | 4.0.3 | current or newer |  [publisher](https://registry.npmjs.org/%40types%2Fd3-time-format/latest) |
@@ -413,13 +417,13 @@ All lockfile package names, including optional platform binaries. Some are not i
 | @upsetjs/venn.js | indirect | 2.0.0 | 2.0.0 | current or newer |  [publisher](https://registry.npmjs.org/%40upsetjs%2Fvenn.js/latest) |
 | @urql/core | indirect | 5.2.0 | 6.0.3 | update available |  [publisher](https://registry.npmjs.org/%40urql%2Fcore/latest) |
 | @urql/exchange-retry | indirect | 1.3.2 | 2.0.0 | update available |  [publisher](https://registry.npmjs.org/%40urql%2Fexchange-retry/latest) |
-| @vitest/expect | indirect | 3.2.7 | 5.0.1 | update available |  [publisher](https://registry.npmjs.org/%40vitest%2Fexpect/latest) |
-| @vitest/mocker | indirect | 3.2.7 | 5.0.1 | update available |  [publisher](https://registry.npmjs.org/%40vitest%2Fmocker/latest) |
-| @vitest/pretty-format | indirect | 3.2.7 | 5.0.1 | update available |  [publisher](https://registry.npmjs.org/%40vitest%2Fpretty-format/latest) |
+| @vitest/expect | indirect | 3.2.7 | 5.0.2 | update available |  [publisher](https://registry.npmjs.org/%40vitest%2Fexpect/latest) |
+| @vitest/mocker | indirect | 3.2.7 | 5.0.2 | update available |  [publisher](https://registry.npmjs.org/%40vitest%2Fmocker/latest) |
+| @vitest/pretty-format | indirect | 3.2.7 | 5.0.2 | update available |  [publisher](https://registry.npmjs.org/%40vitest%2Fpretty-format/latest) |
 | @vitest/runner | indirect | 3.2.7 | 4.1.11 | update available |  [publisher](https://registry.npmjs.org/%40vitest%2Frunner/latest) |
-| @vitest/snapshot | indirect | 3.2.7 | 5.0.1 | update available |  [publisher](https://registry.npmjs.org/%40vitest%2Fsnapshot/latest) |
-| @vitest/spy | indirect | 3.2.7 | 5.0.1 | update available |  [publisher](https://registry.npmjs.org/%40vitest%2Fspy/latest) |
-| @vitest/utils | indirect | 3.2.7 | 5.0.1 | update available |  [publisher](https://registry.npmjs.org/%40vitest%2Futils/latest) |
+| @vitest/snapshot | indirect | 3.2.7 | 5.0.2 | update available |  [publisher](https://registry.npmjs.org/%40vitest%2Fsnapshot/latest) |
+| @vitest/spy | indirect | 3.2.7 | 5.0.2 | update available |  [publisher](https://registry.npmjs.org/%40vitest%2Fspy/latest) |
+| @vitest/utils | indirect | 3.2.7 | 5.0.2 | update available |  [publisher](https://registry.npmjs.org/%40vitest%2Futils/latest) |
 | @wallet-standard/app | indirect | 1.1.1 | 1.1.1 | current or newer |  [publisher](https://registry.npmjs.org/%40wallet-standard%2Fapp/latest) |
 | @wallet-standard/base | indirect | 1.1.1 | 1.1.1 | current or newer |  [publisher](https://registry.npmjs.org/%40wallet-standard%2Fbase/latest) |
 | @wallet-standard/core | indirect | 1.1.1 | 1.1.2 | update available |  [publisher](https://registry.npmjs.org/%40wallet-standard%2Fcore/latest) |
@@ -434,6 +438,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | accepts | indirect | 1.3.8, 2.0.0 | 1.3.8 | current or newer |  [publisher](https://registry.npmjs.org/accepts/latest) |
 | acorn | indirect | 8.16.0 | 8.18.0 | update available |  [publisher](https://registry.npmjs.org/acorn/latest) |
 | agent-base | indirect | 7.1.4 | 9.0.0 | update available |  [publisher](https://registry.npmjs.org/agent-base/latest) |
+| agent-cli-detector | indirect | 0.1.7 | 0.1.7 | current or newer |  [publisher](https://registry.npmjs.org/agent-cli-detector/latest) |
 | ajv | indirect | 8.18.0 | 8.20.0 | update available |  [publisher](https://registry.npmjs.org/ajv/latest) |
 | ajv-draft-04 | indirect | 1.0.0 | 1.0.0 | current or newer |  [publisher](https://registry.npmjs.org/ajv-draft-04/latest) |
 | ajv-formats | indirect | 3.0.1 | 3.0.1 | current or newer |  [publisher](https://registry.npmjs.org/ajv-formats/latest) |
@@ -459,16 +464,16 @@ All lockfile package names, including optional platform binaries. Some are not i
 | babel-plugin-polyfill-corejs2 | indirect | 0.4.17 | 0.4.17 | current or newer |  [publisher](https://registry.npmjs.org/babel-plugin-polyfill-corejs2/latest) |
 | babel-plugin-polyfill-corejs3 | indirect | 0.13.0 | 1.0.0 | update available |  [publisher](https://registry.npmjs.org/babel-plugin-polyfill-corejs3/latest) |
 | babel-plugin-polyfill-regenerator | indirect | 0.6.8 | 1.0.0 | update available |  [publisher](https://registry.npmjs.org/babel-plugin-polyfill-regenerator/latest) |
-| babel-plugin-react-native-web | indirect | 0.21.2 | 0.21.2 | current or newer |  [publisher](https://registry.npmjs.org/babel-plugin-react-native-web/latest) |
+| babel-plugin-react-native-web | indirect | 0.21.2 | 0.21.3 | update available |  [publisher](https://registry.npmjs.org/babel-plugin-react-native-web/latest) |
 | babel-plugin-syntax-hermes-parser | indirect | 0.29.1 | 0.37.0 | update available |  [publisher](https://registry.npmjs.org/babel-plugin-syntax-hermes-parser/latest) |
 | babel-plugin-transform-flow-enums | indirect | 0.0.2 | 0.0.2 | current or newer |  [publisher](https://registry.npmjs.org/babel-plugin-transform-flow-enums/latest) |
 | babel-preset-current-node-syntax | indirect | 1.2.0 | 1.2.0 | current or newer |  [publisher](https://registry.npmjs.org/babel-preset-current-node-syntax/latest) |
-| babel-preset-expo | indirect | 54.0.12 | 57.0.12 | update available |  [publisher](https://registry.npmjs.org/babel-preset-expo/latest) |
+| babel-preset-expo | indirect | 54.0.12 | 57.0.13 | update available |  [publisher](https://registry.npmjs.org/babel-preset-expo/latest) |
 | babel-preset-jest | indirect | 29.6.3 | 30.5.0 | update available |  [publisher](https://registry.npmjs.org/babel-preset-jest/latest) |
 | balanced-match | indirect | 1.0.2, 4.0.4 | 4.0.4 | update available |  [publisher](https://registry.npmjs.org/balanced-match/latest) |
 | base-64 | indirect | 1.0.0 | 1.0.0 | current or newer |  [publisher](https://registry.npmjs.org/base-64/latest) |
 | base64-js | indirect | 1.5.1 | 1.5.1 | current or newer |  [publisher](https://registry.npmjs.org/base64-js/latest) |
-| baseline-browser-mapping | indirect | 2.10.0, 2.11.14 | 2.11.25 | update available |  [publisher](https://registry.npmjs.org/baseline-browser-mapping/latest) |
+| baseline-browser-mapping | indirect | 2.10.0, 2.11.14 | 2.11.26 | update available |  [publisher](https://registry.npmjs.org/baseline-browser-mapping/latest) |
 | before-after-hook | indirect | 3.0.2 | 4.0.0 | update available |  [publisher](https://registry.npmjs.org/before-after-hook/latest) |
 | better-opn | indirect | 3.0.2 | 3.0.2 | current or newer |  [publisher](https://registry.npmjs.org/better-opn/latest) |
 | big-integer | indirect | 1.6.52 | 1.6.52 | current or newer |  [publisher](https://registry.npmjs.org/big-integer/latest) |
@@ -479,7 +484,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | brace-expansion | indirect | 1.1.18, 2.0.3, 5.0.9 | 5.0.12 | update available |  [publisher](https://registry.npmjs.org/brace-expansion/latest) |
 | braces | indirect | 3.0.3 | 3.0.3 | current or newer |  [publisher](https://registry.npmjs.org/braces/latest) |
 | browser-tabs-lock | indirect | 1.3.0 | 1.3.0 | current or newer |  [publisher](https://registry.npmjs.org/browser-tabs-lock/latest) |
-| browserslist | indirect | 4.28.1, 4.28.8 | 4.29.0 | update available |  [publisher](https://registry.npmjs.org/browserslist/latest) |
+| browserslist | indirect | 4.28.1, 4.28.8 | 4.29.1 | update available |  [publisher](https://registry.npmjs.org/browserslist/latest) |
 | bser | indirect | 2.1.1 | 2.1.1 | current or newer |  [publisher](https://registry.npmjs.org/bser/latest) |
 | buffer | indirect | 5.7.1 | 6.0.3 | update available |  [publisher](https://registry.npmjs.org/buffer/latest) |
 | buffer-from | indirect | 1.1.2 | 1.1.2 | current or newer |  [publisher](https://registry.npmjs.org/buffer-from/latest) |
@@ -490,10 +495,11 @@ All lockfile package names, including optional platform binaries. Some are not i
 | call-bind-apply-helpers | indirect | 1.0.2 | 1.0.2 | current or newer |  [publisher](https://registry.npmjs.org/call-bind-apply-helpers/latest) |
 | call-bound | indirect | 1.0.4 | 1.0.4 | current or newer |  [publisher](https://registry.npmjs.org/call-bound/latest) |
 | camelcase | indirect | 5.3.1, 6.3.0 | 9.0.0 | update available |  [publisher](https://registry.npmjs.org/camelcase/latest) |
-| caniuse-lite | indirect | 1.0.30001777, 1.0.30001809 | 1.0.30001810 | update available |  [publisher](https://registry.npmjs.org/caniuse-lite/latest) |
+| caniuse-lite | indirect | 1.0.30001777, 1.0.30001809 | 1.0.30001812 | update available |  [publisher](https://registry.npmjs.org/caniuse-lite/latest) |
 | chai | indirect | 5.3.3 | 6.2.2 | update available |  [publisher](https://registry.npmjs.org/chai/latest) |
 | chalk | indirect | 2.4.2, 4.1.2, 5.6.2 | 6.0.0 | update available |  [publisher](https://registry.npmjs.org/chalk/latest) |
 | check-error | indirect | 2.1.3 | 2.1.3 | current or newer |  [publisher](https://registry.npmjs.org/check-error/latest) |
+| chevrotain | indirect | 11.1.2 | 13.2.0 | update available |  [publisher](https://registry.npmjs.org/chevrotain/latest) |
 | chownr | indirect | 3.0.0 | 3.0.0 | current or newer |  [publisher](https://registry.npmjs.org/chownr/latest) |
 | chrome-launcher | indirect | 0.15.2 | 1.2.1 | update available |  [publisher](https://registry.npmjs.org/chrome-launcher/latest) |
 | chromium-edge-launcher | indirect | 0.2.0 | 2.0.1 | update available |  [publisher](https://registry.npmjs.org/chromium-edge-launcher/latest) |
@@ -536,7 +542,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | css-what | indirect | 6.2.2 | 8.0.0 | update available |  [publisher](https://registry.npmjs.org/css-what/latest) |
 | cssesc | indirect | 3.0.0 | 3.0.0 | current or newer |  [publisher](https://registry.npmjs.org/cssesc/latest) |
 | csstype | indirect | 3.1.3, 3.2.3 | 3.2.3 | update available |  [publisher](https://registry.npmjs.org/csstype/latest) |
-| cytoscape | indirect | 3.34.2 | 3.34.3 | update available |  [publisher](https://registry.npmjs.org/cytoscape/latest) |
+| cytoscape | indirect | 3.34.3 | 3.34.3 | current or newer |  [publisher](https://registry.npmjs.org/cytoscape/latest) |
 | cytoscape-cose-bilkent | indirect | 4.1.0 | 4.1.0 | current or newer |  [publisher](https://registry.npmjs.org/cytoscape-cose-bilkent/latest) |
 | cytoscape-fcose | indirect | 2.2.0 | 2.2.0 | current or newer |  [publisher](https://registry.npmjs.org/cytoscape-fcose/latest) |
 | d3 | indirect | 7.9.0 | 7.9.0 | current or newer |  [publisher](https://registry.npmjs.org/d3/latest) |
@@ -601,11 +607,12 @@ All lockfile package names, including optional platform binaries. Some are not i
 | domelementtype | indirect | 2.3.0 | 3.0.0 | update available |  [publisher](https://registry.npmjs.org/domelementtype/latest) |
 | domhandler | indirect | 5.0.3 | 6.0.1 | update available |  [publisher](https://registry.npmjs.org/domhandler/latest) |
 | domutils | indirect | 3.2.2 | 4.0.2 | update available |  [publisher](https://registry.npmjs.org/domutils/latest) |
-| dotenv | indirect | 16.4.7 | 18.0.1 | update available |  [publisher](https://registry.npmjs.org/dotenv/latest) |
+| dotenv | indirect | 16.4.7 | 18.0.4 | update available |  [publisher](https://registry.npmjs.org/dotenv/latest) |
 | dotenv-expand | indirect | 11.0.7 | 1000.0.0 | update available |  [publisher](https://registry.npmjs.org/dotenv-expand/latest) |
 | dunder-proto | indirect | 1.0.1 | 1.0.1 | current or newer |  [publisher](https://registry.npmjs.org/dunder-proto/latest) |
 | ee-first | indirect | 1.1.1 | 1.1.1 | current or newer |  [publisher](https://registry.npmjs.org/ee-first/latest) |
-| electron-to-chromium | indirect | 1.5.307, 1.5.407 | 1.5.433 | update available |  [publisher](https://registry.npmjs.org/electron-to-chromium/latest) |
+| electron-to-chromium | indirect | 1.5.307, 1.5.407 | 1.5.439 | update available |  [publisher](https://registry.npmjs.org/electron-to-chromium/latest) |
+| elkjs | indirect | 0.9.3 | 0.12.0 | update available |  [publisher](https://registry.npmjs.org/elkjs/latest) |
 | embla-carousel | indirect | 8.6.0 | 8.6.0 | current or newer |  [publisher](https://registry.npmjs.org/embla-carousel/latest) |
 | embla-carousel-reactive-utils | indirect | 8.6.0 | 8.6.0 | current or newer |  [publisher](https://registry.npmjs.org/embla-carousel-reactive-utils/latest) |
 | emoji-regex | indirect | 8.0.0 | 11.0.0 | update available |  [publisher](https://registry.npmjs.org/emoji-regex/latest) |
@@ -632,7 +639,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | etag | indirect | 1.8.1 | 1.8.1 | current or newer |  [publisher](https://registry.npmjs.org/etag/latest) |
 | event-target-shim | indirect | 5.0.1 | 6.0.2 | update available |  [publisher](https://registry.npmjs.org/event-target-shim/latest) |
 | eventemitter3 | indirect | 4.0.7, 5.0.1, 5.0.4 | 5.0.4 | update available |  [publisher](https://registry.npmjs.org/eventemitter3/latest) |
-| eventsource | indirect | 3.0.7 | 5.1.1 | update available |  [publisher](https://registry.npmjs.org/eventsource/latest) |
+| eventsource | indirect | 3.0.7 | 5.1.2 | update available |  [publisher](https://registry.npmjs.org/eventsource/latest) |
 | eventsource-parser | indirect | 3.1.1 | 4.1.1 | update available |  [publisher](https://registry.npmjs.org/eventsource-parser/latest) |
 | execa | indirect | 9.6.1 | 10.0.1 | update available |  [publisher](https://registry.npmjs.org/execa/latest) |
 | expect-type | indirect | 1.4.0 | 1.4.0 | current or newer |  [publisher](https://registry.npmjs.org/expect-type/latest) |
@@ -640,19 +647,18 @@ All lockfile package names, including optional platform binaries. Some are not i
 | expo-asset | indirect | 12.0.13 | 57.0.18 | update available |  [publisher](https://registry.npmjs.org/expo-asset/latest) |
 | expo-image-loader | indirect | 6.0.0 | 57.0.1 | update available |  [publisher](https://registry.npmjs.org/expo-image-loader/latest) |
 | expo-keep-awake | indirect | 15.0.8 | 57.0.2 | update available |  [publisher](https://registry.npmjs.org/expo-keep-awake/latest) |
-| expo-modules-autolinking | indirect | 3.0.26 | 57.0.13 | update available |  [publisher](https://registry.npmjs.org/expo-modules-autolinking/latest) |
-| expo-modules-core | indirect | 3.0.30 | 57.0.18 | update available |  [publisher](https://registry.npmjs.org/expo-modules-core/latest) |
+| expo-modules-autolinking | indirect | 3.0.27 | 57.0.13 | update available |  [publisher](https://registry.npmjs.org/expo-modules-autolinking/latest) |
+| expo-modules-core | indirect | 3.0.30 | 57.0.19 | update available |  [publisher](https://registry.npmjs.org/expo-modules-core/latest) |
 | expo-server | indirect | 1.0.7 | 57.0.3 | update available |  [publisher](https://registry.npmjs.org/expo-server/latest) |
 | exponential-backoff | indirect | 3.1.3 | 3.1.3 | current or newer |  [publisher](https://registry.npmjs.org/exponential-backoff/latest) |
 | fast-content-type-parse | indirect | 2.0.1 | 4.0.0 | update available |  [publisher](https://registry.npmjs.org/fast-content-type-parse/latest) |
 | fast-copy | indirect | 4.0.2 | 4.1.1 | update available |  [publisher](https://registry.npmjs.org/fast-copy/latest) |
 | fast-deep-equal | indirect | 3.1.3 | 3.1.3 | current or newer |  [publisher](https://registry.npmjs.org/fast-deep-equal/latest) |
-| fast-equals | indirect | 5.4.0 | 6.0.3 | update available |  [publisher](https://registry.npmjs.org/fast-equals/latest) |
+| fast-equals | indirect | 5.4.0 | 6.0.4 | update available |  [publisher](https://registry.npmjs.org/fast-equals/latest) |
 | fast-json-stable-stringify | indirect | 2.1.0 | 2.1.0 | current or newer |  [publisher](https://registry.npmjs.org/fast-json-stable-stringify/latest) |
 | fast-safe-stringify | indirect | 2.1.1 | 2.1.1 | current or newer |  [publisher](https://registry.npmjs.org/fast-safe-stringify/latest) |
 | fast-sha256 | indirect | 1.3.0 | 1.3.0 | current or newer |  [publisher](https://registry.npmjs.org/fast-sha256/latest) |
 | fast-uri | indirect | 3.1.2 | 4.2.1 | update available |  [publisher](https://registry.npmjs.org/fast-uri/latest) |
-| fastdom | indirect | 1.0.12 | 1.0.12 | current or newer |  [publisher](https://registry.npmjs.org/fastdom/latest) |
 | fastest-levenshtein | indirect | 1.0.16 | 1.0.16 | current or newer |  [publisher](https://registry.npmjs.org/fastest-levenshtein/latest) |
 | fastq | indirect | 1.20.1 | 1.20.3 | update available |  [publisher](https://registry.npmjs.org/fastq/latest) |
 | fb-watchman | indirect | 2.0.2 | 2.0.2 | current or newer |  [publisher](https://registry.npmjs.org/fb-watchman/latest) |
@@ -671,11 +677,11 @@ All lockfile package names, including optional platform binaries. Some are not i
 | forwarded | indirect | 0.2.0 | 0.2.0 | current or newer |  [publisher](https://registry.npmjs.org/forwarded/latest) |
 | freeport-async | indirect | 2.0.0 | 2.0.0 | current or newer |  [publisher](https://registry.npmjs.org/freeport-async/latest) |
 | fresh | indirect | 0.5.2, 2.0.0 | 0.5.2 | current or newer |  [publisher](https://registry.npmjs.org/fresh/latest) |
-| fs-extra | indirect | 11.3.4 | 11.4.0 | update available |  [publisher](https://registry.npmjs.org/fs-extra/latest) |
+| fs-extra | indirect | 11.3.4 | 11.4.1 | update available |  [publisher](https://registry.npmjs.org/fs-extra/latest) |
 | fs.realpath | indirect | 1.0.0 | 1.0.0 | current or newer |  [publisher](https://registry.npmjs.org/fs.realpath/latest) |
 | fsevents | indirect | 2.3.2, 2.3.3 | 2.3.3 | update available |  [publisher](https://registry.npmjs.org/fsevents/latest) |
 | function-bind | indirect | 1.1.2 | 1.1.2 | current or newer |  [publisher](https://registry.npmjs.org/function-bind/latest) |
-| gensync | indirect | 1.0.0-beta.2 | 0.1.0 | review |  [publisher](https://registry.npmjs.org/gensync/latest) |
+| gensync | indirect | 1.0.0-beta.2 | 0.1.0 | review |  [publisher](https://registry.npmjs.org/gensync) |
 | get-caller-file | indirect | 2.0.5 | 2.0.5 | current or newer |  [publisher](https://registry.npmjs.org/get-caller-file/latest) |
 | get-intrinsic | indirect | 1.3.0 | 1.3.0 | current or newer |  [publisher](https://registry.npmjs.org/get-intrinsic/latest) |
 | get-nonce | indirect | 1.0.1 | 1.0.1 | current or newer |  [publisher](https://registry.npmjs.org/get-nonce/latest) |
@@ -700,7 +706,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | hermes-estree | indirect | 0.29.1, 0.32.0, 0.35.0 | 0.37.0 | update available |  [publisher](https://registry.npmjs.org/hermes-estree/latest) |
 | hermes-parser | indirect | 0.29.1, 0.32.0, 0.35.0 | 0.37.0 | update available |  [publisher](https://registry.npmjs.org/hermes-parser/latest) |
 | hoist-non-react-statics | indirect | 3.3.2 | 3.3.2 | current or newer |  [publisher](https://registry.npmjs.org/hoist-non-react-statics/latest) |
-| hono | indirect | 4.13.3 | 4.13.8 | update available |  [publisher](https://registry.npmjs.org/hono/latest) |
+| hono | indirect | 4.13.3 | 4.13.9 | update available |  [publisher](https://registry.npmjs.org/hono/latest) |
 | hosted-git-info | indirect | 7.0.2 | 10.1.1 | update available |  [publisher](https://registry.npmjs.org/hosted-git-info/latest) |
 | http-cache-semantics | indirect | 4.2.0 | 4.2.0 | current or newer |  [publisher](https://registry.npmjs.org/http-cache-semantics/latest) |
 | http-errors | indirect | 2.0.1 | 2.0.1 | current or newer |  [publisher](https://registry.npmjs.org/http-errors/latest) |
@@ -712,7 +718,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | iconv-lite | indirect | 0.6.3, 0.7.2 | 0.7.3 | update available |  [publisher](https://registry.npmjs.org/iconv-lite/latest) |
 | idb-keyval | indirect | 6.2.1 | 6.3.0 | update available |  [publisher](https://registry.npmjs.org/idb-keyval/latest) |
 | ieee754 | indirect | 1.2.1 | 1.2.1 | current or newer |  [publisher](https://registry.npmjs.org/ieee754/latest) |
-| ignore | indirect | 5.3.2, 7.0.5 | 7.0.9 | update available |  [publisher](https://registry.npmjs.org/ignore/latest) |
+| ignore | indirect | 5.3.2, 7.0.5 | 7.0.10 | update available |  [publisher](https://registry.npmjs.org/ignore/latest) |
 | image-size | indirect | 1.2.1 | 2.0.4 | update available |  [publisher](https://registry.npmjs.org/image-size/latest) |
 | import-meta-resolve | indirect | 4.2.0 | 4.2.0 | current or newer |  [publisher](https://registry.npmjs.org/import-meta-resolve/latest) |
 | imurmurhash | indirect | 0.1.4 | 0.1.4 | current or newer |  [publisher](https://registry.npmjs.org/imurmurhash/latest) |
@@ -751,7 +757,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | jest-util | indirect | 29.7.0 | 30.5.1 | update available |  [publisher](https://registry.npmjs.org/jest-util/latest) |
 | jest-validate | indirect | 29.7.0 | 30.5.1 | update available |  [publisher](https://registry.npmjs.org/jest-validate/latest) |
 | jest-worker | indirect | 29.7.0 | 30.5.1 | update available |  [publisher](https://registry.npmjs.org/jest-worker/latest) |
-| jimp-compact | indirect | 0.16.1 | 0.16.2 | update available; deprecated |  [publisher](https://registry.npmjs.org/jimp-compact/latest) |
+| jimp-compact | indirect | 0.16.1 | 0.16.2 | update available; deprecated |  [publisher](https://registry.npmjs.org/jimp-compact) |
 | jiti | indirect | 2.6.1 | 2.7.0 | update available |  [publisher](https://registry.npmjs.org/jiti/latest) |
 | jose | indirect | 6.2.9 | 6.2.12 | update available |  [publisher](https://registry.npmjs.org/jose/latest) |
 | joycon | indirect | 3.1.1 | 3.1.1 | current or newer |  [publisher](https://registry.npmjs.org/joycon/latest) |
@@ -767,7 +773,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | json5 | indirect | 2.2.3 | 2.2.3 | current or newer |  [publisher](https://registry.npmjs.org/json5/latest) |
 | jsonfile | indirect | 6.2.0 | 6.2.1 | update available |  [publisher](https://registry.npmjs.org/jsonfile/latest) |
 | jsonpointer | indirect | 5.0.1 | 5.0.1 | current or newer |  [publisher](https://registry.npmjs.org/jsonpointer/latest) |
-| katex | indirect | 0.16.47 | 0.18.7 | update available |  [publisher](https://registry.npmjs.org/katex/latest) |
+| katex | indirect | 0.16.47 | 0.18.9 | update available |  [publisher](https://registry.npmjs.org/katex/latest) |
 | keyv | indirect | 4.5.4 | 5.6.0 | update available |  [publisher](https://registry.npmjs.org/keyv/latest) |
 | khroma | indirect | 2.1.0 | 2.1.0 | current or newer |  [publisher](https://registry.npmjs.org/khroma/latest) |
 | kleur | indirect | 3.0.3 | 4.1.5 | update available |  [publisher](https://registry.npmjs.org/kleur/latest) |
@@ -783,7 +789,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | linkify-it | indirect | 5.0.0 | 6.1.0 | update available |  [publisher](https://registry.npmjs.org/linkify-it/latest) |
 | locate-path | indirect | 5.0.0, 8.0.0 | 8.0.0 | update available |  [publisher](https://registry.npmjs.org/locate-path/latest) |
 | lodash | indirect | 4.18.1 | 4.18.1 | current or newer |  [publisher](https://registry.npmjs.org/lodash/latest) |
-| lodash-es | indirect | 4.18.1 | 4.18.1 | current or newer |  [publisher](https://registry.npmjs.org/lodash-es/latest) |
+| lodash-es | indirect | 4.17.23, 4.18.1 | 4.18.1 | update available |  [publisher](https://registry.npmjs.org/lodash-es/latest) |
 | lodash.debounce | indirect | 4.0.8 | 4.0.8 | current or newer |  [publisher](https://registry.npmjs.org/lodash.debounce/latest) |
 | lodash.throttle | indirect | 4.1.1 | 4.1.1 | current or newer |  [publisher](https://registry.npmjs.org/lodash.throttle/latest) |
 | log-symbols | indirect | 2.2.0 | 7.0.1 | update available |  [publisher](https://registry.npmjs.org/log-symbols/latest) |
@@ -792,12 +798,12 @@ All lockfile package names, including optional platform binaries. Some are not i
 | lowercase-keys | indirect | 2.0.0 | 4.0.1 | update available |  [publisher](https://registry.npmjs.org/lowercase-keys/latest) |
 | lru-cache | indirect | 10.4.3, 11.5.2, 5.1.1 | 11.5.3 | update available |  [publisher](https://registry.npmjs.org/lru-cache/latest) |
 | lunr | indirect | 2.3.9 | 2.3.9 | current or newer |  [publisher](https://registry.npmjs.org/lunr/latest) |
-| magic-string | indirect | 0.30.21 | 1.4.1 | update available |  [publisher](https://registry.npmjs.org/magic-string/latest) |
+| magic-string | indirect | 0.30.21 | 1.4.2 | update available |  [publisher](https://registry.npmjs.org/magic-string/latest) |
 | makeerror | indirect | 1.0.12 | 1.0.12 | current or newer |  [publisher](https://registry.npmjs.org/makeerror/latest) |
 | markdown-it | indirect | 14.1.1 | 15.0.2 | update available |  [publisher](https://registry.npmjs.org/markdown-it/latest) |
 | marky | indirect | 1.3.0 | 1.3.0 | current or newer |  [publisher](https://registry.npmjs.org/marky/latest) |
 | math-intrinsics | indirect | 1.1.0 | 1.1.0 | current or newer |  [publisher](https://registry.npmjs.org/math-intrinsics/latest) |
-| mdn-data | indirect | 2.0.14 | 2.36.0 | update available |  [publisher](https://registry.npmjs.org/mdn-data/latest) |
+| mdn-data | indirect | 2.0.14 | 2.37.0 | update available |  [publisher](https://registry.npmjs.org/mdn-data/latest) |
 | mdurl | indirect | 2.0.0 | 2.1.0 | update available |  [publisher](https://registry.npmjs.org/mdurl/latest) |
 | media-typer | indirect | 1.1.0 | 2.0.0 | update available |  [publisher](https://registry.npmjs.org/media-typer/latest) |
 | memoize-one | indirect | 5.2.1, 6.0.0 | 6.0.0 | update available |  [publisher](https://registry.npmjs.org/memoize-one/latest) |
@@ -833,7 +839,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | mitt | indirect | 3.0.1 | 3.0.1 | current or newer |  [publisher](https://registry.npmjs.org/mitt/latest) |
 | mkdirp | indirect | 1.0.4 | 3.0.1 | update available |  [publisher](https://registry.npmjs.org/mkdirp/latest) |
 | modern-screenshot | indirect | 4.6.8 | 4.7.0 | update available |  [publisher](https://registry.npmjs.org/modern-screenshot/latest) |
-| motion-dom | indirect | 12.35.1 | 13.3.0 | update available |  [publisher](https://registry.npmjs.org/motion-dom/latest) |
+| motion-dom | indirect | 12.35.1 | 13.4.4 | update available |  [publisher](https://registry.npmjs.org/motion-dom/latest) |
 | motion-utils | indirect | 12.29.2 | 13.3.0 | update available |  [publisher](https://registry.npmjs.org/motion-utils/latest) |
 | ms | indirect | 2.0.0, 2.1.3 | 2.1.3 | update available |  [publisher](https://registry.npmjs.org/ms/latest) |
 | mz | indirect | 2.7.0 | 2.7.0 | current or newer |  [publisher](https://registry.npmjs.org/mz/latest) |
@@ -843,7 +849,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | node-fetch | indirect | 2.7.0 | 3.3.2 | update available |  [publisher](https://registry.npmjs.org/node-fetch/latest) |
 | node-forge | indirect | 1.4.0 | 1.4.0 | current or newer |  [publisher](https://registry.npmjs.org/node-forge/latest) |
 | node-int64 | indirect | 0.4.0 | 0.4.0 | current or newer |  [publisher](https://registry.npmjs.org/node-int64/latest) |
-| node-releases | indirect | 2.0.36, 2.0.53 | 2.0.56 | update available |  [publisher](https://registry.npmjs.org/node-releases/latest) |
+| node-releases | indirect | 2.0.36, 2.0.53 | 2.0.57 | update available |  [publisher](https://registry.npmjs.org/node-releases/latest) |
 | normalize-path | indirect | 3.0.0 | 3.0.0 | current or newer |  [publisher](https://registry.npmjs.org/normalize-path/latest) |
 | normalize-url | indirect | 6.1.0 | 9.0.1 | update available |  [publisher](https://registry.npmjs.org/normalize-url/latest) |
 | npm-package-arg | indirect | 11.0.3 | 14.0.0 | update available |  [publisher](https://registry.npmjs.org/npm-package-arg/latest) |
@@ -860,7 +866,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | onetime | indirect | 2.0.1 | 8.0.0 | update available |  [publisher](https://registry.npmjs.org/onetime/latest) |
 | open | indirect | 7.4.2, 8.4.2 | 11.0.4 | update available |  [publisher](https://registry.npmjs.org/open/latest) |
 | ora | indirect | 3.4.0 | 9.4.1 | update available |  [publisher](https://registry.npmjs.org/ora/latest) |
-| ox | indirect | 0.14.33, 0.6.9 | 1.7.5 | update available |  [publisher](https://registry.npmjs.org/ox/latest) |
+| ox | indirect | 0.14.33, 0.6.9 | 1.8.1 | update available |  [publisher](https://registry.npmjs.org/ox/latest) |
 | p-cancelable | indirect | 2.1.1 | 4.0.1 | update available |  [publisher](https://registry.npmjs.org/p-cancelable/latest) |
 | p-locate | indirect | 4.1.0, 6.0.0 | 7.0.0 | update available |  [publisher](https://registry.npmjs.org/p-locate/latest) |
 | p-try | indirect | 2.2.0 | 3.0.0 | update available |  [publisher](https://registry.npmjs.org/p-try/latest) |
@@ -904,7 +910,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | postgres-date | indirect | 1.0.7 | 2.1.0 | update available |  [publisher](https://registry.npmjs.org/postgres-date/latest) |
 | postgres-interval | indirect | 1.2.0 | 4.1.0 | update available |  [publisher](https://registry.npmjs.org/postgres-interval/latest) |
 | preact | indirect | 10.24.2, 10.29.8 | 10.29.8 | update available |  [publisher](https://registry.npmjs.org/preact/latest) |
-| pretty-bytes | indirect | 5.6.0 | 7.1.3 | update available |  [publisher](https://registry.npmjs.org/pretty-bytes/latest) |
+| pretty-bytes | indirect | 5.6.0 | 7.2.0 | update available |  [publisher](https://registry.npmjs.org/pretty-bytes/latest) |
 | pretty-format | indirect | 29.7.0 | 30.5.1 | update available |  [publisher](https://registry.npmjs.org/pretty-format/latest) |
 | pretty-ms | indirect | 9.3.0 | 9.3.1 | update available |  [publisher](https://registry.npmjs.org/pretty-ms/latest) |
 | proc-log | indirect | 4.2.0 | 7.0.0 | update available |  [publisher](https://registry.npmjs.org/proc-log/latest) |
@@ -968,7 +974,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | reusify | indirect | 1.1.0 | 1.1.0 | current or newer |  [publisher](https://registry.npmjs.org/reusify/latest) |
 | rimraf | indirect | 3.0.2 | 6.1.3 | update available |  [publisher](https://registry.npmjs.org/rimraf/latest) |
 | robust-predicates | indirect | 3.0.3 | 3.0.3 | current or newer |  [publisher](https://registry.npmjs.org/robust-predicates/latest) |
-| rollup | indirect | 4.59.0 | 4.63.3 | update available |  [publisher](https://registry.npmjs.org/rollup/latest) |
+| rollup | indirect | 4.59.0 | 4.63.5 | update available |  [publisher](https://registry.npmjs.org/rollup/latest) |
 | roughjs | indirect | 4.6.6 | 4.6.6 | current or newer |  [publisher](https://registry.npmjs.org/roughjs/latest) |
 | router | indirect | 2.2.0 | 2.2.0 | current or newer |  [publisher](https://registry.npmjs.org/router/latest) |
 | run-parallel | indirect | 1.2.0 | 1.2.0 | current or newer |  [publisher](https://registry.npmjs.org/run-parallel/latest) |
@@ -1021,9 +1027,8 @@ All lockfile package names, including optional platform binaries. Some are not i
 | std-env | indirect | 3.10.0 | 4.2.0 | update available |  [publisher](https://registry.npmjs.org/std-env/latest) |
 | stream-buffers | indirect | 2.2.0 | 3.0.3 | update available |  [publisher](https://registry.npmjs.org/stream-buffers/latest) |
 | strict-uri-encode | indirect | 2.0.0 | 2.0.0 | current or newer |  [publisher](https://registry.npmjs.org/strict-uri-encode/latest) |
-| strictdom | indirect | 1.0.1 | 1.0.1 | current or newer |  [publisher](https://registry.npmjs.org/strictdom/latest) |
 | string-argv | indirect | 0.3.2 | 0.3.2 | current or newer |  [publisher](https://registry.npmjs.org/string-argv/latest) |
-| string-width | indirect | 4.2.3 | 8.2.2 | update available |  [publisher](https://registry.npmjs.org/string-width/latest) |
+| string-width | indirect | 4.2.3 | 8.3.0 | update available |  [publisher](https://registry.npmjs.org/string-width/latest) |
 | strip-ansi | indirect | 5.2.0, 6.0.1 | 7.2.0 | update available |  [publisher](https://registry.npmjs.org/strip-ansi/latest) |
 | strip-final-newline | indirect | 4.0.0 | 4.0.0 | current or newer |  [publisher](https://registry.npmjs.org/strip-final-newline/latest) |
 | strip-json-comments | indirect | 2.0.1, 5.0.3 | 5.0.3 | update available |  [publisher](https://registry.npmjs.org/strip-json-comments/latest) |
@@ -1032,7 +1037,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | styleq | indirect | 0.1.3 | 0.2.1 | update available |  [publisher](https://registry.npmjs.org/styleq/latest) |
 | stylis | indirect | 4.4.0 | 4.4.0 | current or newer |  [publisher](https://registry.npmjs.org/stylis/latest) |
 | sucrase | indirect | 3.35.1 | 3.35.1 | current or newer |  [publisher](https://registry.npmjs.org/sucrase/latest) |
-| superagent | indirect | 10.3.0 | 10.3.0 | current or newer |  [publisher](https://registry.npmjs.org/superagent/latest) |
+| superagent | indirect | 10.3.0 | 10.4.1 | update available |  [publisher](https://registry.npmjs.org/superagent/latest) |
 | supports-color | indirect | 5.5.0, 7.2.0, 8.1.1 | 11.0.0 | update available |  [publisher](https://registry.npmjs.org/supports-color/latest) |
 | supports-hyperlinks | indirect | 2.3.0 | 4.5.0 | update available |  [publisher](https://registry.npmjs.org/supports-hyperlinks/latest) |
 | supports-preserve-symlinks-flag | indirect | 1.0.0 | 1.0.0 | current or newer |  [publisher](https://registry.npmjs.org/supports-preserve-symlinks-flag/latest) |
@@ -1063,20 +1068,20 @@ All lockfile package names, including optional platform binaries. Some are not i
 | tslib | indirect | 2.8.1 | 2.8.1 | current or newer |  [publisher](https://registry.npmjs.org/tslib/latest) |
 | type-detect | indirect | 4.0.8 | 4.1.0 | update available |  [publisher](https://registry.npmjs.org/type-detect/latest) |
 | type-fest | indirect | 0.21.3, 0.7.1 | 5.10.0 | update available |  [publisher](https://registry.npmjs.org/type-fest/latest) |
-| type-is | indirect | 2.0.1 | 2.1.0 | update available |  [publisher](https://registry.npmjs.org/type-is/latest) |
+| type-is | indirect | 2.0.1 | 3.0.0 | update available |  [publisher](https://registry.npmjs.org/type-is/latest) |
 | typedoc | indirect | 0.28.17 | 0.28.20 | update available |  [publisher](https://registry.npmjs.org/typedoc/latest) |
 | typedoc-plugin-coverage | indirect | 4.0.2 | 4.0.3 | update available |  [publisher](https://registry.npmjs.org/typedoc-plugin-coverage/latest) |
 | typedoc-plugin-markdown | indirect | 4.10.0 | 4.13.1 | update available |  [publisher](https://registry.npmjs.org/typedoc-plugin-markdown/latest) |
 | ua-parser-js | indirect | 1.0.41 | 2.0.10 | update available |  [publisher](https://registry.npmjs.org/ua-parser-js/latest) |
 | uc.micro | indirect | 2.1.0 | 3.0.0 | update available |  [publisher](https://registry.npmjs.org/uc.micro/latest) |
 | uid-safe | indirect | 2.1.5 | 2.1.5 | current or newer |  [publisher](https://registry.npmjs.org/uid-safe/latest) |
-| undici | indirect | 6.28.0 | 8.10.2 | update available |  [publisher](https://registry.npmjs.org/undici/latest) |
-| undici-types | indirect | 7.18.2, 8.10.0 | 8.10.2 | update available |  [publisher](https://registry.npmjs.org/undici-types/latest) |
+| undici | indirect | 6.28.0 | 8.11.2 | update available |  [publisher](https://registry.npmjs.org/undici/latest) |
+| undici-types | indirect | 7.18.2, 8.10.0 | 8.11.2 | update available |  [publisher](https://registry.npmjs.org/undici-types/latest) |
 | unicode-canonical-property-names-ecmascript | indirect | 2.0.1 | 2.0.1 | current or newer |  [publisher](https://registry.npmjs.org/unicode-canonical-property-names-ecmascript/latest) |
 | unicode-match-property-ecmascript | indirect | 2.0.0 | 2.0.0 | current or newer |  [publisher](https://registry.npmjs.org/unicode-match-property-ecmascript/latest) |
 | unicode-match-property-value-ecmascript | indirect | 2.2.1 | 2.2.1 | current or newer |  [publisher](https://registry.npmjs.org/unicode-match-property-value-ecmascript/latest) |
 | unicode-property-aliases-ecmascript | indirect | 2.2.0 | 2.2.0 | current or newer |  [publisher](https://registry.npmjs.org/unicode-property-aliases-ecmascript/latest) |
-| unicorn-magic | indirect | 0.3.0, 0.4.0 | 0.4.0 | update available |  [publisher](https://registry.npmjs.org/unicorn-magic/latest) |
+| unicorn-magic | indirect | 0.3.0, 0.4.0 | 0.4.1 | update available |  [publisher](https://registry.npmjs.org/unicorn-magic/latest) |
 | universal-github-app-jwt | indirect | 2.2.2 | 2.2.2 | current or newer |  [publisher](https://registry.npmjs.org/universal-github-app-jwt/latest) |
 | universal-user-agent | indirect | 7.0.3 | 7.0.3 | current or newer |  [publisher](https://registry.npmjs.org/universal-user-agent/latest) |
 | universalify | indirect | 2.0.1 | 2.0.1 | current or newer |  [publisher](https://registry.npmjs.org/universalify/latest) |
@@ -1092,7 +1097,7 @@ All lockfile package names, including optional platform binaries. Some are not i
 | validate-npm-package-name | indirect | 5.0.1 | 8.0.0 | update available |  [publisher](https://registry.npmjs.org/validate-npm-package-name/latest) |
 | vary | indirect | 1.1.2 | 1.1.2 | current or newer |  [publisher](https://registry.npmjs.org/vary/latest) |
 | victory-vendor | indirect | 36.9.2 | 37.3.6 | update available |  [publisher](https://registry.npmjs.org/victory-vendor/latest) |
-| viem | indirect | 2.55.17 | 2.56.8 | update available |  [publisher](https://registry.npmjs.org/viem/latest) |
+| viem | indirect | 2.55.17 | 2.56.9 | update available |  [publisher](https://registry.npmjs.org/viem/latest) |
 | vite-node | indirect | 3.2.4 | 6.0.0 | update available |  [publisher](https://registry.npmjs.org/vite-node/latest) |
 | vlq | indirect | 1.0.1 | 2.0.4 | update available |  [publisher](https://registry.npmjs.org/vlq/latest) |
 | walker | indirect | 1.0.8 | 1.0.8 | current or newer |  [publisher](https://registry.npmjs.org/walker/latest) |
@@ -1100,23 +1105,23 @@ All lockfile package names, including optional platform binaries. Some are not i
 | wcwidth | indirect | 1.0.1 | 1.0.1 | current or newer |  [publisher](https://registry.npmjs.org/wcwidth/latest) |
 | webidl-conversions | indirect | 3.0.1, 5.0.0 | 8.0.1 | update available |  [publisher](https://registry.npmjs.org/webidl-conversions/latest) |
 | whatwg-fetch | indirect | 3.6.20 | 3.6.20 | current or newer |  [publisher](https://registry.npmjs.org/whatwg-fetch/latest) |
-| whatwg-url | indirect | 5.0.0 | 17.1.1 | update available |  [publisher](https://registry.npmjs.org/whatwg-url/latest) |
-| whatwg-url-without-unicode | indirect | 8.0.0-3 | 8.0.0 | review |  [publisher](https://registry.npmjs.org/whatwg-url-without-unicode/latest) |
+| whatwg-url | indirect | 5.0.0 | 17.1.2 | update available |  [publisher](https://registry.npmjs.org/whatwg-url/latest) |
+| whatwg-url-without-unicode | indirect | 8.0.0-3 | 8.0.0 | review |  [publisher](https://registry.npmjs.org/whatwg-url-without-unicode) |
 | which | indirect | 2.0.2 | 7.0.0 | update available |  [publisher](https://registry.npmjs.org/which/latest) |
 | which-module | indirect | 2.0.1 | 2.0.1 | current or newer |  [publisher](https://registry.npmjs.org/which-module/latest) |
 | why-is-node-running | indirect | 2.3.0 | 3.2.2 | update available |  [publisher](https://registry.npmjs.org/why-is-node-running/latest) |
 | wonka | indirect | 6.3.6 | 6.3.6 | current or newer |  [publisher](https://registry.npmjs.org/wonka/latest) |
-| wrap-ansi | indirect | 6.2.0, 7.0.0 | 10.0.1 | update available |  [publisher](https://registry.npmjs.org/wrap-ansi/latest) |
+| wrap-ansi | indirect | 6.2.0, 7.0.0 | 10.0.2 | update available |  [publisher](https://registry.npmjs.org/wrap-ansi/latest) |
 | wrappy | indirect | 1.0.2 | 1.0.2 | current or newer |  [publisher](https://registry.npmjs.org/wrappy/latest) |
 | write-file-atomic | indirect | 4.0.2 | 8.0.0 | update available |  [publisher](https://registry.npmjs.org/write-file-atomic/latest) |
-| ws | indirect | 6.2.6, 7.5.13, 8.21.0, 8.21.3 | 8.21.3 | update available |  [publisher](https://registry.npmjs.org/ws/latest) |
+| ws | indirect | 6.2.6, 7.5.13, 8.21.0, 8.21.3 | 8.22.0 | update available |  [publisher](https://registry.npmjs.org/ws/latest) |
 | xcode | indirect | 3.0.1 | 3.0.1 | current or newer |  [publisher](https://registry.npmjs.org/xcode/latest) |
 | xml2js | indirect | 0.6.0 | 0.6.2 | update available |  [publisher](https://registry.npmjs.org/xml2js/latest) |
 | xmlbuilder | indirect | 11.0.1, 15.1.1 | 15.1.1 | update available |  [publisher](https://registry.npmjs.org/xmlbuilder/latest) |
 | xtend | indirect | 4.0.2 | 4.0.2 | current or newer |  [publisher](https://registry.npmjs.org/xtend/latest) |
 | y18n | indirect | 4.0.3, 5.0.8 | 5.0.8 | update available |  [publisher](https://registry.npmjs.org/y18n/latest) |
 | yallist | indirect | 3.1.1, 5.0.0 | 5.0.0 | update available |  [publisher](https://registry.npmjs.org/yallist/latest) |
-| yargs | indirect | 15.4.1, 17.7.3 | 18.1.0 | update available |  [publisher](https://registry.npmjs.org/yargs/latest) |
+| yargs | indirect | 15.4.1, 17.7.3 | 18.2.0 | update available |  [publisher](https://registry.npmjs.org/yargs/latest) |
 | yargs-parser | indirect | 18.1.3, 21.1.1 | 22.0.0 | update available |  [publisher](https://registry.npmjs.org/yargs-parser/latest) |
 | yocto-queue | indirect | 0.1.0, 1.2.2 | 1.2.2 | update available |  [publisher](https://registry.npmjs.org/yocto-queue/latest) |
 | yoctocolors | indirect | 2.1.2 | 2.2.0 | update available |  [publisher](https://registry.npmjs.org/yoctocolors/latest) |
