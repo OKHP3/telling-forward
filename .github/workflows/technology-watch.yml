@@ -28,7 +28,7 @@ jobs:
       - name: Clear committed inventory before fallible setup
         if: github.event_name != 'pull_request'
         run: rm -f docs/technology-inventory.md docs/technology-inventory.json docs/technology-transitive-inventory.md
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.19.0
       - uses: actions/setup-node@v4
