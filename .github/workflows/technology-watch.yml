@@ -62,7 +62,7 @@ jobs:
           }
           console.log('\nFull inventory and runtime review targets are in the attached artifact. Follow docs/technology-update-policy.md. No deployment was changed.');
           NODE
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always() && github.event_name != 'pull_request'
         with:
           name: technology-inventory
