@@ -148,3 +148,5 @@ A root `LICENSE` file exists as a proprietary/all-rights-reserved placeholder (d
 Do not turn open items into implementation assumptions. Record verified decisions in `docs/decisions/open-questions.md` when the project owner establishes them.
 
 Keep this file aligned with the repository as it changes. It is the canonical project guide; `CLAUDE.md` should remain a short compatibility pointer unless Claude-specific instructions are genuinely required.
+
+## Imported Claude Cowork project instructions
