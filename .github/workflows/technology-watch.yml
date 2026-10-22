@@ -42,6 +42,7 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
+          TECHNOLOGY_LOOKUP_DEADLINE_MINUTES: '15'
         run: |
           node scripts/check-technology-updates.mjs --include-transitive --write
       - name: Summarize updates

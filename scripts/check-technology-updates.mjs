@@ -88,12 +88,16 @@ async function request(url, json = true) {
         const header = response.headers.get('retry-after');
         const seconds = Number(header);
         const retry = seconds > 0 ? seconds * 1000 : Math.max(30000, Date.parse(header) - Date.now() || 0);
+        // A publisher can ask us to wait longer than the CI job allows. Report
+        // that source as unknown instead of losing the whole inventory.
+        if (retry > 30000) throw new Error(`HTTP 429; Retry-After ${header} exceeds the 30s retry limit`);
         cooldowns.set(origin, Math.max(cooldowns.get(origin) ?? 0, Date.now() + retry));
         continue;
       }
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return json ? await response.json() : await response.text();
     } catch (error) {
+      if (error.message?.startsWith('HTTP 429; Retry-After')) throw error;
       if (attempt === 2) throw error;
       await new Promise((done) => setTimeout(done, 300 * (attempt + 1)));
     }
@@ -112,12 +116,18 @@ export function pypiRelease(metadata) {
 }
 async function enrich(rows, offline, cached = new Map()) {
   let cursor = 0;
+  let completed = 0;
+  let failed = 0;
+  const minutes = Number(process.env.TECHNOLOGY_LOOKUP_DEADLINE_MINUTES ?? 0);
+  if (!Number.isFinite(minutes) || minutes < 0) throw new Error('Invalid technology lookup deadline');
+  const deadline = minutes ? Date.now() + minutes * 60000 : Infinity;
   await Promise.all(Array.from({ length: 8 }, async () => {
     while (cursor < rows.length) {
       const row = rows[cursor++];
       row.latest = null;
       if (!offline) {
         try {
+          if (Date.now() >= deadline) throw new Error('Publisher lookup deadline reached');
           const prior = cached.get(row.source);
           if ((prior?.latest || prior?.releaseState) && Date.now() - Date.parse(prior.checkedAt) < 3600000) {
             Object.assign(row, { latest: prior.latest, checkedAt: prior.checkedAt, deprecated: prior.deprecated, engines: prior.engines, note: prior.note, releaseSource: prior.releaseSource, releaseState: prior.releaseState, latestTag: prior.latestTag });
@@ -142,6 +152,10 @@ async function enrich(rows, offline, cached = new Map()) {
         } catch (error) { row.latest = null; row.error = error.message; }
       }
       row.status = row.releaseState ?? status(row.current, row.latest);
+      if (row.error) failed++;
+      if (!offline && (++completed % 100 === 0 || completed === rows.length)) {
+        process.stderr.write(`Publisher lookups: ${completed}/${rows.length}; failed: ${failed}\n`);
+      }
     }
   }));
 }

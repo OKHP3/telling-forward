@@ -96,6 +96,8 @@ node scripts/check-technology-updates.mjs --include-transitive --write
 
 If a registry rate-limits a partial run, use `--resume` with the last command. It reuses successful release observations younger than one hour and preserves their per-row check timestamps. Normal scheduled runs fetch fresh data. Requests are paced and retries bounded. Prerelease npm latest tags fall back to the highest numeric stable release. The script returns 2 on retrieval/parsing failure, and optional `--fail-on-outdated` returns 1 when a package has a newer stable release. Detection never edits package versions or installs dependencies.
 
+The scheduled watch allows 15 minutes for publisher lookups inside its 20-minute job and logs progress every 100 sources. If a publisher stalls or asks for a longer retry, unfinished versions remain `unknown`; the job fails and still uploads the partial inventory. This makes the failure reviewable without mistaking an older committed inventory for a fresh result.
+
 ## Remaining unknowns and next check
 
 Local validation completed for this maintenance change:
