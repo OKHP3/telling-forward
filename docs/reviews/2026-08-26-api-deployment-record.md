@@ -16,7 +16,7 @@ The Pages build receives the API origin from the GitHub repository variable
 `TELLING_FORWARD_API_BASE_URL`; no API credential is embedded in the static
 bundle.
 
-## Current publication evidence
+## Historical publication evidence (2026-08-26)
 
 | Field | Value |
 |---|---|
@@ -31,6 +31,34 @@ bundle.
 This is a publication prerequisite record, not a claim that service-backed
 production is live. The verified GitHub Pages shell remains a separate static
 availability claim.
+
+## Publication recheck (2026-10-23)
+
+The following evidence was inspected at 16:07 UTC against canonical revision
+`24440fb1b434b804dd91b9c20da4db825057cdac`. It supersedes the historical
+table only where a fresh observation is available.
+
+| Check | Observed result |
+|---|---|
+| Repository Actions variables | The authenticated repository lookup returned zero variables. `TELLING_FORWARD_API_BASE_URL` is not configured. |
+| [Dependency health](https://github.com/OKHP3/telling-forward/actions/runs/39719085959) | Completed successfully at the inspected revision. |
+| [Web browser regression](https://github.com/OKHP3/telling-forward/actions/runs/39719085955) | Completed successfully at the inspected revision. |
+| [Refresh Mermaid](https://github.com/OKHP3/telling-forward/actions/runs/39895811928) | Completed successfully at the inspected revision. |
+| [Pages deployment](https://github.com/OKHP3/telling-forward/actions/runs/39719086008) | Skipped at the inspected revision. This is not a successful deployment. |
+| Replit production deployment | Current deployment status, HTTPS origin, and deployed revision remain unverified. |
+| Production acceptance | Health, Pages-origin CORS, sign-in, protected read, authorized write, and callback checks remain outstanding. |
+
+The [Pages workflow](../../.github/workflows/deploy-pages.yml) gates its build
+on a nonempty `TELLING_FORWARD_API_BASE_URL`. The missing variable therefore
+still prevents a new Pages publication. Passing source checks do not establish
+production API availability, a new Pages release, or authenticated runtime
+behavior. No placeholder origin was configured and no publication gate was
+removed during this recheck.
+
+Before resuming the checklist below, restore authorized deployment access and
+establish the actual deployment status and permitted hosting terms. Do not
+infer a production URL from a preview or initiate a paid deployment as a
+fallback for unavailable access. The existing hosting decision is unchanged.
 
 ## Release checklist
 
